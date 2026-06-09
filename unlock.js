@@ -2,7 +2,6 @@ const form = document.getElementById('unlock-form');
 const securedText = document.getElementById('securedText');
 const pasteField = document.getElementById('paste-field');
 const secretInput = document.getElementById('secret');
-const secretLabel = document.getElementById('secret-label');
 const subtitle = document.getElementById('subtitle');
 const result = document.getElementById('result');
 const resultValue = document.getElementById('result-value');
@@ -12,6 +11,9 @@ const linkHint = document.getElementById('link-hint');
 
 let unlocked = '';
 let linkMarker = null;
+
+secretInput.setAttribute('autocomplete', 'current-password');
+secretInput.setAttribute('name', 'gst-team-passphrase');
 
 function showError(message) {
   error.hidden = false;
@@ -36,11 +38,10 @@ function markerFromHash() {
   }
 }
 
-function setupLinkMode(marker) {
-  linkMarker = marker;
+function setupLinkMode() {
   pasteField.hidden = true;
   securedText.removeAttribute('required');
-  subtitle.textContent = 'Secured message from email — enter the team passphrase or one-time code.';
+  subtitle.textContent = 'Enter your team passphrase — 1Password can autofill this field.';
   linkHint.hidden = false;
   secretInput.focus();
 }
@@ -63,6 +64,7 @@ form.addEventListener('submit', async (event) => {
     result.hidden = false;
     form.hidden = true;
     linkHint.hidden = true;
+    copyButton.focus();
   } catch (err) {
     showError(err instanceof Error && !err.message.includes('at least') ? 'Wrong passphrase or corrupted link.' : err.message);
   }
@@ -76,8 +78,9 @@ copyButton.addEventListener('click', async () => {
 
 const fromLink = markerFromHash();
 if (fromLink) {
+  linkMarker = fromLink;
   securedText.value = fromLink.fullMarker || location.hash.slice(1);
-  setupLinkMode(fromLink);
+  setupLinkMode();
 } else {
   const hash = location.hash.replace(/^#/, '');
   if (hash) {
@@ -87,6 +90,9 @@ if (fromLink) {
       securedText.value = hash;
     }
     const parsed = resolveMarker(securedText.value);
-    if (parsed) setupLinkMode(parsed);
+    if (parsed) {
+      linkMarker = parsed;
+      setupLinkMode();
+    }
   }
 }

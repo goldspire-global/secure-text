@@ -5,15 +5,17 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background: #0d111b;
   color: #eef2ff;
   font-family: "Segoe UI", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 .unlock {
   max-width: 440px;
   margin: 0 auto;
-  padding: 48px 20px;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
 }
 
 .unlock__header {
@@ -65,14 +67,16 @@ h1 {
   border-radius: 12px;
   background: #111827;
   color: #f8fafc;
-  padding: 12px;
+  padding: 14px 12px;
   font: inherit;
+  font-size: 16px;
 }
 
 .btn {
   border: 0;
   border-radius: 999px;
-  padding: 12px 16px;
+  padding: 14px 18px;
+  min-height: 48px;
   background: linear-gradient(135deg, #d4a017, #f0c14b);
   color: #17130a;
   font-size: 14px;
@@ -122,4 +126,19 @@ h1 {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gst-save-op {
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .unlock {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
 }
