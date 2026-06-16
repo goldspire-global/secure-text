@@ -1,0 +1,95 @@
+{
+  "manifest_version": 3,
+  "name": "Goldspire Secure Text",
+  "version": "0.12.0",
+  "description": "Highlight text → [redacted]. Recipients unlock on the same page.",
+  "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "storage": {
+    "managed_schema": "schemas/managed_storage_schema.json"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Goldspire Secure Text",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "goldspire-secure-text@studio.goldspire",
+      "strict_min_version": "128.0"
+    }
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3015/*",
+      "https://goldspire.studio/*",
+      "https://*.goldspire.studio/*"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "src/constants.js",
+        "src/passphrase-policy.js",
+        "src/burn-list.js",
+        "src/audit.js",
+        "src/browser.js",
+        "src/crypto.js",
+        "src/marker.js",
+        "src/redacted.js",
+        "src/password.js",
+        "src/selection.js",
+        "src/secrets.js",
+        "src/settings-migrate.js",
+        "src/settings.js",
+        "src/resecure.js",
+        "src/ui.js",
+        "src/detector.js",
+        "src/content.js",
+        "src/unlock-host.js"
+      ],
+      "css": ["styles/content.css"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "unlock/*",
+        "bookmarklet/*",
+        "src/*.js",
+        "styles/content.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "secure-selection": {
+      "suggested_key": { "default": "Ctrl+Shift+S", "mac": "Command+Shift+S" },
+      "description": "Secure selection as [redacted]"
+    },
+    "unlock-selection": {
+      "suggested_key": { "default": "Ctrl+Shift+U", "mac": "Command+Shift+U" },
+      "description": "Unlock [redacted] text"
+    },
+    "generate-password": {
+      "suggested_key": { "default": "Ctrl+Shift+G", "mac": "Command+Shift+G" },
+      "description": "Generate and insert a password"
+    }
+  }
+}

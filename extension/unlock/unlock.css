@@ -1,0 +1,144 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #0d111b;
+  color: #eef2ff;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.unlock {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+}
+
+.unlock__header {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.unlock__logo {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.unlock__header p,
+.hint {
+  margin: 6px 0 0;
+  color: #a8b0c2;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.unlock__form {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: #c7cede;
+}
+
+.field textarea,
+.field input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: #111827;
+  color: #f8fafc;
+  padding: 14px 12px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 18px;
+  min-height: 48px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  color: #17130a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn--ghost {
+  background: #1f2937;
+  color: #f8fafc;
+}
+
+.result {
+  margin-top: 8px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.result h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #c7cede;
+}
+
+.result code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 16px;
+}
+
+.result__actions {
+  margin-top: 12px;
+}
+
+.error {
+  margin-top: 16px;
+  color: #fca5a5;
+  font-size: 14px;
+}
+
+.hint {
+  margin-top: 24px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gst-save-op {
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .unlock {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+}

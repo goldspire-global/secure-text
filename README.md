@@ -1,34 +1,48 @@
-# Goldspire Secure Text — Unlock Page
+# Goldspire Secure Text
 
-Public unlock page for **[redacted]** links in Gmail, Outlook, and other email clients.
+Browser extension + hosted unlock page for **[redacted]** inline secrets in email, Jira, forms, and anywhere on the web.
 
-Email clients only keep **https://** links. This site lets recipients click `[redacted]` in a message and unlock the secret with the team passphrase or one-time code.
+## Repository layout
 
-## Live URL
-
-```
-https://goldspire-global.github.io/secure-text/unlock.html
-```
-
-Paste that URL in the extension: **Popup → Settings → Public unlock page URL** (or leave blank for the built-in default).
-
-## How it works
-
-1. Sender secures text with the Goldspire Secure Text extension.
-2. Gmail stores a real hyperlink: `[redacted]` → `unlock.html#<encrypted-payload>`.
-3. Recipient clicks the link, enters the passphrase, and sees the secret in the browser.
-4. The payload stays in the URL hash — it is never sent to a server.
-
-## Files
-
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| `unlock.html` | Unlock UI |
-| `unlock.js` | Reads hash / pasted text, decrypts client-side |
-| `unlock.css` | Hosted unlock page styles |
-| `crypto.js`, `marker.js`, `redacted.js`, `browser.js`, `constants.js` | Shared crypto + marker logic |
-| `passphrase-policy.js`, `burn-list.js` | Passphrase validation + one-time burn list |
+| [`extension/`](extension/) | Full extension source — load unpacked from here |
+| `unlock.html` (+ siblings at repo root) | GitHub Pages unlock site |
+| [`.env`](.env) | **Edit configuration here** → then `npm run env:apply` |
+| [`scripts/`](scripts/) | Env apply + deploy helpers |
 
-## Updating
+## Configuration
 
-Re-run `node scripts/package.mjs` in `apps/secure-text-extension`, then copy `dist/unlock-deploy/*` into this repo and push.
+**Edit:** [`.env`](.env) (copy from [`.env.example`](.env.example) if missing)
+
+```bash
+npm run env:apply   # writes extension/src/constants.js from .env
+```
+
+Key variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `ORG_API_BASE` | Cloud org API (e.g. `http://localhost:3015` or production API URL) |
+| `ORG_PORTAL_URL` | Join / sign-in portal |
+| `BUILT_IN_PUBLIC_UNLOCK_URL` | Hosted unlock page URL |
+
+## Install extension (dev)
+
+1. `npm run env:apply` (after editing `.env`)
+2. Chrome/Edge → `chrome://extensions` → Developer mode → **Load unpacked** → select **`extension/`** folder
+3. Reload after code changes
+
+## Build unlock page (GitHub Pages)
+
+```bash
+npm run build
+```
+
+Packages `extension/dist/` and copies the unlock bundle to this repo root. Commit and push to update:
+
+**https://goldspire-global.github.io/secure-text/unlock.html**
+
+## Docs
+
+See [`extension/docs/`](extension/docs/) for enterprise deployment, org provisioning, and security.

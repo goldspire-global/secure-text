@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Goldspire Secure Text</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+
+      <!-- ── First-run setup ───────────────────────────────────── -->
+      <section id="view-setup" class="view">
+        <header class="popup__header popup__header--center">
+          <div class="popup__logo">🔒</div>
+          <div>
+            <h1>Welcome to Secure Text</h1>
+            <p id="setup-subtitle">Highlight secrets → <strong>[redacted]</strong> → send safely.</p>
+          </div>
+        </header>
+
+        <!-- Step 1: pick profile -->
+        <div id="setup-step-pick">
+          <p class="setup-label">How will you use this?</p>
+          <div class="profile-pick">
+            <button type="button" class="profile-card" data-profile="personal">
+              <span class="profile-card__icon">👤</span>
+              <strong>Personal</strong>
+              <span class="profile-card__desc">Just me — secure passwords and secrets in email, forms, and notes.</span>
+            </button>
+            <button type="button" class="profile-card" data-profile="organization">
+              <span class="profile-card__icon">🏢</span>
+              <strong>Team / Organization</strong>
+              <span class="profile-card__desc">Join your company — policy and team passphrase sync automatically.</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2a: personal config -->
+        <div id="setup-step-personal" class="setup-step" hidden>
+          <button type="button" class="setup-back" data-back>← Back</button>
+          <h2 class="setup-step__title">Personal setup</h2>
+          <p class="card__text">Your passphrase is encrypted and stored only in this browser. One-click secure after setup.</p>
+          <label class="field">
+            <span>Your passphrase</span>
+            <input id="setup-personal-passphrase" type="password" autocomplete="new-password" placeholder="Choose a strong passphrase (16+ chars)" />
+            <small id="setup-personal-strength" class="hint"></small>
+          </label>
+          <label class="checkbox">
+            <input id="setup-personal-oneclick" type="checkbox" checked />
+            <span>One-click secure with saved passphrase</span>
+          </label>
+          <button type="button" id="setup-finish-personal" class="btn btn--full">Get started</button>
+        </div>
+
+        <!-- Step 2b: org join -->
+        <div id="setup-step-organization" class="setup-step" hidden>
+          <button type="button" class="setup-back" data-back>← Back</button>
+          <h2 class="setup-step__title">Join your organization</h2>
+          <p class="card__text">Enter the join code from your admin, or sign in with your work account. Your team passphrase and settings sync automatically — including when IT rotates secrets.</p>
+          <label class="field">
+            <span>Organization join code</span>
+            <input id="setup-org-join-code" type="text" autocomplete="off" placeholder="e.g. ACME-7K2M" />
+          </label>
+          <button type="button" id="setup-org-connect" class="btn btn--full">Connect</button>
+          <button type="button" id="setup-org-signin" class="btn btn--ghost btn--full">Sign in with organization</button>
+          <p class="hint">On a company-managed browser, IT may deploy policy automatically — no join code needed.</p>
+        </div>
+      </section>
+
+      <!-- ── Main app (after setup) ───────────────────────────── -->
+      <section id="view-main" class="view" hidden>
+        <p id="managed-banner" class="managed-banner" hidden>Managed by your organization</p>
+        <header class="popup__header">
+          <div class="popup__logo">🔒</div>
+          <div class="popup__header-text">
+            <div class="popup__title-row">
+              <h1>Secure Text</h1>
+              <span id="profile-chip" class="profile-chip"></span>
+            </div>
+            <p>Highlight → <strong>[redacted]</strong> → send. Click to unlock.</p>
+          </div>
+          <span id="version-label" class="version-label"></span>
+        </header>
+
+        <nav class="tabs">
+          <button type="button" class="tabs__btn tabs__btn--active" data-tab="home">Home</button>
+          <button type="button" class="tabs__btn" data-tab="settings">Settings</button>
+          <button type="button" class="tabs__btn" data-tab="help">Help</button>
+        </nav>
+
+        <!-- Home -->
+        <div id="tab-home" class="tab tab--active">
+          <div class="card card--hero">
+            <p id="selection-preview" class="selection-preview">Highlight text on the page.</p>
+            <div class="row row--stack">
+              <button type="button" id="action-secure" class="btn">Secure selection</button>
+              <button type="button" id="action-unlock" class="btn btn--ghost">Unlock [redacted]</button>
+            </div>
+            <p class="selection-tip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> to secure · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd> to unlock</p>
+          </div>
+
+          <details class="card card--collapsible">
+            <summary>Password generator</summary>
+            <output id="generated-password" class="password-output">—</output>
+            <div class="row">
+              <button type="button" id="generate-password" class="btn btn--ghost">Generate</button>
+              <button type="button" id="copy-password" class="btn btn--ghost">Copy</button>
+              <button type="button" id="insert-password" class="btn btn--ghost">Insert</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Settings -->
+        <div id="tab-settings" class="tab">
+          <form id="settings-form" class="popup__form">
+
+            <!-- Personal -->
+            <div id="settings-personal" hidden>
+              <label class="field">
+                <span>Passphrase</span>
+                <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" />
+                <small id="passphrase-strength" class="hint"></small>
+              </label>
+              <label class="checkbox">
+                <input id="useSavedPassphrase" name="useSavedPassphrase" type="checkbox" checked />
+                <span>One-click secure</span>
+              </label>
+              <label class="checkbox">
+                <input id="resecureAfterUnlock" name="resecureAfterUnlock" type="checkbox" checked />
+                <span>Auto re-lock after unlock</span>
+              </label>
+            </div>
+
+            <!-- Team -->
+            <div id="settings-organization" hidden>
+              <div id="org-connected-card" class="settings-status settings-status--card" hidden>
+                <div>
+                  <span class="settings-status__label">Organization</span>
+                  <span id="org-connected-name" class="settings-status__value">—</span>
+                </div>
+                <span id="org-connected-source" class="org-source-chip">Cloud</span>
+              </div>
+              <div id="org-manual-settings">
+                <div class="settings-status">
+                  <span class="settings-status__label">Team passphrase</span>
+                  <span id="org-passphrase-status" class="settings-status__value">Provisioned</span>
+                </div>
+                <label class="checkbox" id="passphrase-from-vault-row">
+                  <input id="passphraseFromVault" name="passphraseFromVault" type="checkbox" />
+                  <span>From external vault (enter once per session)</span>
+                </label>
+                <label class="field" id="org-passphrase-field" hidden>
+                  <span>Team passphrase (encrypted on this browser)</span>
+                  <input id="org-passphrase" type="password" autocomplete="current-password" />
+                  <small class="hint">For self-hosted teams without cloud or MDM only.</small>
+                </label>
+              </div>
+              <button type="button" id="disconnect-org" class="btn btn--ghost btn--full btn--text" hidden>Leave organization</button>
+              <label class="field">
+                <span>Default when securing</span>
+                <select id="defaultSecureMode" name="defaultSecureMode">
+                  <option value="team">Team passphrase</option>
+                  <option value="one-time">One-time code</option>
+                </select>
+              </label>
+              <label class="checkbox">
+                <input id="resecureAfterUnlock-org" type="checkbox" checked />
+                <span>Auto re-lock after unlock</span>
+              </label>
+            </div>
+
+            <details class="settings-advanced">
+              <summary>More options</summary>
+              <div class="settings-advanced__body">
+                <label class="field">
+                  <span>On-page hints</span>
+                  <select id="selectionUiMode" name="selectionUiMode">
+                    <option value="smart">Smart</option>
+                    <option value="always">Always</option>
+                    <option value="quiet">Off — shortcut only</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Re-lock delay (seconds)</span>
+                  <input id="resecureDelaySeconds" name="resecureDelaySeconds" type="number" min="5" max="600" step="1" />
+                </label>
+                <div id="advanced-org-only" hidden>
+                  <label class="field">
+                    <span>Custom unlock page URL</span>
+                    <input id="publicUnlockUrl" name="publicUnlockUrl" type="url" placeholder="Leave blank for default" />
+                  </label>
+                </div>
+              </div>
+            </details>
+
+            <button type="submit" class="btn btn--full">Save</button>
+            <button type="button" id="reset-setup" class="btn btn--ghost btn--full btn--text">Switch to personal / team</button>
+          </form>
+
+          <div class="card" id="snoozed-sites-card" hidden>
+            <p class="card__text">Sites where hints are hidden.</p>
+            <ul id="snoozed-sites-list"></ul>
+            <button type="button" id="clear-snoozed" class="btn btn--ghost btn--sm">Clear all</button>
+          </div>
+        </div>
+
+        <!-- Help -->
+        <div id="tab-help" class="tab">
+          <div id="help-personal" class="help-content">
+            <div class="card">
+              <h2>How it works</h2>
+              <ol>
+                <li>Highlight a secret on any page</li>
+                <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> or click <strong>Secure</strong></li>
+                <li>Text becomes <code>[redacted]</code> — send as normal</li>
+                <li>Recipient clicks <code>[redacted]</code> and enters your passphrase to unlock</li>
+              </ol>
+            </div>
+          </div>
+          <div id="help-organization" class="help-content" hidden>
+            <div class="card">
+              <h2>How it works (team)</h2>
+              <ol>
+                <li>Join your organization (join code, sign-in, or IT-managed policy)</li>
+                <li>Highlight a secret → <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></li>
+                <li>Send the message — secret shows as <code>[redacted]</code></li>
+                <li>Teammate clicks <code>[redacted]</code> → one-click or passphrase prompt → secret appears</li>
+              </ol>
+            </div>
+            <div class="card">
+              <h2>Organization provisioning</h2>
+              <p class="card__text">Team passphrases are pushed by <strong>IT policy</strong> (managed browsers) or <strong>Goldspire cloud</strong> (join code / SSO). When IT rotates secrets, your extension updates automatically — no manual entry.</p>
+              <p class="card__text">External vault mode is optional for teams that keep the passphrase only in a password manager.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Security</h2>
+            <p class="card__text">AES-256-GCM + PBKDF2 (600k iterations). All encryption runs in your browser. No secrets leave your device.</p>
+          </div>
+        </div>
+      </section>
+
+      <p id="status" class="status" hidden></p>
+    </main>
+    <script src="../src/constants.js"></script>
+    <script src="../src/passphrase-policy.js"></script>
+    <script src="../src/browser.js"></script>
+    <script src="../src/settings-migrate.js"></script>
+    <script src="../src/settings.js"></script>
+    <script src="../src/secrets.js"></script>
+    <script src="../src/managed-policy.js"></script>
+    <script src="../src/org-provision.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

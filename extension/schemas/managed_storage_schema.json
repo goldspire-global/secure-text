@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "orgId": {
+      "title": "Organization ID",
+      "description": "Internal identifier for the deploying organization (e.g. acme-corp).",
+      "type": "string"
+    },
+    "orgDisplayName": {
+      "title": "Organization display name",
+      "description": "Shown in the extension UI (e.g. Acme Corp).",
+      "type": "string"
+    },
+    "securityProfile": {
+      "title": "Security profile",
+      "description": "Force personal or organization (team) mode for all users.",
+      "type": "string",
+      "enum": ["personal", "organization"]
+    },
+    "teamPassphrase": {
+      "title": "Team passphrase",
+      "description": "Shared team passphrase. Stored encrypted on each device. Rotates when IT updates this policy.",
+      "type": "string"
+    },
+    "passphraseFromVault": {
+      "title": "Team passphrase from external vault",
+      "description": "When true, users enter the team passphrase from their password manager once per browser session. When false (recommended with teamPassphrase), one-click secure with no popup.",
+      "type": "boolean"
+    },
+    "useSavedPassphrase": {
+      "title": "One-click secure",
+      "description": "Use the stored team passphrase without prompting.",
+      "type": "boolean"
+    },
+    "setupComplete": {
+      "title": "Skip first-run setup",
+      "description": "When true, users go straight to the main popup.",
+      "type": "boolean"
+    },
+    "defaultSecureMode": {
+      "title": "Default secure mode",
+      "description": "Default protection when securing text.",
+      "type": "string",
+      "enum": ["team", "one-time"]
+    }
+  }
+}

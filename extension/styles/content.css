@@ -1,0 +1,349 @@
+.gst-overlay {
+  all: initial;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 18, 0.55);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.gst-dialog {
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 14px;
+  background: #111522;
+  color: #f4f6fb;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px;
+}
+
+.gst-dialog--compact {
+  width: min(300px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.gst-dialog--compact .gst-dialog__title {
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.gst-dialog--compact .gst-field {
+  margin-bottom: 8px;
+}
+
+.gst-dialog--compact .gst-dialog__actions {
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.gst-dialog--compact .gst-dialog__actions .gst-btn--primary {
+  margin-left: auto;
+}
+
+.gst-dialog__title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.gst-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.gst-field__label {
+  font-size: 12px;
+  color: #b8bfd1;
+}
+
+.gst-field__input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0b0f19;
+  color: #f4f6fb;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.4;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.gst-field__input:focus {
+  border-color: #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
+}
+
+.gst-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.gst-btn {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gst-btn--ghost {
+  color: #c6ccda;
+}
+
+.gst-btn--primary {
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  color: #17130a;
+}
+
+.gst-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gst-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  font: 600 13px/1.4 "Segoe UI", system-ui, sans-serif;
+  color: #f8fafc;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.gst-toast--info {
+  background: #1f2937;
+}
+
+.gst-toast--success {
+  background: #14532d;
+}
+
+.gst-toast--error {
+  background: #7f1d1d;
+}
+
+.gst-fab {
+  all: unset;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  color: #17130a;
+  font: 700 12px/1 "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.gst-fabs {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147483645;
+  display: grid;
+  gap: 8px;
+}
+
+.gst-fab--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.gst-fab--unlock {
+  background: linear-gradient(135deg, #334155, #475569);
+  color: #f8fafc;
+}
+
+.gst-dialog--wide {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.gst-radio-group {
+  display: grid;
+  gap: 8px;
+}
+
+.gst-radio,
+.gst-checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: #d7ddea;
+}
+
+.gst-note {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #9aa3b8;
+  line-height: 1.45;
+}
+
+.gst-field--compact .gst-field__label {
+  font-size: 11px;
+}
+
+.gst-field--compact .gst-field__input {
+  padding: 7px 10px;
+  font-size: 14px;
+}
+
+.gst-field--compact .gst-field__input[readonly] {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.gst-result {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.gst-result__row {
+  display: grid;
+  gap: 4px;
+}
+
+.gst-result__label {
+  font-size: 11px;
+  color: #9aa3b8;
+}
+
+.gst-result__value {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font: 600 12px/1.45 Consolas, monospace;
+  word-break: break-all;
+  color: #f8fafc;
+}
+
+.gst-redacted,
+.gst-redacted-btn {
+  all: unset;
+  display: inline;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 1px 6px;
+  background: rgba(100, 116, 139, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #94a3b8;
+  font: 600 12px/1.5 "Segoe UI", system-ui, sans-serif;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.gst-redacted:hover,
+.gst-redacted-btn:hover {
+  background: rgba(212, 160, 23, 0.18);
+  border-color: rgba(212, 160, 23, 0.5);
+  color: #e8c55a;
+}
+
+.gst-relock-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(560px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #111827;
+  border: 1px solid rgba(212, 160, 23, 0.35);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #f8fafc;
+}
+
+.gst-relock-banner__text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  font-size: 12px;
+}
+
+.gst-relock-banner__text strong {
+  font-size: 13px;
+}
+
+.gst-relock-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.gst-selection-status {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 2147483644;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px;
+  border-radius: 999px;
+  background: #111827;
+  border: 1px solid rgba(212, 160, 23, 0.4);
+  color: #f6d57a;
+  font: 600 12px/1.4 "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gst-selection-status--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.gst-pill-text {
+  flex: 1;
+}
+
+.gst-pill-snooze {
+  all: unset;
+  cursor: pointer;
+  opacity: 0.55;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: opacity 0.1s;
+}
+
+.gst-pill-snooze:hover {
+  opacity: 1;
+}
