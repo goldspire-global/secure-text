@@ -151,6 +151,9 @@
     }
 
     if (action === 'allow') {
+      if (isCopilotEnabled(settings) && detections.length) {
+        return { handled: false, showCopilot: true };
+      }
       global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
       return { handled: true, allowed: true };
     }

@@ -37,6 +37,13 @@ test('findIbans validates check digits', () => {
   assert.equal(hits[0].category, 'iban');
 });
 
+test('findIbans detects spaced IBAN', () => {
+  const lib = loadLib();
+  const hits = lib.findIbans('pay DE89 3704 0044 0532 0130 00 today');
+  assert.ok(hits.length >= 1);
+  assert.equal(hits[0].category, 'iban');
+});
+
 test('findMedicalRecordNumbers detects MRN prefix', () => {
   const lib = loadLib();
   const hits = lib.findMedicalRecordNumbers('MRN: 123456789');

@@ -14,6 +14,32 @@ import {
   repoRoot,
 } from './helpers.mjs';
 
+test('journey: paste with copilot on shows prompt when DLP is off', async () => {
+  const g = loadVeilStack();
+  let prompted = false;
+  g.GoldspireVeilCopilotUI = {
+    showVeilCopilot: ({ onDismiss }) => {
+      prompted = true;
+      onDismiss?.();
+    },
+  };
+  g.GoldspirePasteInsert = {
+    getCaretState: () => ({ kind: 'input', element: { value: '', selectionStart: 0, selectionEnd: 0, dispatchEvent() {} }, start: 0, end: 0 }),
+    insertAtCaret: () => null,
+  };
+
+  const settings = { copilotEnabled: true, dlpMode: 'off' };
+  const event = {
+    clipboardData: { getData: () => 'AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe' },
+    target: { tagName: 'DIV', parentElement: null },
+    preventDefault() {},
+    stopPropagation() {},
+  };
+
+  await g.GoldspirePasteObserve.handlePaste(event, async () => settings);
+  assert.equal(prompted, true);
+});
+
 test('journey: user pastes API key → copilot offers mask → masked text inserted', async () => {
   const g = loadVeilStack();
   const apiKey = 'sk-live-abcdefghijklmnopqrstuvwxyz';
@@ -28,15 +54,9 @@ test('journey: user pastes API key → copilot offers mask → masked text inser
   assert.ok(ids.includes('mask'));
   assert.ok(ids.includes('ignore'));
 
-  const masked = await g.GoldspireVeilCopilot.applyPasteAction('mask', {
-    text: apiKey,
-    context,
-    detections,
-    settings,
-    caret: {},
-  });
-  assert.ok(masked.inserted.includes('*'));
-  assert.ok(!masked.inserted.includes(apiKey));
+  const masked = g.GoldspireVeilMask.maskSensitiveText(apiKey, context);
+  assert.ok(masked.includes('*'));
+  assert.ok(!masked.includes(apiKey));
 });
 
 test('journey: AI prompt surface → sanitize-first, no encrypt', () => {

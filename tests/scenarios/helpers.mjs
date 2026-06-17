@@ -134,6 +134,8 @@ export function loadVeilStack(extra = {}) {
     'extension/src/tokens/client.js',
     'extension/src/copilot/controller.js',
     'extension/src/copilot/prompt.js',
+    'extension/src/observe/paste-insert.js',
+    'extension/src/observe/paste-observe.js',
     'extension/src/ai/framework.js',
     'extension/src/ai/intercept.js',
     'extension/src/ai/chatgpt.js',

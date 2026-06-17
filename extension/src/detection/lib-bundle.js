@@ -255,23 +255,40 @@
   function findIbans(text) {
     const input = String(text || '');
     if (!input) return [];
-    const pattern = /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/gi;
     const results = [];
-    let match;
-    while ((match = pattern.exec(input)) !== null) {
-      const raw = match[0].replace(/\s/g, '').toUpperCase();
-      if (raw.length < 15 || raw.length > 34) continue;
-      if (!ibanMod97(raw)) continue;
+    const seen = new Set();
+
+    function tryPushCompact(compact, index) {
+      const value = String(compact || '').toUpperCase();
+      if (value.length < 15 || value.length > 34) return;
+      if (!ibanMod97(value)) return;
+      if (seen.has(value)) return;
+      seen.add(value);
       results.push({
         category: 'iban',
-        matchedText: redactPreview(raw, { showLast: 4 }),
-        matchedTextRaw: match[0],
-        index: match.index,
+        matchedText: redactPreview(value, { showLast: 4 }),
+        matchedTextRaw: value,
+        index,
         confidence: 88,
         severity: 'high',
         recommendation: 'Mask or encrypt financial identifiers before sharing.',
       });
     }
+
+    const compactInput = input.replace(/\s/g, '');
+    const pattern = /[A-Z]{2}\d{2}[A-Z0-9]{11,30}/gi;
+    let match;
+    while ((match = pattern.exec(compactInput)) !== null) {
+      const chunk = match[0].toUpperCase();
+      for (let end = Math.min(34, chunk.length); end >= 15; end -= 1) {
+        const candidate = chunk.slice(0, end);
+        if (ibanMod97(candidate)) {
+          tryPushCompact(candidate, match.index);
+          break;
+        }
+      }
+    }
+
     return results;
   }
 
