@@ -35,7 +35,7 @@
     if (!base) throw new Error('Cloud sharing is not configured.');
 
     const auth = await authHeaders();
-    if (!auth.token) throw new Error('Join your organization to use sharing.');
+    if (!auth.token) throw new Error('Join your team to use sharing.');
 
     let response;
     try {
@@ -49,9 +49,7 @@
       });
     } catch (error) {
       if (error?.message === 'Failed to fetch' || error?.name === 'TypeError') {
-        throw new Error(
-          `Cannot reach organization server at ${base}. Start it with npm run api:dev, then try again.`,
-        );
+        throw new Error('Cannot reach the team server. Check your connection and try again.');
       }
       throw error;
     }
@@ -214,7 +212,7 @@
 
     for (const email of recipients) {
       const member = byEmail[email];
-      if (!member) throw new Error(`${email} is not in your organization.`);
+      if (!member) throw new Error(`${email} is not on your team.`);
       if (!member.publicKeyJwk) {
         throw new Error(`${email} has not registered for secure sharing yet (needs extension + work email).`);
       }

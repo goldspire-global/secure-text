@@ -3,48 +3,44 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Create organization — Goldspire Secure Text</title>
+  <title>Set up your team — Goldspire Secure Text</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
   <div class="layout">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="create.html">Create organization</a>
-      <a href="join.html">Join organization</a>
-      <a href="admin.html">Admin console</a>
-    </nav>
+    <nav class="nav" data-portal-nav></nav>
 
     <div id="form-card" class="card">
-      <h1>Create organization</h1>
-      <p class="lede">This creates your team vault, a member join code, and an admin token. Save the admin token — it is shown only once.</p>
+      <h1>Set up your team</h1>
+      <p class="lede">Create your organization, choose how members join, and get a join code to share.</p>
 
       <form id="create-form">
         <div class="field">
-          <label for="display-name">Organization name</label>
+          <label for="display-name">Team name</label>
           <input id="display-name" name="displayName" required minlength="2" maxlength="120" placeholder="Acme Corp" />
         </div>
 
         <div class="field">
-          <label for="admin-email">Your work email (optional)</label>
+          <label for="admin-email">Your work email</label>
           <input id="admin-email" name="adminEmail" type="email" autocomplete="email" placeholder="you@company.com" />
+          <div class="hint">We’ll add this address to your member list automatically.</div>
         </div>
 
         <div class="field">
-          <label for="allowed-domain">Allowed email domain (optional)</label>
+          <label for="allowed-domain">Company email domain</label>
           <input id="allowed-domain" name="allowedEmailDomain" placeholder="company.com" autocomplete="off" />
-          <div class="hint">If set, only <code>@company.com</code> addresses can register. Otherwise you must add each member in the admin console before they can join.</div>
+          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. Leave blank to invite people individually.</div>
         </div>
 
         <div class="field">
           <label for="team-passphrase">Team passphrase</label>
           <input id="team-passphrase" name="teamPassphrase" type="password" required minlength="12" autocomplete="new-password" />
-          <div class="hint">At least 12 characters. Members receive this automatically when they join — store it in your team password manager.</div>
+          <div class="hint">At least 12 characters. Members receive this in the extension when they join. Store a copy in your team password manager.</div>
         </div>
 
         <div class="btn-row">
-          <button type="button" class="btn btn--ghost" id="generate-passphrase">Generate passphrase</button>
-          <button type="submit" class="btn" id="submit-btn">Create organization</button>
+          <button type="button" class="btn btn--ghost" id="generate-passphrase">Generate</button>
+          <button type="submit" class="btn" id="submit-btn">Create team</button>
         </div>
       </form>
 
@@ -52,36 +48,38 @@
     </div>
 
     <div id="success-card" class="card hidden">
-      <h1>Organization created</h1>
-      <p class="lede">Copy these credentials now. The admin token cannot be recovered if lost — create a new organization instead.</p>
+      <h1>Your team is ready</h1>
+      <p class="lede">Save these details now. Your admin sign-in key is shown once and cannot be recovered.</p>
 
       <div class="credential">
-        <strong>Organization</strong>
+        <strong>Team name</strong>
         <code id="out-display-name"></code>
       </div>
       <div class="credential">
-        <strong>Organization ID</strong>
-        <code id="out-org-id"></code>
-      </div>
-      <div class="credential">
-        <strong>Member join code</strong>
+        <strong>Join code</strong>
         <code id="out-join-code"></code>
       </div>
       <div class="credential">
-        <strong>Admin token (secret)</strong>
+        <strong>Admin sign-in key</strong>
         <code id="out-admin-token"></code>
       </div>
 
       <div class="btn-row">
-        <button type="button" class="btn" id="open-admin">Open admin console</button>
-        <a class="btn btn--ghost" href="join.html" id="join-link">Member join page</a>
+        <button type="button" class="btn" id="open-admin">Open admin</button>
+        <a class="btn btn--ghost" href="join.html">Member join page</a>
       </div>
     </div>
   </div>
 
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
   <script>
+    GoldspirePortalNav.renderPortalNav('create');
+    if (GoldspirePortalApp.loadAdminSession()?.adminToken) {
+      window.location.replace('admin.html');
+    }
+
     const app = GoldspirePortalApp;
     const form = document.getElementById('create-form');
     const statusEl = document.getElementById('status');
@@ -96,7 +94,7 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       submitBtn.disabled = true;
-      app.setStatus(statusEl, 'Creating organization…');
+      app.setStatus(statusEl, 'Creating your team…');
 
       try {
         const body = {
@@ -113,7 +111,6 @@
         });
 
         document.getElementById('out-display-name').textContent = result.displayName;
-        document.getElementById('out-org-id').textContent = result.orgId;
         document.getElementById('out-join-code').textContent = result.joinCode;
         document.getElementById('out-admin-token').textContent = result.adminToken;
 
@@ -123,11 +120,12 @@
           adminToken: result.adminToken,
         });
 
+        GoldspirePortalNav.renderPortalNav('create');
         formCard.classList.add('hidden');
         successCard.classList.remove('hidden');
         app.setStatus(statusEl, '');
       } catch (error) {
-        app.setStatus(statusEl, error.message || 'Could not create organization.', 'error');
+        app.setStatus(statusEl, error.message || 'Could not create your team.', 'error');
       } finally {
         submitBtn.disabled = false;
       }

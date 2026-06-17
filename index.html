@@ -3,31 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Goldspire Secure Text — Organization</title>
+  <title>Goldspire Secure Text</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
   <div class="layout">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="create.html">Create organization</a>
-      <a href="join.html">Join organization</a>
-      <a href="admin.html">Admin console</a>
-    </nav>
+    <nav class="nav" data-portal-nav></nav>
 
     <div class="card">
       <h1>Goldspire Secure Text</h1>
-      <p class="lede">Set up your team for secure redaction in email and web apps. Create an organization, share a join code with members, and manage everything from the admin console.</p>
+      <p class="lede">Redact sensitive text in email and web apps before you send. Set up your team, invite colleagues, and manage access from one place.</p>
 
       <div class="btn-row">
-        <a class="btn" href="create.html">Create organization</a>
-        <a class="btn btn--ghost" href="join.html">Join with code</a>
-        <a class="btn btn--ghost" href="admin.html">Admin console</a>
+        <a class="btn" href="create.html" data-nav-create>Set up your team</a>
+        <a class="btn btn--ghost" href="join.html">Join a team</a>
+        <a class="btn btn--ghost" href="admin.html" data-nav-admin>Admin sign in</a>
       </div>
 
-      <p class="hint" style="margin-top: 1.25rem;">Members install the browser extension, enter your join code, and register their work email for secure sharing.</p>
+      <p class="hint" style="margin-top: 1.25rem;">Team members install the browser extension and join with the code you share.</p>
     </div>
   </div>
   <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
+  <script>GoldspirePortalNav.renderPortalNav('index');
+    (function () {
+      const session = GoldspirePortalApp.loadAdminSession?.();
+      if (!session?.adminToken) return;
+      document.querySelector('[data-nav-create]')?.remove();
+      const admin = document.querySelector('[data-nav-admin]');
+      if (admin) {
+        admin.textContent = 'Manage team';
+        admin.classList.remove('btn--ghost');
+      }
+    })();
+  </script>
 </body>
 </html>

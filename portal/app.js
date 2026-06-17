@@ -45,7 +45,7 @@
 
   async function apiRequest(path, options = {}) {
     const base = apiBase();
-    if (!base) throw new Error('Organization server URL is not configured.');
+    if (!base) throw new Error('Service is not configured. Contact your administrator.');
 
     const headers = {
       Accept: 'application/json',
@@ -66,7 +66,7 @@
 
   async function apiAdmin(path, options = {}) {
     const session = loadAdminSession();
-    if (!session?.adminToken) throw new Error('Sign in to the admin console first.');
+    if (!session?.adminToken) throw new Error('Sign in with your admin key first.');
     return apiRequest(path, {
       ...options,
       headers: {

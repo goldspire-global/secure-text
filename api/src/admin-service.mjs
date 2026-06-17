@@ -82,7 +82,7 @@ function publicOrgRow(row) {
 export async function authenticateAdmin(req) {
   const auth = String(req.headers.authorization || '');
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  if (!token) throw httpError(401, 'Missing admin token.');
+  if (!token) throw httpError(401, 'Missing admin sign-in key.');
 
   const pool = getPool();
   const result = await pool.query(
@@ -93,7 +93,7 @@ export async function authenticateAdmin(req) {
     [hashAdminToken(token)],
   );
 
-  if (result.rowCount === 0) throw httpError(401, 'Invalid admin token.');
+  if (result.rowCount === 0) throw httpError(401, 'Invalid admin sign-in key.');
   return { token, org: result.rows[0] };
 }
 
@@ -102,8 +102,8 @@ export async function createOrganization(body = {}) {
   const teamPassphrase = String(body.teamPassphrase || body.team_passphrase || '').trim();
   const adminEmail = normalizeEmail(body.adminEmail || body.admin_email || '');
 
-  if (displayName.length < 2) throw httpError(400, 'Organization name must be at least 2 characters.');
-  if (displayName.length > 120) throw httpError(400, 'Organization name is too long.');
+  if (displayName.length < 2) throw httpError(400, 'Team name must be at least 2 characters.');
+  if (displayName.length > 120) throw httpError(400, 'Team name is too long.');
   if (teamPassphrase.length < 12) {
     throw httpError(400, 'Team passphrase must be at least 12 characters.');
   }
@@ -170,7 +170,7 @@ export async function createOrganization(body = {}) {
   } catch (error) {
     await client.query('ROLLBACK');
     if (error.code === '23505') {
-      throw httpError(409, 'Could not create organization — try a different name.');
+      throw httpError(409, 'Could not create team — try a different name.');
     }
     throw error;
   } finally {
@@ -190,7 +190,7 @@ export async function updateOrganization(admin, body = {}) {
 
   const displayName = body.displayName != null ? String(body.displayName).trim() : null;
   if (displayName != null) {
-    if (displayName.length < 2) throw httpError(400, 'Organization name must be at least 2 characters.');
+    if (displayName.length < 2) throw httpError(400, 'Team name must be at least 2 characters.');
     patches.push(`display_name = $${index++}`);
     values.push(displayName);
   }

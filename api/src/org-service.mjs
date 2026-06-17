@@ -44,7 +44,7 @@ export async function joinWithCode(joinCode, deviceId, email) {
   const code = normalizeJoinCode(joinCode);
   const device = String(deviceId || '').trim();
   const memberEmail = normalizeEmail(email);
-  if (!code) throw httpError(400, 'Enter your organization join code.');
+  if (!code) throw httpError(400, 'Enter your join code.');
   if (!device) throw httpError(400, 'Missing device id.');
   if (!memberEmail || !memberEmail.includes('@')) {
     throw httpError(400, 'Valid work email is required.');

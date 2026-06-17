@@ -3,29 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin console — Goldspire Secure Text</title>
+  <title>Team admin — Goldspire Secure Text</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
   <div class="layout">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="create.html">Create organization</a>
-      <a href="join.html">Join organization</a>
-      <a href="admin.html">Admin console</a>
-    </nav>
+    <nav class="nav" data-portal-nav></nav>
 
     <div id="login-card" class="card">
-      <h1>Admin console</h1>
-      <p class="lede">Sign in with the admin token you received when the organization was created.</p>
+      <h1>Admin sign in</h1>
+      <p class="lede">Use the admin sign-in key you received when you set up your team.</p>
 
       <form id="login-form">
         <div class="field">
-          <label for="admin-token">Admin token</label>
+          <label for="admin-token">Admin sign-in key</label>
           <input id="admin-token" name="adminToken" class="code" autocomplete="off" required placeholder="gst_…" />
         </div>
         <div class="btn-row">
           <button type="submit" class="btn">Sign in</button>
+          <a class="btn btn--ghost" href="create.html">Set up a new team</a>
         </div>
       </form>
       <div id="login-status" class="status" role="status"></div>
@@ -33,7 +29,7 @@
 
     <div id="dashboard" class="hidden">
       <div class="card">
-        <h1 id="org-title">Organization</h1>
+        <h1 id="org-title">Your team</h1>
         <p class="lede" id="org-meta"></p>
         <div class="btn-row">
           <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">Refresh</button>
@@ -43,33 +39,33 @@
       </div>
 
       <div class="card">
-        <h2>Organization settings</h2>
+        <h2>Team settings</h2>
         <form id="settings-form">
           <div class="field">
-            <label for="settings-name">Display name</label>
+            <label for="settings-name">Team name</label>
             <input id="settings-name" required minlength="2" maxlength="120" />
           </div>
           <div class="field">
-            <label for="settings-email">Admin contact email</label>
+            <label for="settings-email">Your contact email</label>
             <input id="settings-email" type="email" />
           </div>
           <div class="field">
-            <label for="settings-passphrase">Rotate team passphrase</label>
+            <label for="settings-passphrase">New team passphrase</label>
             <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
-            <div class="hint">Rotating bumps policy version — members sync automatically within a few hours (or on next popup open).</div>
+            <div class="hint">Changing this updates every member’s extension within a few hours, or the next time they open it.</div>
           </div>
           <div class="field">
-            <label for="settings-membership-policy">Membership policy</label>
+            <label for="settings-membership-policy">Who can join</label>
             <select id="settings-membership-policy">
-              <option value="invite">Invite list — admin adds emails first</option>
-              <option value="domain">Email domain — any matching work email</option>
-              <option value="open">Open — any email (not recommended)</option>
+              <option value="invite">People I add below</option>
+              <option value="domain">Anyone with a company email</option>
+              <option value="open">Anyone with the join code</option>
             </select>
           </div>
           <div class="field" id="domains-row">
-            <label for="settings-domains">Allowed email domains</label>
-            <input id="settings-domains" placeholder="company.com, subsidiary.com" />
-            <div class="hint">Comma-separated. Required when policy is “Email domain”.</div>
+            <label for="settings-domains">Company email domains</label>
+            <input id="settings-domains" placeholder="company.com" />
+            <div class="hint">Separate multiple domains with commas. Required when joining is limited to company email.</div>
           </div>
           <div class="btn-row">
             <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
@@ -80,7 +76,7 @@
 
       <div class="card">
         <h2>Join codes</h2>
-        <p class="lede">Share a code with members. They enter it in the extension or on the join page.</p>
+        <p class="lede">Share a code so members can connect the browser extension.</p>
         <div class="btn-row">
           <button type="button" class="btn btn--sm" id="new-code-btn">Create join code</button>
         </div>
@@ -96,7 +92,7 @@
 
       <div class="card">
         <h2>Members</h2>
-        <p class="lede">Add work emails before members join. They still need the join code, but can only register an email on this list (unless domain policy is enabled).</p>
+        <p class="lede">Add work emails before people join. They still need a join code to connect the extension.</p>
         <form id="add-member-form" class="btn-row" style="align-items: flex-end;">
           <div class="field" style="flex:1; margin:0;">
             <label for="member-email">Email</label>
@@ -110,17 +106,18 @@
         </form>
         <table>
           <thead>
-            <tr><th>Email</th><th>Name</th><th>Registered</th><th>Joined</th><th></th></tr>
+            <tr><th>Email</th><th>Name</th><th>Extension</th><th>Added</th><th></th></tr>
           </thead>
           <tbody id="members-body"></tbody>
         </table>
       </div>
 
       <div class="card">
-        <h2>Devices</h2>
+        <h2>Connected browsers</h2>
+        <p class="lede">Browsers where a member has installed and connected the extension.</p>
         <table>
           <thead>
-            <tr><th>Device</th><th>Member</th><th>Policy v</th><th>Status</th><th></th></tr>
+            <tr><th>Member</th><th>Last active</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="devices-body"></tbody>
         </table>
@@ -130,7 +127,10 @@
 
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
   <script>
+    GoldspirePortalNav.renderPortalNav('admin');
+
     const app = GoldspirePortalApp;
     const loginCard = document.getElementById('login-card');
     const dashboard = document.getElementById('dashboard');
@@ -140,6 +140,7 @@
     function showDashboard(show) {
       loginCard.classList.toggle('hidden', show);
       dashboard.classList.toggle('hidden', !show);
+      GoldspirePortalNav.renderPortalNav('admin');
     }
 
     async function loadDashboard() {
@@ -152,7 +153,7 @@
 
         document.getElementById('org-title').textContent = org.displayName;
         document.getElementById('org-meta').textContent =
-          `ID: ${org.orgId} · Policy v${org.policyVersion} · Membership: ${org.settings?.membershipPolicy || 'invite'}`;
+          GoldspirePortalNav.membershipSummary(org);
         document.getElementById('settings-name').value = org.displayName;
         document.getElementById('settings-email').value = org.adminEmail || '';
         document.getElementById('settings-membership-policy').value = org.settings?.membershipPolicy || 'invite';
@@ -178,38 +179,37 @@
             <tr>
               <td>${row.email}</td>
               <td>${row.displayName || '—'}</td>
-              <td>${row.registered ? 'Yes' : 'No'}</td>
+              <td>${row.registered ? 'Connected' : 'Not yet'}</td>
               <td>${app.formatWhen(row.createdAt)}</td>
               <td>
                 ${row.active
-                  ? `<button type="button" class="btn btn--danger btn--sm" data-deactivate-member="${row.email}">Deactivate</button>`
-                  : '<span class="badge badge--off">Inactive</span>'}
+                  ? `<button type="button" class="btn btn--danger btn--sm" data-deactivate-member="${row.email}">Remove</button>`
+                  : '<span class="badge badge--off">Removed</span>'}
               </td>
             </tr>
           `).join('')
-          : '<tr><td colspan="5">No members yet.</td></tr>';
+          : '<tr><td colspan="5">No members yet. Add emails above, then share a join code.</td></tr>';
 
         const devicesBody = document.getElementById('devices-body');
         devicesBody.innerHTML = devices.devices.length
           ? devices.devices.map((row) => `
             <tr>
-              <td><code>${row.deviceId.slice(0, 8)}…</code></td>
               <td>${row.memberEmail || '—'}</td>
-              <td>${row.policyVersion}</td>
-              <td>${row.revoked ? '<span class="badge badge--off">Revoked</span>' : '<span class="badge badge--ok">Active</span>'}</td>
+              <td>${app.formatWhen(row.updatedAt || row.createdAt)}</td>
+              <td>${row.revoked ? '<span class="badge badge--off">Disconnected</span>' : '<span class="badge badge--ok">Active</span>'}</td>
               <td>
                 ${!row.revoked
-                  ? `<button type="button" class="btn btn--danger btn--sm" data-revoke-device="${encodeURIComponent(row.deviceId)}">Revoke</button>`
+                  ? `<button type="button" class="btn btn--danger btn--sm" data-revoke-device="${encodeURIComponent(row.deviceId)}">Disconnect</button>`
                   : ''}
               </td>
             </tr>
           `).join('')
-          : '<tr><td colspan="5">No devices have joined yet.</td></tr>';
+          : '<tr><td colspan="4">No browsers connected yet.</td></tr>';
 
         app.setStatus(dashStatus, '');
       } catch (error) {
-        app.setStatus(dashStatus, error.message || 'Could not load dashboard.', 'error');
-        if ((error.message || '').includes('admin token')) {
+        app.setStatus(dashStatus, error.message || 'Could not load your team.', 'error');
+        if ((error.message || '').includes('admin token') || (error.message || '').includes('sign-in')) {
           app.clearAdminSession();
           showDashboard(false);
         }
@@ -232,7 +232,7 @@
         app.setStatus(loginStatus, '');
       } catch (error) {
         app.clearAdminSession();
-        app.setStatus(loginStatus, error.message || 'Sign in failed.', 'error');
+        app.setStatus(loginStatus, error.message || 'Sign in failed. Check your key and try again.', 'error');
       }
     });
 
@@ -251,7 +251,7 @@
           body: '{}',
         });
         await app.copyText(result.code);
-        app.setStatus(dashStatus, `Created join code ${result.code} (copied).`, 'ok');
+        app.setStatus(dashStatus, `Join code ${result.code} created and copied.`, 'ok');
         await loadDashboard();
       } catch (error) {
         app.setStatus(dashStatus, error.message, 'error');
@@ -281,7 +281,7 @@
           body: JSON.stringify(body),
         });
         document.getElementById('settings-passphrase').value = '';
-        app.setStatus(dashStatus, 'Settings saved.', 'ok');
+        app.setStatus(dashStatus, 'Changes saved.', 'ok');
         await loadDashboard();
       } catch (error) {
         app.setStatus(dashStatus, error.message, 'error');
@@ -327,7 +327,7 @@
           await loadDashboard();
         }
         if (email) {
-          if (!confirm(`Deactivate ${email}?`)) return;
+          if (!confirm(`Remove ${email} from your team?`)) return;
           await app.apiAdmin('/v1/orgs/me/members/deactivate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -336,7 +336,7 @@
           await loadDashboard();
         }
         if (device) {
-          if (!confirm('Revoke this device? It will need to join again.')) return;
+          if (!confirm('Disconnect this browser? The member will need to join again.')) return;
           await app.apiAdmin(`/v1/orgs/me/devices/${device}/revoke`, { method: 'POST' });
           await loadDashboard();
         }

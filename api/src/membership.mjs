@@ -28,7 +28,7 @@ export async function assertMemberEmailAllowed(pool, orgId, email, deviceId, set
     if (!domain || !allowedEmailDomains.includes(domain)) {
       throw httpError(
         403,
-        `Only work emails from ${allowedEmailDomains.join(', ')} can join this organization.`,
+        `Only work emails from ${allowedEmailDomains.join(', ')} can join this team.`,
       );
     }
     return;
@@ -45,7 +45,7 @@ export async function assertMemberEmailAllowed(pool, orgId, email, deviceId, set
   if (result.rowCount === 0) {
     throw httpError(
       403,
-      'This email is not on the member list. Ask your admin to add you in the admin console.',
+      'This email is not on the member list. Ask your admin to add you first.',
     );
   }
 
@@ -60,7 +60,7 @@ export async function loadOrgSettings(pool, orgId) {
     `SELECT settings FROM organizations WHERE id = $1`,
     [orgId],
   );
-  if (result.rowCount === 0) throw httpError(404, 'Organization not found.');
+  if (result.rowCount === 0) throw httpError(404, 'Team not found.');
   return typeof result.rows[0].settings === 'object' && result.rows[0].settings
     ? result.rows[0].settings
     : {};

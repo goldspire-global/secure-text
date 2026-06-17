@@ -3,27 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Join organization — Goldspire Secure Text</title>
+  <title>Join a team — Goldspire Secure Text</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
   <div class="layout">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="create.html">Create organization</a>
-      <a href="join.html">Join organization</a>
-      <a href="admin.html">Admin console</a>
-    </nav>
+    <nav class="nav" data-portal-nav></nav>
 
     <div class="card">
-      <h1>Join your organization</h1>
-      <p class="lede">Enter the join code from your admin. Open this page from the extension for automatic pairing, or enter your details manually.</p>
+      <h1>Join a team</h1>
+      <p class="lede">Enter the join code from your admin and the work email they registered for you.</p>
 
       <form id="join-form">
-        <div class="field">
-          <label for="api-base">Organization server URL</label>
-          <input id="api-base" name="apiBase" autocomplete="off" placeholder="https://api.yourcompany.com" />
-          <div class="hint">Pre-filled from deployment config when available.</div>
+        <div class="field" id="api-base-row" hidden>
+          <label for="api-base">Server</label>
+          <input id="api-base" name="apiBase" autocomplete="off" />
         </div>
 
         <div class="field">
@@ -34,7 +28,6 @@
         <div class="field">
           <label for="join-email">Work email</label>
           <input id="join-email" type="email" name="email" autocomplete="email" required placeholder="you@company.com" />
-          <div class="hint">Must match your organization's member list or allowed email domain.</div>
         </div>
 
         <button type="submit" class="btn" id="submit-btn">Connect extension</button>
@@ -46,7 +39,10 @@
 
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
   <script>
+    GoldspirePortalNav.renderPortalNav('join');
+
     const app = GoldspirePortalApp;
     const params = new URLSearchParams(location.search);
     const deviceId = params.get('device_id') || '';
@@ -55,9 +51,11 @@
     const form = document.getElementById('join-form');
     const submitBtn = document.getElementById('submit-btn');
     const apiBaseInput = document.getElementById('api-base');
+    const apiBaseRow = document.getElementById('api-base-row');
 
     const apiFromQuery = params.get('api') || params.get('api_base') || '';
     apiBaseInput.value = apiFromQuery || app.apiBase();
+    if (!apiBaseInput.value) apiBaseRow.hidden = false;
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -70,13 +68,14 @@
       }
       if (!apiBase) apiBase = app.apiBase();
       if (!apiBase) {
-        app.setStatus(statusEl, 'Enter a valid organization server URL.', 'error');
+        app.setStatus(statusEl, 'Server address is not configured.', 'error');
+        apiBaseRow.hidden = false;
         return;
       }
       if (!joinCode || !email) return;
 
       submitBtn.disabled = true;
-      app.setStatus(statusEl, 'Joining…');
+      app.setStatus(statusEl, 'Connecting…');
 
       const effectiveDeviceId = deviceId || crypto.randomUUID();
       try {
@@ -91,7 +90,7 @@
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(payload.message || payload.error || 'Join failed.');
+          throw new Error(payload.message || payload.error || 'Could not join this team.');
         }
 
         const runtime = typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null);
@@ -100,19 +99,19 @@
             type: 'ORG_PROVISION',
             payload,
           });
-          app.setStatus(statusEl, 'Connected. Close this tab and finish setup in the extension (enter your work email).', 'ok');
+          app.setStatus(statusEl, 'Connected. Return to the extension to finish setup.', 'ok');
         } else {
-          app.setStatus(statusEl, `Joined ${payload.orgDisplayName || 'your organization'}. Open the extension → Team → enter the same join code and your work email.`, 'ok');
+          app.setStatus(statusEl, `Connected to ${payload.orgDisplayName || 'your team'}. Open the extension, choose Team, and enter the same join code and email.`, 'ok');
         }
       } catch (err) {
-        app.setStatus(statusEl, err.message || 'Join failed.', 'error');
+        app.setStatus(statusEl, err.message || 'Could not join this team.', 'error');
       } finally {
         submitBtn.disabled = false;
       }
     });
 
-    if (!deviceId) {
-      app.setStatus(statusEl, 'Tip: use “Sign in with organization” in the extension for automatic device pairing.', 'warn');
+    if (extensionId && deviceId) {
+      app.setStatus(statusEl, 'Enter your join code and work email, then connect.', 'warn');
     }
   </script>
 </body>

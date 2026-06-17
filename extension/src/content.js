@@ -973,12 +973,12 @@
     const sharingAvailable = canUseOrgSharing(settings);
     const selectionSummary = getSelectionSummary();
     const protectionOptions = [
-      { value: 'team', label: 'Whole organization (team passphrase)', checked: settings.defaultSecureMode === 'team' },
+      { value: 'team', label: 'Team passphrase', checked: settings.defaultSecureMode === 'team' },
       ...(sharingAvailable
-        ? [{ value: 'direct', label: 'Specific people (org inbox)', checked: false }]
+        ? [{ value: 'direct', label: 'Specific people', checked: false }]
         : []),
-      { value: 'one-time', label: 'One-time code (share manually)', checked: settings.defaultSecureMode === 'one-time' },
-      { value: 'custom', label: 'Custom passphrase (this message only)', checked: settings.defaultSecureMode === 'custom' },
+      { value: 'one-time', label: 'One-time code', checked: settings.defaultSecureMode === 'one-time' },
+      { value: 'custom', label: 'Custom passphrase', checked: settings.defaultSecureMode === 'custom' },
     ];
 
     GoldspireSecureUI.showPrompt({

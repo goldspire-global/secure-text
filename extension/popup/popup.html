@@ -14,8 +14,8 @@
         <header class="popup__header popup__header--center">
           <div class="popup__logo">🔒</div>
           <div>
-            <h1>Welcome to Secure Text</h1>
-            <p id="setup-subtitle">Highlight secrets → <strong>[redacted]</strong> → send safely.</p>
+            <h1>Welcome</h1>
+            <p id="setup-subtitle">Highlight sensitive text, secure it, then send as normal.</p>
           </div>
         </header>
 
@@ -30,8 +30,8 @@
             </button>
             <button type="button" class="profile-card" data-profile="organization">
               <span class="profile-card__icon">🏢</span>
-              <strong>Team / Organization</strong>
-              <span class="profile-card__desc">Join your company — policy and team passphrase sync automatically.</span>
+              <strong>Team</strong>
+              <span class="profile-card__desc">Join your company — settings and passphrase stay in sync.</span>
             </button>
           </div>
         </div>
@@ -56,19 +56,19 @@
         <!-- Step 2b: org join -->
         <div id="setup-step-organization" class="setup-step" hidden>
           <button type="button" class="setup-back" data-back>← Back</button>
-          <h2 class="setup-step__title">Join your organization</h2>
-          <p class="card__text">Enter the join code from your admin, or sign in with your work account. Your team passphrase and settings sync automatically — including when IT rotates secrets.</p>
+          <h2 class="setup-step__title">Join your team</h2>
+          <p class="card__text">Enter the join code from your admin and the work email they registered for you.</p>
           <label class="field">
-            <span>Organization join code</span>
-            <input id="setup-org-join-code" type="text" autocomplete="off" placeholder="e.g. DEMO-N0VA7" spellcheck="false" />
+            <span>Join code</span>
+            <input id="setup-org-join-code" type="text" autocomplete="off" placeholder="From your admin" spellcheck="false" />
           </label>
           <label class="field">
             <span>Work email</span>
             <input id="setup-org-email" type="email" autocomplete="email" placeholder="you@company.com" />
           </label>
           <button type="button" id="setup-org-connect" class="btn btn--full">Connect</button>
-          <button type="button" id="setup-org-signin" class="btn btn--ghost btn--full">Sign in with organization</button>
-          <p class="hint">On a company-managed browser, IT may deploy policy automatically — no join code needed.</p>
+          <button type="button" id="setup-org-signin" class="btn btn--ghost btn--full">Open join page</button>
+          <p class="hint">On a company-managed browser, your admin may have already set this up for you.</p>
         </div>
       </section>
 
@@ -81,9 +81,8 @@
             <div class="popup__title-row">
               <h1>Secure Text</h1>
               <span id="profile-chip" class="profile-chip"></span>
-              <span id="version-label" class="version-label"></span>
             </div>
-            <p>Highlight → <strong>[redacted]</strong> → send. Click to unlock.</p>
+            <p>Highlight text, secure it, send as normal. Recipients click to unlock.</p>
           </div>
         </header>
 
@@ -162,10 +161,10 @@
             <div id="settings-organization" hidden>
               <div id="org-connected-card" class="settings-status settings-status--card" hidden>
                 <div>
-                  <span class="settings-status__label">Organization</span>
+                  <span class="settings-status__label">Team</span>
                   <span id="org-connected-name" class="settings-status__value">—</span>
                 </div>
-                <span id="org-connected-source" class="org-source-chip">Cloud</span>
+                <span id="org-connected-source" class="org-source-chip" hidden></span>
               </div>
               <label class="field" id="org-member-email-row" hidden>
                 <span>Work email (for Share with)</span>
@@ -175,7 +174,7 @@
               <div id="org-manual-settings">
                 <div class="settings-status">
                   <span class="settings-status__label">Team passphrase</span>
-                  <span id="org-passphrase-status" class="settings-status__value">Provisioned</span>
+                  <span id="org-passphrase-status" class="settings-status__value">Ready</span>
                 </div>
                 <label class="checkbox" id="passphrase-from-vault-row">
                   <input id="passphraseFromVault" name="passphraseFromVault" type="checkbox" />
@@ -184,7 +183,7 @@
                 <label class="field" id="org-passphrase-field" hidden>
                   <span>Team passphrase (encrypted on this browser)</span>
                   <input id="org-passphrase" type="password" autocomplete="current-password" />
-                  <small class="hint">For self-hosted teams without cloud or MDM only.</small>
+                  <small class="hint">Only needed for self-hosted teams without automatic setup.</small>
                 </label>
               </div>
               <button type="button" id="disconnect-org" class="btn btn--ghost btn--full btn--text" hidden>Leave organization</button>
@@ -257,7 +256,7 @@
             </details>
 
             <button type="submit" class="btn btn--full">Save</button>
-            <button type="button" id="reset-setup" class="btn btn--ghost btn--full btn--text">Switch to personal / team</button>
+            <button type="button" id="reset-setup" class="btn btn--ghost btn--full btn--text">Switch profile</button>
           </form>
 
           <div class="card" id="snoozed-sites-card" hidden>
@@ -276,7 +275,7 @@
                 <li>Highlight a secret on any page</li>
                 <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> or click <strong>Secure</strong></li>
                 <li>Text becomes <code>[redacted]</code> — send as normal</li>
-                <li>Recipient clicks <code>[redacted]</code> and enters your passphrase to unlock</li>
+                <li>Recipient clicks <code>[redacted]</code> and enters the passphrase to unlock</li>
               </ol>
             </div>
           </div>
@@ -284,21 +283,20 @@
             <div class="card">
               <h2>How it works (team)</h2>
               <ol>
-                <li>Join your organization (join code, sign-in, or IT-managed policy)</li>
-                <li>Highlight a secret → <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></li>
-                <li>Send the message — secret shows as <code>[redacted]</code></li>
-                <li>Teammate clicks <code>[redacted]</code> → one-click or passphrase prompt → secret appears</li>
+                <li>Join your team with a join code from your admin</li>
+                <li>Highlight sensitive text and press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></li>
+                <li>Send the message — secured text shows as <code>[redacted]</code></li>
+                <li>Teammates click <code>[redacted]</code> to unlock</li>
               </ol>
             </div>
             <div class="card">
-              <h2>Organization provisioning</h2>
-              <p class="card__text">Team passphrases are pushed by <strong>IT policy</strong> (managed browsers) or <strong>Goldspire cloud</strong> (join code / SSO). When IT rotates secrets, your extension updates automatically — no manual entry.</p>
-              <p class="card__text">External vault mode is optional for teams that keep the passphrase only in a password manager.</p>
+              <h2>Team setup</h2>
+              <p class="card__text">Your team passphrase and settings are delivered when you join. When your admin changes the passphrase, your extension updates automatically.</p>
             </div>
           </div>
           <div class="card">
-            <h2>Security</h2>
-            <p class="card__text">AES-256-GCM + PBKDF2 (600k iterations). All encryption runs in your browser. No secrets leave your device.</p>
+            <h2>Privacy</h2>
+            <p class="card__text">Encryption runs in your browser. Secured content is not sent to our servers.</p>
           </div>
         </div>
       </section>

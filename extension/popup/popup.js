@@ -90,7 +90,6 @@ const passphraseFromVaultInput = document.getElementById('passphraseFromVault');
 const passphraseStrength = document.getElementById('passphrase-strength');
 const resecureDelayInput = document.getElementById('resecureDelaySeconds');
 const profileChip = document.getElementById('profile-chip');
-const versionLabel = document.getElementById('version-label');
 
 const passwordLengthInput = document.getElementById('passwordLength');
 const passwordLowercaseInput = document.getElementById('passwordLowercase');
@@ -199,7 +198,7 @@ function applyProvisionChrome(settings) {
   const resetBtn = document.getElementById('reset-setup');
   const modeEl = document.getElementById('defaultSecureMode');
   const orgEmailEl = document.getElementById('orgMemberEmail');
-  const orgName = settings.orgDisplayName || managedState.orgDisplayName || 'Your organization';
+  const orgName = settings.orgDisplayName || managedState.orgDisplayName || 'Your team';
   const source = settings.orgProvisionSource === 'managed' || managedState.hasTeamPassphrase
     ? 'managed'
     : settings.orgProvisionSource;
@@ -210,7 +209,7 @@ function applyProvisionChrome(settings) {
     const nameEl = document.getElementById('org-connected-name');
     const sourceEl = document.getElementById('org-connected-source');
     if (nameEl) nameEl.textContent = orgName;
-    if (sourceEl) sourceEl.textContent = source === 'managed' ? 'IT policy' : 'Cloud';
+    if (sourceEl) sourceEl.hidden = true;
     // Leaving org is an IT/admin action in real deployments.
     if (disconnect) disconnect.hidden = true;
     if (resetBtn) resetBtn.hidden = true;
@@ -284,7 +283,6 @@ function applyProfileChrome(profile) {
   const isOrg = profile === 'organization';
   profileChip.textContent = isOrg ? 'Team' : 'Personal';
   profileChip.className = `profile-chip profile-chip--${profile}`;
-  versionLabel.textContent = `v${extensionVersion}`;
 
   document.getElementById('settings-personal').hidden = isOrg;
   document.getElementById('settings-organization').hidden = !isOrg;
@@ -306,13 +304,13 @@ function refreshOrgPassphraseStatus(fromVault, settings = {}) {
   const fieldEl = document.getElementById('org-passphrase-field');
   const vaultRow = document.getElementById('passphrase-from-vault-row');
   if (isOrgProvisioned(settings)) {
-    if (statusEl) statusEl.textContent = 'Provisioned automatically';
+    if (statusEl) statusEl.textContent = 'Set by your team';
     if (fieldEl) fieldEl.hidden = true;
     if (vaultRow) vaultRow.hidden = true;
     return;
   }
   if (statusEl) {
-    statusEl.textContent = fromVault ? 'External vault' : 'Stored on browser';
+    statusEl.textContent = fromVault ? 'From password manager' : 'Saved on this browser';
   }
   if (fieldEl) fieldEl.hidden = fromVault;
   if (vaultRow) vaultRow.hidden = false;
@@ -399,14 +397,14 @@ document.getElementById('setup-org-connect')?.addEventListener('click', async ()
     return;
   }
   if (!joinCode && !document.getElementById('setup-org-join-code')?.hidden) {
-    showStatus('Enter your organization join code.');
+    showStatus('Enter your join code.');
     return;
   }
 
   try {
     await completeOrgMembership({ joinCode, email });
   } catch (error) {
-    showStatus(error?.message || 'Could not join organization.');
+    showStatus(error?.message || 'Could not join your team.');
   }
 });
 
@@ -417,10 +415,10 @@ async function completeOrgMembership({ joinCode, email }) {
   if (needsJoin) {
     const result = await orgMessage('ORG_JOIN', { joinCode, email });
     if (!result?.ok) {
-      throw new Error(result?.error || 'Could not join organization.');
+      throw new Error(result?.error || 'Could not join your team.');
     }
   } else if (!settings.orgId) {
-    throw new Error('Enter your organization join code.');
+    throw new Error('Enter your join code.');
   }
 
   const registered = await orgMessage('ORG_REGISTER_MEMBER', { email });
@@ -431,7 +429,7 @@ async function completeOrgMembership({ joinCode, email }) {
 
   const joined = await readSyncSettings();
   await finishSetup('organization', { orgMemberEmail: email });
-  showStatus(`Joined ${joined.orgDisplayName || 'your organization'}.`);
+  showStatus(`Connected to ${joined.orgDisplayName || 'your team'}.`);
 }
 
 function showPendingOrgSetup(settings = {}) {
@@ -447,8 +445,8 @@ function showPendingOrgSetup(settings = {}) {
   const blurb = document.querySelector('#setup-step-organization .card__text');
   if (blurb) {
     blurb.textContent = settings.orgDisplayName
-      ? `Connected to ${settings.orgDisplayName}. Enter your work email to finish joining.`
-      : 'Enter your work email to finish joining your organization.';
+      ? `Connected to ${settings.orgDisplayName}. Enter your work email to finish.`
+      : 'Enter your work email to finish joining your team.';
   }
 }
 
@@ -458,21 +456,21 @@ document.getElementById('setup-org-signin')?.addEventListener('click', async () 
     showStatus(result.error);
     return;
   }
-  showStatus('Complete sign-in in the browser tab, then return here.');
+  showStatus('Finish sign-in in the browser tab, then return here.');
 });
 
 document.getElementById('disconnect-org')?.addEventListener('click', async () => {
   // Real deployments: only IT/admin can remove a device from an org.
   showStatus('Ask your admin to remove this device.');
   return;
-  if (!confirm('Leave this organization? You will need to join again to use team secure.')) return;
+  if (!confirm('Leave this team? You will need to join again to use team secure.')) return;
   const result = await orgMessage('ORG_DISCONNECT');
   if (!result?.ok) {
     showStatus(result?.error || 'Could not disconnect.');
     return;
   }
   showSetup();
-  showStatus('Left organization.');
+  showStatus('Left team.');
 });
 
 document.getElementById('reset-setup')?.addEventListener('click', async () => {
@@ -584,7 +582,7 @@ async function loadSettings() {
         : 'Shared team passphrase (16+ chars)';
     } else if (orgInput) {
       orgInput.value = '';
-      orgInput.placeholder = 'Provisioned by your organization';
+      orgInput.placeholder = 'Set by your team';
     }
   }
 
