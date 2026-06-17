@@ -32,6 +32,14 @@
     };
   }
 
+  function editableRootForRange(range) {
+    const ancestor =
+      range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement;
+    return ancestor?.closest?.('[contenteditable=""], [contenteditable="true"]') || null;
+  }
+
   function readRangeSelection() {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
@@ -39,18 +47,37 @@
     const selectedText = selection.toString();
     if (!selectedText.trim()) return null;
 
-    const range = selection.getRangeAt(0);
-    const editableRoot =
-      range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? range.commonAncestorContainer
-        : range.commonAncestorContainer.parentElement;
+    const ranges = [];
+    for (let i = 0; i < selection.rangeCount; i += 1) {
+      const range = selection.getRangeAt(i);
+      const text = range.toString();
+      if (!text.trim()) continue;
+      ranges.push({
+        range: range.cloneRange(),
+        selectedText: text,
+      });
+    }
+    if (ranges.length === 0) return null;
+
+    const editableRoot = editableRootForRange(ranges[0].range);
+
+    if (ranges.length === 1) {
+      return {
+        kind: 'range',
+        selection,
+        range: ranges[0].range,
+        selectedText: ranges[0].selectedText,
+        editableRoot,
+      };
+    }
 
     return {
-      kind: 'range',
+      kind: 'multi-range',
       selection,
-      range: range.cloneRange(),
+      ranges,
+      rangeCount: ranges.length,
       selectedText,
-      editableRoot: editableRoot?.closest?.('[contenteditable=""], [contenteditable="true"]') || null,
+      editableRoot,
     };
   }
 
@@ -96,16 +123,12 @@
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return null;
     const range = selection.getRangeAt(0);
-    const editableRoot =
-      range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? range.commonAncestorContainer
-        : range.commonAncestorContainer.parentElement;
     return {
       kind: 'range',
       selection,
       range: range.cloneRange(),
       selectedText: selection.toString() || '',
-      editableRoot: editableRoot?.closest?.('[contenteditable=""], [contenteditable="true"]') || null,
+      editableRoot: editableRootForRange(range),
     };
   }
 
@@ -121,6 +144,22 @@
           start: context.start,
           end: context.end,
           element: context.element,
+        },
+      };
+      return context;
+    }
+
+    if (context.kind === 'multi-range') {
+      cached = {
+        at: Date.now(),
+        context: {
+          kind: 'multi-range',
+          selectedText: context.selectedText,
+          rangeCount: context.rangeCount,
+          ranges: context.ranges.map((entry) => ({
+            selectedText: entry.selectedText,
+            range: entry.range.cloneRange(),
+          })),
         },
       };
       return context;
@@ -161,6 +200,26 @@
       return { kind: 'input', element, selectedText, start, end };
     }
 
+    if (stored.kind === 'multi-range') {
+      if (!Array.isArray(stored.ranges) || stored.ranges.length === 0) return null;
+      const selection = window.getSelection();
+      if (!selection) return null;
+      selection.removeAllRanges();
+      for (const entry of stored.ranges) {
+        selection.addRange(entry.range.cloneRange());
+      }
+      return {
+        kind: 'multi-range',
+        selection,
+        ranges: stored.ranges.map((entry) => ({
+          selectedText: entry.selectedText,
+          range: entry.range.cloneRange(),
+        })),
+        rangeCount: stored.rangeCount,
+        selectedText: stored.selectedText,
+      };
+    }
+
     return {
       kind: 'range',
       selectedText: stored.selectedText,
@@ -180,8 +239,37 @@
     return null;
   }
 
+  function getSelectionSummary() {
+    const context = buildSelectionContext();
+    if (!context?.selectedText?.trim()) return null;
+
+    if (context.kind === 'multi-range' && context.rangeCount > 1) {
+      return {
+        multi: true,
+        count: context.rangeCount,
+        chars: context.selectedText.length,
+        preview: context.selectedText,
+      };
+    }
+
+    const preview = context.selectedText.trim();
+    return {
+      multi: false,
+      count: 1,
+      chars: preview.length,
+      preview,
+    };
+  }
+
   function getLivePreview() {
-    return buildSelectionContext()?.selectedText?.trim() || '';
+    const summary = getSelectionSummary();
+    if (!summary) return '';
+
+    if (summary.multi) {
+      return `${summary.count} selections`;
+    }
+
+    return summary.preview;
   }
 
   function getActiveSelection(options = {}) {
@@ -233,8 +321,28 @@
     initSelectionTracking,
     clearCache,
     getLivePreview,
+    getSelectionSummary,
+    expandSecureTargets(context) {
+      if (!context) return [];
+      if (context.kind === 'multi-range') {
+        if (!Array.isArray(context.ranges) || context.ranges.length === 0) return [];
+        return context.ranges.map((entry) => ({
+          kind: 'range',
+          range: entry.range,
+          selectedText: entry.selectedText,
+          selection: context.selection,
+          editableRoot: context.editableRoot,
+        }));
+      }
+      return [context];
+    },
     getCachedPreview() {
-      return cached?.context?.selectedText?.trim() || '';
+      const stored = cached?.context;
+      if (!stored?.selectedText?.trim()) return '';
+      if (stored.kind === 'multi-range' && stored.rangeCount > 1) {
+        return `${stored.rangeCount} selections`;
+      }
+      return stored.selectedText.trim();
     },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : window);

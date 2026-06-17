@@ -1,11 +1,21 @@
 {
   "name": "goldspire-secure-text",
-  "version": "0.12.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Goldspire Secure Text browser extension + hosted unlock page",
+  "type": "module",
   "scripts": {
     "env:apply": "node scripts/apply-env.mjs",
     "package": "npm run env:apply && node extension/scripts/package.mjs && node scripts/deploy-pages.mjs",
-    "build": "npm run package"
+    "build": "npm run package",
+    "start": "node api/src/server.mjs",
+    "db:migrate": "node api/scripts/migrate.mjs",
+    "db:seed": "node api/scripts/seed.mjs",
+    "setup:cloud": "npm run db:migrate && npm run db:seed",
+    "api:dev": "node api/src/server.mjs",
+    "dev": "npm run env:apply && npm run api:dev"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
   }
 }

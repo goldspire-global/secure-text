@@ -20,8 +20,8 @@ Edit **`.env`** in the repo root:
 
 | Variable | Dev value | Production |
 |----------|-----------|------------|
-| `ORG_API_BASE` | `http://localhost:3015` | Your deployed API URL |
-| `ORG_PORTAL_URL` | `http://localhost:3015/secure-text/join` | Your join portal URL |
+| `ORG_API_BASE` | `http://localhost:3015` | e.g. `https://secure-text-api.goldspireventures.com` |
+| `ORG_PORTAL_URL` | `http://localhost:3015/secure-text/join` | e.g. `https://join-secure-text.goldspireventures.com/join.html` |
 | `BUILT_IN_PUBLIC_UNLOCK_URL` | `https://goldspire-global.github.io/secure-text/unlock.html` | Same (GitHub Pages) |
 
 ## 3. Apply config to the extension
@@ -50,29 +50,48 @@ This writes `extension/src/constants.js` from your `.env`.
 3. **Load unpacked** → select the **`extension/`** folder inside the clone
 4. After code or `.env` changes: run `env:apply` again, then click **Reload** on the extension card
 
-## 5. Cloud org join (optional — needs backend)
+## 5. Cloud org join (optional — local API in this repo)
 
-The extension can join teams via join code when a cloud API is running.
+The extension can join teams via join code when the cloud API is running. Everything lives in this repo under **`api/`** — no separate monorepo needed.
 
-### Supabase `.env` (monorepo backend)
-
-If you use the **Goldspire launch stack** monorepo for `apps/api`:
+### Supabase `.env`
 
 | Variable | Use |
 |----------|-----|
 | `DATABASE_URL` | **Transaction pooler** — port **6543** (`*.pooler.supabase.com`) |
 | `DIRECT_URL` | **Session pooler** — port **5432** (same host) — for migrations only |
+| `ORG_API_BASE` | `http://localhost:3015` (must match running API) |
 
-From monorepo root:
+From repo root:
+
+```powershell
+npm install
+npm run env:apply
+npm run setup:cloud    # migrate + seed Supabase
+npm.cmd run api:dev      # Windows — API on :3015
+```
 
 ```bash
-pnpm install
-pnpm db:migrate
-pnpm db:seed
-pnpm --filter @goldspire/api-app dev
+npm install
+npm run env:apply
+npm run setup:cloud
+npm run api:dev
 ```
 
 Demo join code after seed: **`DEMO-N0VA7`** (Nova Care org).
+
+### Share with specific people (Phase 2)
+
+After joining, each user registers a **work email** (setup wizard or Settings). The extension generates a keypair; the server only stores the **public** key and encrypted unlock deliveries.
+
+**Try it with two browser profiles:**
+
+1. Profile A — join org, email `alice@novacare.demo`
+2. Profile B — join org, email `bob@novacare.demo`
+3. Profile A — highlight text → **Secure with options…** → **Specific people (org inbox)** → `bob@novacare.demo`
+4. Profile B — open the same page, click **[redacted]** → unlocks automatically (key delivered via org inbox sync)
+
+No email service required — delivery is extension ↔ API ↔ extension.
 
 ### Quick test (extension only, no backend)
 

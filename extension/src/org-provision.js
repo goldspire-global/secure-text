@@ -124,6 +124,15 @@
     return { ok: true, orgId: payload.orgId, orgDisplayName: payload.orgDisplayName };
   }
 
+  function apiFetchError(base, error) {
+    if (error?.message === 'Failed to fetch' || error?.name === 'TypeError') {
+      return new Error(
+        `Cannot reach organization server at ${base}. Start it with npm run api:dev, then try Connect again.`,
+      );
+    }
+    return error instanceof Error ? error : new Error(String(error));
+  }
+
   async function joinWithCode(joinCode) {
     const code = String(joinCode || '').trim();
     if (!code) throw new Error('Enter your organization join code.');
@@ -134,15 +143,20 @@
     }
 
     const deviceId = await getDeviceId();
-    const response = await fetch(`${base}/v1/extension/org/join`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Device-Id': deviceId,
-        'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
-      },
-      body: JSON.stringify({ joinCode: code, deviceId }),
-    });
+    let response;
+    try {
+      response = await fetch(`${base}/v1/extension/org/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Id': deviceId,
+          'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
+        },
+        body: JSON.stringify({ joinCode: code, deviceId }),
+      });
+    } catch (error) {
+      throw apiFetchError(base, error);
+    }
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -192,15 +206,20 @@
     }
 
     const deviceId = await getDeviceId();
-    const response = await fetch(`${base}/v1/extension/org/sync`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Device-Id': deviceId,
-        'X-Policy-Version': String(settings.orgPolicyVersion || 0),
-        'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
-      },
-    });
+    let response;
+    try {
+      response = await fetch(`${base}/v1/extension/org/sync`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Device-Id': deviceId,
+          'X-Policy-Version': String(settings.orgPolicyVersion || 0),
+          'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
+        },
+      });
+    } catch (error) {
+      throw apiFetchError(base, error);
+    }
 
     if (response.status === 304) return { synced: true, unchanged: true };
     if (response.status === 401) {
@@ -257,6 +276,7 @@
 
   global.GoldspireOrgProvision = {
     getDeviceId,
+    loadProvisionToken,
     joinWithCode,
     openSignIn,
     buildSignInUrl,

@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'org-provision.js');
+importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'org-share.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -45,6 +45,14 @@ async function syncCloudOrgPolicy() {
   }
 }
 
+async function syncCloudOrgShares() {
+  try {
+    await GoldspireOrgShare.syncPendingShares();
+  } catch (error) {
+    console.warn('Goldspire Secure Text: share inbox sync failed', error);
+  }
+}
+
 function scheduleOrgSyncAlarm() {
   const minutes = GoldspireConstants.ORG_SYNC_INTERVAL_MINUTES || 360;
   if (!api.alarms?.create) return;
@@ -54,6 +62,7 @@ function scheduleOrgSyncAlarm() {
 async function bootstrapPolicies() {
   await applyEnterprisePolicy();
   await syncCloudOrgPolicy();
+  await syncCloudOrgShares();
 }
 
 function updateContextMenus({ selectedText = '', editable = false } = {}) {
@@ -227,9 +236,24 @@ createMenus();
 bootstrapPolicies();
 scheduleOrgSyncAlarm();
 
+if (api.tabs?.onActivated) {
+  api.tabs.onActivated.addListener(() => {
+    syncCloudOrgShares();
+  });
+}
+
+if (api.tabs?.onUpdated) {
+  api.tabs.onUpdated.addListener((_tabId, changeInfo) => {
+    if (changeInfo.status === 'complete') syncCloudOrgShares();
+  });
+}
+
 if (api.alarms?.onAlarm) {
   api.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'goldspire-org-sync') syncCloudOrgPolicy();
+    if (alarm.name === 'goldspire-org-sync') {
+      syncCloudOrgPolicy();
+      syncCloudOrgShares();
+    }
   });
 }
 
@@ -269,6 +293,7 @@ api.contextMenus.onClicked.addListener((info, tab) => {
 
 api.commands.onCommand.addListener((command) => {
   if (command === 'secure-selection') sendToActiveTab('SECURE_SELECTION');
+  if (command === 'secure-with-options') sendToActiveTab('SECURE_WITH_OPTIONS');
   if (command === 'unlock-selection') sendToActiveTab('UNLOCK_SELECTION');
   if (command === 'generate-password') sendToActiveTab('INSERT_GENERATED_PASSWORD');
 });
@@ -339,6 +364,41 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     GoldspireOrgProvision.disconnectOrg()
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error?.message || 'Disconnect failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'ORG_REGISTER_MEMBER') {
+    GoldspireOrgShare.registerMember(message.email, message.displayName)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Registration failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'ORG_LIST_MEMBERS') {
+    GoldspireOrgShare.listMembers(message.query || '')
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Could not load members.' }));
+    return true;
+  }
+
+  if (message?.type === 'ORG_SYNC_SHARES') {
+    GoldspireOrgShare.syncPendingShares()
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Share sync failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'ORG_LOOKUP_SHARE_KEY') {
+    GoldspireOrgShare.lookupKeyForMarker(message.fullMarker)
+      .then((key) => sendResponse({ key }))
+      .catch(() => sendResponse({ key: '' }));
+    return true;
+  }
+
+  if (message?.type === 'ORG_DELIVER_SHARE') {
+    GoldspireOrgShare.deliverSharesForMembers(message)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Share delivery failed.' }));
     return true;
   }
 

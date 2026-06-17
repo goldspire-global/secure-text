@@ -10,3 +10,4 @@ for (const file of readdirSync(unlockDeploy)) {
 }
 
 console.log(`Deployed unlock page to repo root (GitHub Pages): ${repoRoot}`);
+console.log(`Join portal is available at: ${join(repoRoot, 'join.html')}`);

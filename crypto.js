@@ -67,7 +67,9 @@
       throw new Error('Nothing to secure.');
     }
     if (plaintext.length > MAX_PLAINTEXT_LENGTH) {
-      throw new Error('Text is too long to secure inline.');
+      throw new Error(
+        `Selection is too long (max ${MAX_PLAINTEXT_LENGTH.toLocaleString()} characters). Select a smaller portion.`,
+      );
     }
   }
 
@@ -213,5 +215,7 @@
     validatePassphrase,
     validatePlaintext,
     getIterations,
+    MAX_PLAINTEXT_LENGTH,
+    MAX_PAYLOAD_BYTES,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : window);

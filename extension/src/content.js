@@ -25,6 +25,36 @@
   let remoteSelectionPreview = '';
   // Which iframe last reported the selection (top frame only)
   let remoteSelectionToken = '';
+  function orgShareMessage(type, payload = {}) {
+    return new Promise((resolve) => {
+      runtimeApi()?.sendMessage?.({ type, ...payload }, (response) => {
+        resolve(response || { ok: false });
+      });
+    });
+  }
+
+  function canUseOrgSharing(settings) {
+    return Boolean(
+      GoldspireConstants?.ORG_API_BASE
+      && settings.orgProvisionSource === 'cloud'
+      && settings.orgId,
+    );
+  }
+
+  let orgShareSyncTimer = null;
+  function scheduleOrgShareSync(settings) {
+    if (!canUseOrgSharing(settings)) return;
+    if (orgShareSyncTimer) return;
+    orgShareSyncTimer = window.setTimeout(() => {
+      orgShareSyncTimer = null;
+      orgShareMessage('ORG_SYNC_SHARES').then((result) => {
+        if (result?.failed > 0) {
+          safeToast('Some shared unlock keys could not be retrieved — re-register your work email in Settings.', 'error');
+        }
+      });
+    }, 300);
+  }
+
   const isTopFrame = window.top === window.self;
   const frameToken = Math.random().toString(36).slice(2);
   let lastContextMenuTarget = null;
@@ -43,6 +73,44 @@
 
   function getActivePreview() {
     return GoldspireSelection.getLivePreview() || remoteSelectionPreview || '';
+  }
+
+  function getSelectionSummary() {
+    return GoldspireSelection.getSelectionSummary?.() || null;
+  }
+
+  function validateSecureTargets(context) {
+    const targets = GoldspireSelection.expandSecureTargets(context);
+    if (targets.length === 0) {
+      throw new Error('Nothing to secure.');
+    }
+    const maxChars = GoldspireSecureCrypto.MAX_PLAINTEXT_LENGTH || 4096;
+
+    for (const target of targets) {
+      if (GoldspireRedacted.isRedactedToken(target.selectedText.trim())) {
+        throw new Error('Selection includes text already secured as [redacted].');
+      }
+      try {
+        GoldspireSecureCrypto.validatePlaintext(target.selectedText);
+      } catch (error) {
+        if (targets.length > 1) {
+          throw new Error(
+            `One selection is too long (max ${maxChars.toLocaleString()} characters each). Shrink it and try again.`,
+          );
+        }
+        throw error;
+      }
+    }
+
+    return targets;
+  }
+
+  function sortTargetsForReplacement(targets) {
+    if (targets.length <= 1) return targets;
+    return [...targets].sort((a, b) => {
+      if (!a.range || !b.range) return 0;
+      return b.range.compareBoundaryPoints(Range.START_TO_START, a.range);
+    });
   }
 
   function isSensitiveSelection(text) {
@@ -82,6 +150,10 @@
   }
 
   function shouldShowSelectionUi(preview, settings) {
+    const summary = getSelectionSummary();
+    if (summary?.multi && summary.count > 1) {
+      return true;
+    }
     if (!preview || preview.length < 4) return false;
     const host = location.hostname;
     if (snoozedHosts.has(host)) return false;
@@ -328,41 +400,55 @@
     return false;
   }
 
+  function formatPillHint() {
+    const summary = getSelectionSummary();
+    if (!summary) return '';
+    const maxChars = GoldspireSecureCrypto.MAX_PLAINTEXT_LENGTH || 4096;
+    if (summary.multi && summary.count > 1) {
+      return `${summary.count} selections · ${summary.chars} chars`;
+    }
+    return `${summary.chars} / ${maxChars.toLocaleString()} chars`;
+  }
+
+  function shouldShowUnlockUi(preview, settings) {
+    if (!preview || !GoldspireRedacted.isRedactedToken(preview)) return false;
+    if (settings?.showSelectionPill === false) return false;
+    const host = location.hostname;
+    if (snoozedHosts.has(host)) return false;
+    if (Date.now() < pillSnoozedUntil) return false;
+    const mode = settings?.selectionUiMode || 'smart';
+    if (mode === 'quiet') return false;
+    if (mode === 'always') return true;
+    return isComposeContext() || preview.trim() === GoldspireRedacted.LABEL;
+  }
+
   function doRefreshSelectionUi() {
     const preview = getActivePreview();
     const settings = cachedUiSettings;
     const showPill = settings?.showSelectionPill !== false;
-    const showFabs = settings?.showFloatingButton !== false;
 
     const pill = document.getElementById('goldspire-selection-status');
     if (pill) {
-      const secured = preview ? GoldspireRedacted.isRedactedToken(preview) : false;
-      // Always show pill for secured tokens (so user knows they can unlock)
-      const wantPill = showPill && (secured ? Boolean(preview) : shouldShowSelectionUi(preview, settings));
+      const secured = shouldShowUnlockUi(preview, settings);
+      const wantSecurePill = showPill && !secured && preview && shouldShowSelectionUi(preview, settings);
+      const wantUnlockPill = secured;
+      const split = pill.querySelector('.gst-pill-split');
+      const unlockBtn = pill.querySelector('.gst-pill-unlock');
+      const hint = pill.querySelector('.gst-pill-hint');
 
-      if (!wantPill || !preview) {
+      if (!wantSecurePill && !wantUnlockPill) {
         pill.classList.remove('gst-selection-status--visible');
+      } else if (wantUnlockPill) {
+        split?.setAttribute('hidden', '');
+        unlockBtn?.removeAttribute('hidden');
+        if (hint) hint.textContent = '';
+        pill.classList.add('gst-selection-status--visible');
       } else {
-        pill.querySelector('.gst-pill-text').textContent = secured
-          ? 'Secured [redacted] selected — click to unlock'
-          : `Ready to secure: "${preview.slice(0, 28)}${preview.length > 28 ? '…' : ''}"`;
+        split?.removeAttribute('hidden');
+        unlockBtn?.setAttribute('hidden', '');
+        if (hint) hint.textContent = formatPillHint();
         pill.classList.add('gst-selection-status--visible');
       }
-    }
-
-    const wrap = document.getElementById('goldspire-secure-text-fabs');
-    if (wrap) {
-      const secured = preview ? GoldspireRedacted.isRedactedToken(preview) : false;
-      const wantFabs = showFabs && (secured ? true : shouldShowSelectionUi(preview, settings));
-
-      wrap.querySelector('#goldspire-secure-fab')?.classList.toggle(
-        'gst-fab--visible',
-        Boolean(wantFabs && preview && !secured),
-      );
-      wrap.querySelector('#goldspire-unlock-fab')?.classList.toggle(
-        'gst-fab--visible',
-        Boolean(secured || (wantFabs && preview === GoldspireRedacted.LABEL)),
-      );
     }
   }
 
@@ -487,7 +573,14 @@
     pill.id = 'goldspire-selection-status';
     pill.className = 'gst-selection-status';
     pill.innerHTML = `
-      <span class="gst-pill-text"></span>
+      <div class="gst-pill">
+        <div class="gst-pill-split">
+          <button type="button" class="gst-pill-half gst-pill-half--quick" title="Quick secure (team passphrase)">Quick</button>
+          <button type="button" class="gst-pill-half gst-pill-half--options" title="Share with specific people or choose protection">Options</button>
+        </div>
+        <button type="button" class="gst-pill-unlock" hidden title="Unlock [redacted]">Unlock</button>
+        <span class="gst-pill-hint"></span>
+      </div>
       <button type="button" class="gst-pill-snooze" title="Don't show on this site">✕</button>
     `;
     document.documentElement.appendChild(pill);
@@ -495,17 +588,32 @@
     pill.querySelector('.gst-pill-snooze')?.addEventListener('click', (e) => {
       e.stopPropagation();
       pill.classList.remove('gst-selection-status--visible');
-      // Snooze for current page-load session only; right-click shows a site-snooze option
       pillSnoozedUntil = Date.now() + 30 * 60 * 1000;
     });
 
-    // Right-click pill dismiss → snooze for this site permanently
     pill.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       runSafe(snoozeCurrentSite().then(() => {
         pill.classList.remove('gst-selection-status--visible');
         safeToast(`Selection hints hidden on ${location.hostname}. Re-enable in extension settings.`, 'info');
       }));
+    });
+
+    pill.querySelector('.gst-pill-half--quick')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!getActivePreview()) return;
+      runSafe(handleCommand({ type: 'SECURE_SELECTION' }));
+    });
+
+    pill.querySelector('.gst-pill-half--options')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!getActivePreview()) return;
+      runSafe(handleCommand({ type: 'SECURE_WITH_OPTIONS', showOptions: true }));
+    });
+
+    pill.querySelector('.gst-pill-unlock')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      runSafe(handleCommand({ type: 'UNLOCK_SELECTION' }));
     });
 
     document.addEventListener('selectionchange', refreshSelectionUi);
@@ -567,7 +675,7 @@
     });
   }
 
-  async function executeSecure(context, settings, { mode, unlockSecret, copyLink }) {
+  async function executeSecure(context, settings, { mode, unlockSecret, copyLink, silentOneTime = false, skipClipboard = false, silentBatch = false }) {
     const profile = getProfile(settings);
     const isOneTime = mode === 'one-time';
     const version = isOneTime ? '2' : '1';
@@ -593,7 +701,7 @@
     await recordHistory({ mode: isOneTime ? 'one-time' : mode });
     await auditEvent('secure', settings, isOneTime ? 'one-time' : mode);
 
-    if (isOneTime) {
+    if (isOneTime && !silentOneTime && !skipClipboard) {
       const unlockLink = GoldspireSecureMarker.buildUnlockLink(fullMarker);
       if (settings.copyOneTimeCodeAutomatically) await copyWithAutoClear(unlockSecret, settings);
 
@@ -610,7 +718,7 @@
       });
 
       if (copyLink && unlockLink) await copyWithAutoClear(unlockLink, settings);
-    } else {
+    } else if (!isOneTime && !silentBatch) {
       GoldspireSecureUI.showToast('Secured as [redacted]. Send as normal.', 'success');
     }
 
@@ -621,12 +729,122 @@
     GoldspireSecrets.clearMemoryString(unlockSecret);
     refreshSelectionUi();
     detectorController?.scheduleScan();
+    return { fullMarker, unlockSecret, mode: isOneTime ? 'one-time' : mode };
+  }
+
+  async function executeSecureBatch(context, settings, options = {}) {
+    const targets = sortTargetsForReplacement(validateSecureTargets(context));
+    const multi = targets.length > 1;
+    const results = [];
+
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      results.push(
+        await executeSecure(target, settings, {
+          ...options,
+          silentBatch: multi,
+          silentOneTime: options.silentOneTime || (multi && index < targets.length - 1),
+          skipClipboard: options.skipClipboard || (multi && index < targets.length - 1),
+        }),
+      );
+    }
+
+    if (multi && options.mode !== 'one-time') {
+      GoldspireSecureUI.showToast(`Secured ${targets.length} selections as [redacted].`, 'success');
+    }
+
+    GoldspireSelection.clearCache();
+    return results.length === 1 ? results[0] : results;
   }
 
   async function unlockMarker(marker, options = {}) {
     const settings = await getSettings();
     const profile = getProfile(settings);
     const isOneTime = marker.mode === 'one-time' || marker.version === '2';
+    const fullMarker = marker.fullMarker || marker.full || '';
+
+    async function runUnlock(secret) {
+      if (!secret) throw new Error('Passphrase is required.');
+
+      if (await GoldspireBurnList?.isBurned?.(fullMarker)) {
+        throw new Error('This one-time message was already unlocked and cannot be read again.');
+      }
+
+      const rateLimit = await GoldspireBurnList?.checkRateLimit?.(fullMarker);
+      if (rateLimit && !rateLimit.allowed) {
+        throw new Error(rateLimit.message);
+      }
+
+      let plaintext;
+      let envelopeMeta;
+      try {
+        const result = await GoldspireSecureCrypto.decryptEnvelope(marker.payload, secret, {
+          profile,
+          mode: isOneTime ? 'one-time' : 'team',
+        });
+        plaintext = result.text;
+        envelopeMeta = result.envelope;
+        await GoldspireBurnList?.clearFailures?.(fullMarker);
+      } catch (error) {
+        await GoldspireBurnList?.recordFailure?.(fullMarker);
+        throw new Error(
+          error instanceof Error && (
+            error.message.includes('at least')
+            || error.message.includes('expired')
+            || error.message.includes('already unlocked')
+          )
+            ? error.message
+            : 'Wrong passphrase or corrupted text.',
+        );
+      }
+
+      if (isOneTime || envelopeMeta?.burn) {
+        await GoldspireBurnList?.burn?.(fullMarker);
+      }
+
+      await auditEvent('unlock', settings, isOneTime ? 'one-time' : marker.mode || 'team');
+
+      if (!isOneTime && settings.passphraseFromVault) {
+        await GoldspireSecrets.cacheSessionTeamPassphrase?.(secret);
+      }
+
+      let resecureTarget = null;
+
+      if (options.replaceNode) {
+        const textNode = document.createTextNode(plaintext);
+        options.replaceNode.replaceWith(textNode);
+        resecureTarget = { kind: 'node', node: textNode };
+      } else if (options.context) {
+        resecureTarget = replaceRedactedWithPlaintext(options.context, marker, plaintext);
+      }
+
+      maybeScheduleResecure({ settings, marker, secret, plaintext, target: resecureTarget });
+
+      if (options.copyResult !== false) {
+        await copyWithAutoClear(plaintext, settings);
+        GoldspireSecureUI.showToast('Unlocked and copied.', 'success');
+      } else {
+        GoldspireSecureUI.showToast('Unlocked on this page.', 'success');
+      }
+
+      refreshSelectionUi();
+      return plaintext;
+    }
+
+    if (isOneTime && canUseOrgSharing(settings)) {
+      await orgShareMessage('ORG_SYNC_SHARES');
+      const lookup = await orgShareMessage('ORG_LOOKUP_SHARE_KEY', { fullMarker });
+      if (lookup?.key) {
+        try {
+          const plaintext = await runUnlock(lookup.key.trim());
+          GoldspireSecureUI.showToast('Unlocked via org inbox.', 'success');
+          return plaintext;
+        } catch {
+          // Fall back to manual code entry.
+        }
+      }
+    }
+
     const prefill =
       !settings.passphraseFromVault
       && !isOneTime
@@ -661,76 +879,7 @@
       const useCompactTeamForm = !isOneTime && settings.passphraseFromVault;
 
       const handleUnlock = async ({ passphrase }) => {
-        const secret = passphrase?.trim();
-        if (!secret) throw new Error('Passphrase is required.');
-
-        const fullMarker = marker.fullMarker || marker.full || '';
-        if (await GoldspireBurnList?.isBurned?.(fullMarker)) {
-          throw new Error('This one-time message was already unlocked and cannot be read again.');
-        }
-
-        const rateLimit = await GoldspireBurnList?.checkRateLimit?.(fullMarker);
-        if (rateLimit && !rateLimit.allowed) {
-          throw new Error(rateLimit.message);
-        }
-
-        let plaintext;
-        let envelopeMeta;
-        try {
-          const result = await GoldspireSecureCrypto.decryptEnvelope(marker.payload, secret, {
-            profile,
-            mode: isOneTime ? 'one-time' : 'team',
-          });
-          plaintext = result.text;
-          envelopeMeta = result.envelope;
-          await GoldspireBurnList?.clearFailures?.(fullMarker);
-        } catch (error) {
-          await GoldspireBurnList?.recordFailure?.(fullMarker);
-          throw new Error(
-            error instanceof Error && (
-              error.message.includes('at least')
-              || error.message.includes('expired')
-              || error.message.includes('already unlocked')
-            )
-              ? error.message
-              : 'Wrong passphrase or corrupted text.',
-          );
-        }
-
-        if (isOneTime || envelopeMeta?.burn) {
-          await GoldspireBurnList?.burn?.(fullMarker);
-        }
-
-        await auditEvent('unlock', settings, isOneTime ? 'one-time' : marker.mode || 'team');
-
-        if (!isOneTime && settings.passphraseFromVault) {
-          await GoldspireSecrets.cacheSessionTeamPassphrase?.(secret);
-        }
-
-        let resecureTarget = null;
-
-        if (options.replaceNode) {
-          const textNode = document.createTextNode(plaintext);
-          options.replaceNode.replaceWith(textNode);
-          resecureTarget = { kind: 'node', node: textNode };
-        } else if (options.context) {
-          resecureTarget = replaceRedactedWithPlaintext(options.context, marker, plaintext);
-        }
-
-        maybeScheduleResecure({ settings, marker, secret, plaintext, target: resecureTarget });
-
-        if (options.copyResult !== false) {
-          await copyWithAutoClear(plaintext, settings);
-          GoldspireSecureUI.showResultDialog({
-            title: 'Unlocked',
-            lines: [{ label: 'Secret', value: plaintext }],
-            copyItems: [{ label: 'Copy', value: plaintext }],
-          });
-        } else {
-          GoldspireSecureUI.showToast('Unlocked on this page.', 'success');
-        }
-
-        refreshSelectionUi();
+        const plaintext = await runUnlock(passphrase?.trim());
         resolve(plaintext);
       };
 
@@ -765,8 +914,10 @@
       return;
     }
 
-    if (GoldspireRedacted.isRedactedToken(context.selectedText.trim())) {
-      GoldspireSecureUI.showToast('Already secured as [redacted].', 'error');
+    try {
+      validateSecureTargets(context);
+    } catch (error) {
+      GoldspireSecureUI.showToast(error instanceof Error ? error.message : 'Selection cannot be secured.', 'error');
       return;
     }
 
@@ -782,7 +933,7 @@
       (settings.passphraseFromVault || settings.useSavedPassphrase !== false);
 
     if (canQuickSecure) {
-      await executeSecure(context, settings, {
+      await executeSecureBatch(context, settings, {
         mode: 'team',
         unlockSecret: teamPassphrase,
         copyLink: false,
@@ -800,7 +951,7 @@
         onSubmit: async ({ passphrase }) => {
           const unlockSecret = passphrase?.trim();
           if (!unlockSecret) throw new Error('Passphrase is required.');
-          await executeSecure(context, settings, {
+          await executeSecureBatch(context, settings, {
             mode: 'team',
             unlockSecret,
             copyLink: false,
@@ -810,19 +961,33 @@
       return;
     }
 
+    const sharingAvailable = canUseOrgSharing(settings);
+    const selectionSummary = getSelectionSummary();
+    const protectionOptions = [
+      { value: 'team', label: 'Whole organization (team passphrase)', checked: settings.defaultSecureMode === 'team' },
+      ...(sharingAvailable
+        ? [{ value: 'direct', label: 'Specific people (org inbox)', checked: false }]
+        : []),
+      { value: 'one-time', label: 'One-time code (share manually)', checked: settings.defaultSecureMode === 'one-time' },
+      { value: 'custom', label: 'Custom passphrase (this message only)', checked: settings.defaultSecureMode === 'custom' },
+    ];
+
     GoldspireSecureUI.showPrompt({
-      title: 'Secure selection',
+      title: selectionSummary?.multi ? `Secure ${selectionSummary.count} selections` : 'Secure selection',
       submitLabel: 'Secure as [redacted]',
       fields: [
         {
           type: 'radio-group',
           name: 'mode',
           label: 'Protection',
-          options: [
-            { value: 'team', label: 'Team passphrase', checked: settings.defaultSecureMode === 'team' },
-            { value: 'one-time', label: 'One-time code (share separately)', checked: settings.defaultSecureMode === 'one-time' },
-            { value: 'custom', label: 'Custom passphrase (this message only)', checked: settings.defaultSecureMode === 'custom' },
-          ],
+          options: protectionOptions,
+        },
+        {
+          name: 'recipients',
+          label: 'Recipient work emails',
+          type: 'text',
+          placeholder: sharingAvailable ? 'colleague@company.com, teammate@company.com' : '',
+          hidden: !sharingAvailable,
         },
         {
           name: 'passphrase',
@@ -842,8 +1007,9 @@
           checked: false,
         },
       ],
-      onSubmit: async ({ mode, passphrase, customPassphrase, copyLink }) => {
-        const isOneTime = mode === 'one-time';
+      onSubmit: async ({ mode, passphrase, customPassphrase, copyLink, recipients }) => {
+        const isDirect = mode === 'direct';
+        const isOneTime = mode === 'one-time' || isDirect;
         const unlockSecret = isOneTime
           ? GoldspireSecureCrypto.generateOneTimeCode(16)
           : mode === 'custom'
@@ -852,11 +1018,60 @@
 
         if (!unlockSecret) throw new Error('Passphrase is required.');
 
+        if (isDirect) {
+          const recipientEmails = String(recipients || '')
+            .split(/[,;\s]+/)
+            .map((entry) => entry.trim().toLowerCase())
+            .filter(Boolean);
+          if (recipientEmails.length === 0) {
+            throw new Error('Enter at least one colleague work email.');
+          }
+
+          const securedResults = await executeSecureBatch(context, settings, {
+            mode: 'one-time',
+            unlockSecret,
+            copyLink: false,
+            silentOneTime: true,
+            skipClipboard: true,
+          });
+
+          const securedList = Array.isArray(securedResults) ? securedResults : [securedResults];
+          const deliveredLines = [];
+
+          for (const secured of securedList) {
+            const delivered = await orgShareMessage('ORG_DELIVER_SHARE', {
+              recipientEmails,
+              unlockSecret: secured.unlockSecret,
+              fullMarker: secured.fullMarker,
+            });
+
+            if (delivered?.error) throw new Error(delivered.error);
+
+            for (const entry of delivered.shares || recipientEmails) {
+              deliveredLines.push({
+                label: 'Delivered to',
+                value: entry.recipientEmail || entry,
+              });
+            }
+          }
+
+          GoldspireSecureUI.showResultDialog({
+            title: securedList.length > 1
+              ? `Secured ${securedList.length} selections for specific people`
+              : 'Secured for specific people',
+            lines: [
+              { label: 'Note', value: 'Unlock key delivered to org inbox — not copied to clipboard.' },
+              ...deliveredLines,
+            ],
+          });
+          return;
+        }
+
         if (!isOneTime && settings.enforceStrongPassphrase !== false && mode !== 'custom') {
           GoldspirePassphrasePolicy?.assertPassphrase?.(unlockSecret, profile, { mode });
         }
 
-        await executeSecure(context, settings, {
+        await executeSecureBatch(context, settings, {
           mode: isOneTime ? 'one-time' : mode,
           unlockSecret,
           copyLink,
@@ -1034,25 +1249,7 @@
   window.__goldspireHandleCommand = handleCommand;
 
   function ensureFloatingButtons() {
-    if (document.getElementById('goldspire-secure-text-fabs')) return;
-
-    getSettings().then((settings) => {
-      cachedUiSettings = settings;
-      // Always inject the wrapper — visibility is controlled per-button by refreshSelectionUi
-      const wrap = document.createElement('div');
-      wrap.id = 'goldspire-secure-text-fabs';
-      wrap.className = 'gst-fabs';
-      wrap.innerHTML = `
-        <button type="button" id="goldspire-secure-fab" class="gst-fab">Secure</button>
-        <button type="button" id="goldspire-unlock-fab" class="gst-fab gst-fab--unlock">Unlock</button>
-      `;
-      document.documentElement.appendChild(wrap);
-
-      // Route through handleCommand so the action can be forwarded to the correct iframe.
-      wrap.querySelector('#goldspire-secure-fab')?.addEventListener('click', () => runSafe(handleCommand({ type: 'SECURE_SELECTION' })));
-      wrap.querySelector('#goldspire-unlock-fab')?.addEventListener('click', () => runSafe(handleCommand({ type: 'UNLOCK_SELECTION' })));
-      refreshSelectionUi();
-    }).catch(() => {});
+    // Secure / options actions live in the bottom split pill; no side FABs needed.
   }
 
   window.addEventListener('message', (event) => {
@@ -1095,6 +1292,11 @@
     runSafe(handleCommand(event.data));
   });
 
+  if (!globalThis.GoldspireSelection?.initSelectionTracking) {
+    console.error('[Goldspire Secure Text] selection module failed to load — reload the extension.');
+    return;
+  }
+
   GoldspireSelection.initSelectionTracking();
 
   document.addEventListener(
@@ -1114,10 +1316,23 @@
 
   // Pre-load snoozed hosts and cache settings for synchronous UI decisions
   runSafe(loadSnoozedHosts());
-  getSettings().then((s) => { cachedUiSettings = s; }).catch(() => {});
+  getSettings().then((s) => {
+    cachedUiSettings = s;
+    scheduleOrgShareSync(s);
+  }).catch(() => {});
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && cachedUiSettings) {
+      scheduleOrgShareSync(cachedUiSettings);
+    }
+  });
 
   detectorController = GoldspireSecureDetector.initDetector(getSettings, (marker, node) => {
-    runSafe(unlockMarker(marker, { replaceNode: node, copyResult: true }));
+    runSafe((async () => {
+      const settings = await getSettings();
+      scheduleOrgShareSync(settings);
+      await unlockMarker(marker, { replaceNode: node, copyResult: false });
+    })());
   });
 
   try {

@@ -97,6 +97,7 @@ body {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .version-label {
@@ -104,8 +105,9 @@ body {
   color: #6b7280;
   font-weight: 600;
   white-space: nowrap;
-  align-self: flex-start;
-  margin-top: 4px;
+  margin-left: auto;
+  line-height: 1;
+  align-self: center;
 }
 
 .profile-chip {

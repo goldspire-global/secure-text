@@ -142,17 +142,23 @@
 
 .gst-fab {
   all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
   transition: opacity 0.15s ease, transform 0.15s ease;
   border-radius: 999px;
   padding: 10px 14px;
+  min-height: 36px;
   background: linear-gradient(135deg, #d4a017, #f0c14b);
   color: #17130a;
   font: 700 12px/1 "Segoe UI", system-ui, sans-serif;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   cursor: pointer;
+  text-align: center;
 }
 
 .gst-fabs {
@@ -174,6 +180,12 @@
 .gst-fab--unlock {
   background: linear-gradient(135deg, #334155, #475569);
   color: #f8fafc;
+}
+
+.gst-fab--options {
+  background: linear-gradient(135deg, #1e3a5f, #2563eb);
+  color: #f8fafc;
+  font-weight: 600;
 }
 
 .gst-dialog--wide {
@@ -302,48 +314,159 @@
 
 .gst-selection-status {
   position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%) translateY(12px);
-  z-index: 2147483644;
+  right: 18px;
+  top: 50%;
+  left: auto;
+  bottom: auto;
+  transform: translateY(calc(-50% + 8px));
+  transform-origin: right center;
+  z-index: 2147483645;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease, transform 0.15s ease;
-  max-width: min(480px, calc(100vw - 32px));
-  padding: 10px 10px 10px 16px;
-  border-radius: 999px;
-  background: #111827;
-  border: 1px solid rgba(212, 160, 23, 0.4);
-  color: #f6d57a;
-  font: 600 12px/1.4 "Segoe UI", system-ui, sans-serif;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .gst-selection-status--visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(-50%);
 }
 
-.gst-pill-text {
-  flex: 1;
+.gst-pill {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gst-pill-split {
+  display: flex;
+  width: 151px;
+  height: 36px;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.gst-pill-split[hidden] {
+  display: none !important;
+}
+
+.gst-pill-half {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1 1 50%;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 11px/1 "Segoe UI", system-ui, sans-serif;
+  transition: filter 0.12s ease;
+  user-select: none;
+}
+
+.gst-pill-half:hover {
+  filter: brightness(1.08);
+}
+
+.gst-pill-half:active {
+  filter: brightness(0.94);
+}
+
+.gst-pill-half--quick {
+  background: linear-gradient(180deg, #f0c14b 0%, #d4a017 100%);
+  color: #17130a;
+}
+
+.gst-pill-half--options {
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #f8fafc;
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+.gst-pill-unlock {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 151px;
+  height: 36px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #64748b 0%, #334155 100%);
+  color: #f8fafc;
+  font: 700 11px/1 "Segoe UI", system-ui, sans-serif;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+  transition: filter 0.12s ease;
+}
+
+.gst-pill-unlock[hidden] {
+  display: none !important;
+}
+
+.gst-pill-unlock:hover {
+  filter: brightness(1.08);
+}
+
+.gst-pill-unlock:active {
+  filter: brightness(0.94);
+}
+
+.gst-pill-hint {
+  display: block;
+  max-width: 151px;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #94a3b8;
+  font: 500 9px/1.2 "Segoe UI", system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.gst-pill-hint:not(:empty) {
+  opacity: 1;
 }
 
 .gst-pill-snooze {
   all: unset;
   cursor: pointer;
-  opacity: 0.55;
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #94a3b8;
+  font-size: 10px;
   line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
   flex-shrink: 0;
-  transition: opacity 0.1s;
+  transition: opacity 0.1s, background 0.1s;
 }
 
 .gst-pill-snooze:hover {
   opacity: 1;
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
 }

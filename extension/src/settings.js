@@ -28,6 +28,7 @@
     orgDisplayName: '',
     orgProvisionSource: '',
     orgPolicyVersion: 0,
+    orgMemberEmail: '',
   };
 
   function migrate(settings) {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Goldspire Secure Text",
-  "version": "0.12.0",
+  "version": "1.0.0",
   "description": "Highlight text → [redacted]. Recipients unlock on the same page.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
@@ -90,6 +90,10 @@
     "generate-password": {
       "suggested_key": { "default": "Ctrl+Shift+G", "mac": "Command+Shift+G" },
       "description": "Generate and insert a password"
+    },
+    "secure-with-options": {
+      "suggested_key": { "default": "Ctrl+Shift+O", "mac": "Command+Shift+O" },
+      "description": "Secure selection with options (share with specific people)"
     }
   }
 }

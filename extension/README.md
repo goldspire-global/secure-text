@@ -63,7 +63,7 @@ Read [SECURITY.md](SECURITY.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 
 **Organization provisioning:** [docs/ORG_PROVISIONING.md](docs/ORG_PROVISIONING.md) — MDM vs cloud join.
 
-**Cloud API (monorepo):** `apps/api` on port **3015** — run `pnpm --filter @goldspire/api-app dev` after `pnpm db:migrate && pnpm db:seed`.
+**Cloud API (this repo):** `api/` on port **3015** — run `npm run setup:cloud && npm run api:dev` from the repo root after configuring Supabase in `.env`.
 
 ## Package & deploy unlock site
 

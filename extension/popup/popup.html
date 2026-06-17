@@ -60,7 +60,11 @@
           <p class="card__text">Enter the join code from your admin, or sign in with your work account. Your team passphrase and settings sync automatically — including when IT rotates secrets.</p>
           <label class="field">
             <span>Organization join code</span>
-            <input id="setup-org-join-code" type="text" autocomplete="off" placeholder="e.g. ACME-7K2M" />
+            <input id="setup-org-join-code" type="text" autocomplete="off" placeholder="e.g. DEMO-N0VA7" spellcheck="false" />
+          </label>
+          <label class="field">
+            <span>Work email</span>
+            <input id="setup-org-email" type="email" autocomplete="email" placeholder="you@company.com" />
           </label>
           <button type="button" id="setup-org-connect" class="btn btn--full">Connect</button>
           <button type="button" id="setup-org-signin" class="btn btn--ghost btn--full">Sign in with organization</button>
@@ -77,10 +81,10 @@
             <div class="popup__title-row">
               <h1>Secure Text</h1>
               <span id="profile-chip" class="profile-chip"></span>
+              <span id="version-label" class="version-label"></span>
             </div>
             <p>Highlight → <strong>[redacted]</strong> → send. Click to unlock.</p>
           </div>
-          <span id="version-label" class="version-label"></span>
         </header>
 
         <nav class="tabs">
@@ -95,14 +99,37 @@
             <p id="selection-preview" class="selection-preview">Highlight text on the page.</p>
             <div class="row row--stack">
               <button type="button" id="action-secure" class="btn">Secure selection</button>
+              <button type="button" id="action-secure-options" class="btn btn--ghost">Secure with options…</button>
               <button type="button" id="action-unlock" class="btn btn--ghost">Unlock [redacted]</button>
             </div>
-            <p class="selection-tip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> to secure · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd> to unlock</p>
+            <p class="selection-tip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> Quick · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> Options · Outlook: use the pill on the right</p>
           </div>
 
           <details class="card card--collapsible">
             <summary>Password generator</summary>
             <output id="generated-password" class="password-output">—</output>
+            <div class="row row--wrap row--gap-sm">
+              <label class="field field--inline">
+                <span>Length</span>
+                <input id="passwordLength" type="number" min="8" max="64" step="1" value="16" />
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordLowercase" type="checkbox" checked />
+                <span>a-z</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordUppercase" type="checkbox" checked />
+                <span>A-Z</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordDigits" type="checkbox" checked />
+                <span>0-9</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordSymbols" type="checkbox" checked />
+                <span>Symbols</span>
+              </label>
+            </div>
             <div class="row">
               <button type="button" id="generate-password" class="btn btn--ghost">Generate</button>
               <button type="button" id="copy-password" class="btn btn--ghost">Copy</button>
@@ -141,6 +168,11 @@
                 </div>
                 <span id="org-connected-source" class="org-source-chip">Cloud</span>
               </div>
+              <label class="field" id="org-member-email-row" hidden>
+                <span>Work email (for Share with)</span>
+                <input id="orgMemberEmail" name="orgMemberEmail" type="email" autocomplete="email" placeholder="you@company.com" />
+                <small class="hint">Used to deliver secured messages to you via the org inbox.</small>
+              </label>
               <div id="org-manual-settings">
                 <div class="settings-status">
                   <span class="settings-status__label">Team passphrase</span>

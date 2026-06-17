@@ -1,3 +1,84 @@
+# Threat model (v1)
+
+This document summarizes how **Goldspire Secure Text** protects secrets, what the server can/can’t see, and what assumptions security reviewers should validate.
+
+## Goals
+
+- Protect secrets typed into email / web apps from accidental exposure in tickets, chats, emails, screenshots, and forwards.
+- Ensure the **server cannot decrypt user secrets**.
+- Allow organizations to deliver unlock capability to specific recipients (**org inbox**) without sending plaintext to the server.
+
+## Non-goals
+
+- Defend against a fully compromised endpoint (malware / keylogger / hostile browser profile).
+- Provide message integrity for arbitrary edited text once it leaves the editor (email clients may mutate HTML).
+- Replace DLP / CASB controls; this is a client-side encryption UX layer.
+
+## Data flow summary
+
+### Secure (team/personal)
+
+1. User highlights text.
+2. Extension derives a key from the passphrase (PBKDF2) and encrypts plaintext (AES‑GCM).
+3. The email/page receives a `[redacted]` marker containing ciphertext.
+4. Plaintext is not sent to any server.
+
+### Unlock
+
+1. Recipient clicks `[redacted]`.
+2. Extension decrypts locally using passphrase (or org inbox key for direct shares).
+3. Plaintext is written inline in the page editor.
+
+## What the server can see
+
+When using the optional org API (`api/` in this repo):
+
+- **Join code** and device id during join.
+- **Public key material** for members (for org inbox delivery).
+- **Wrapped unlock keys** (ciphertext), never plaintext.
+- Metadata: timestamps, org id, device id.
+
+The server **does not** receive:
+
+- Team passphrase in normal operation (except demo seed/dev).
+- Any plaintext secrets from secured text.
+- Decrypted content during unlock.
+
+## No “hardcoding” / backdoors
+
+- There is **no built-in unlock key** or universal passphrase.
+- Demo values (join codes, demo passphrase) live only in **seed scripts** for local development.
+- Production deployments should not ship seed data.
+
+## Key risks + mitigations
+
+### 1) Malicious webpage attempting to call the org API
+
+- Mitigation: API CORS is **allow-listed** (`CORS_ALLOW_ORIGINS`), not `*`.
+- Mitigation: Bearer tokens are validated server-side and tied to device/org.
+
+### 2) Token theft from compromised browser profile
+
+- If an attacker can read extension storage, they may impersonate a device.
+- This is out of scope for endpoint-compromise; mitigate with enterprise controls (MDM, OS hardening, least privilege, browser profile policies).
+
+### 3) Email client mutation
+
+- Some clients modify HTML/copy/paste. The extension uses robust markers and hashes payload-only for share lookups.
+
+### 4) Abuse of “keep unlocked” time window
+
+- Mitigation: org profile enforces a **hard max relock delay** in UI.
+
+## Recommended enterprise checks
+
+- Independent review of:
+  - `extension/src/crypto.js`
+  - `extension/src/secrets.js`
+  - `api/src/auth.mjs`, `api/src/org-service.mjs`, `api/src/share-service.mjs`
+- Verify server logs do not include secrets.
+- Distribute signed builds (Chrome Web Store or enterprise policy).
+
 # Threat model — Goldspire Secure Text
 
 This document explains what the extension **does** and **does not** protect against. Share it with your team before rolling out.

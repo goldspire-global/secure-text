@@ -84,13 +84,20 @@ chrome.runtime.sendMessage(extensionId, {
 
 Configure `ORG_API_BASE` and `ORG_PORTAL_URL` in `src/constants.js` when deploying (defaults to `http://localhost:3015` for local dev).
 
+### Production example (Goldspire Ventures)
+
+- `ORG_API_BASE`: `https://secure-text-api.goldspireventures.com`
+- `ORG_PORTAL_URL`: `https://join-secure-text.goldspireventures.com/join.html`
+- API env `CORS_ALLOW_ORIGINS`: `https://join-secure-text.goldspireventures.com`
+
 ## Local dev
 
 ```bash
-# From monorepo root
-pnpm db:migrate
-pnpm db:seed
-pnpm --filter @goldspire/api-app dev
+# From this repo root (see SETUP.md)
+npm install
+npm run env:apply
+npm run setup:cloud
+npm run api:dev
 ```
 
 Demo join code (after seed): **`DEMO-N0VA7`** (Nova Care org).

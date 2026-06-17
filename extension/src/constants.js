@@ -16,9 +16,9 @@
     /** Suggested shared vault item title for IT documentation. */
     TEAM_VAULT_ITEM_LABEL: 'Goldspire Team Passphrase',
     /** Cloud org API base (no trailing slash). Empty = cloud join disabled. */
-    ORG_API_BASE: "http://localhost:3015",
+    ORG_API_BASE: "https://secure-text-api.goldspireventures.com",
     /** Organization sign-in / join portal. */
-    ORG_PORTAL_URL: "http://localhost:3015/secure-text/join",
+    ORG_PORTAL_URL: "https://join-secure-text.goldspireventures.com/join.html",
     /** Alarm interval for cloud policy sync (minutes). */
     ORG_SYNC_INTERVAL_MINUTES: 360,
   };

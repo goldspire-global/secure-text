@@ -47,6 +47,7 @@ const defaults = {
   orgDisplayName: '',
   orgProvisionSource: '',
   orgPolicyVersion: 0,
+  orgMemberEmail: '',
 };
 
 const SETTINGS_KEYS = [
@@ -64,12 +65,17 @@ const SETTINGS_KEYS = [
   'copyOneTimeCodeAutomatically',
   'clipboardClearSeconds',
   'passwordLength',
+  'passwordLowercase',
+  'passwordUppercase',
+  'passwordDigits',
+  'passwordSymbols',
   'enforceStrongPassphrase',
   'setupComplete',
   'orgId',
   'orgDisplayName',
   'orgProvisionSource',
   'orgPolicyVersion',
+  'orgMemberEmail',
 ];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
@@ -85,6 +91,12 @@ const passphraseStrength = document.getElementById('passphrase-strength');
 const resecureDelayInput = document.getElementById('resecureDelaySeconds');
 const profileChip = document.getElementById('profile-chip');
 const versionLabel = document.getElementById('version-label');
+
+const passwordLengthInput = document.getElementById('passwordLength');
+const passwordLowercaseInput = document.getElementById('passwordLowercase');
+const passwordUppercaseInput = document.getElementById('passwordUppercase');
+const passwordDigitsInput = document.getElementById('passwordDigits');
+const passwordSymbolsInput = document.getElementById('passwordSymbols');
 
 let passphraseDirty = false;
 let orgPassphraseDirty = false;
@@ -184,6 +196,9 @@ function applyProvisionChrome(settings) {
   const manual = document.getElementById('org-manual-settings');
   const connected = document.getElementById('org-connected-card');
   const disconnect = document.getElementById('disconnect-org');
+  const resetBtn = document.getElementById('reset-setup');
+  const modeEl = document.getElementById('defaultSecureMode');
+  const orgEmailEl = document.getElementById('orgMemberEmail');
   const orgName = settings.orgDisplayName || managedState.orgDisplayName || 'Your organization';
   const source = settings.orgProvisionSource === 'managed' || managedState.hasTeamPassphrase
     ? 'managed'
@@ -196,19 +211,28 @@ function applyProvisionChrome(settings) {
     const sourceEl = document.getElementById('org-connected-source');
     if (nameEl) nameEl.textContent = orgName;
     if (sourceEl) sourceEl.textContent = source === 'managed' ? 'IT policy' : 'Cloud';
-    if (disconnect) disconnect.hidden = source !== 'cloud' || managedState.active;
+    // Leaving org is an IT/admin action in real deployments.
+    if (disconnect) disconnect.hidden = true;
+    if (resetBtn) resetBtn.hidden = true;
+    if (modeEl) modeEl.setAttribute('disabled', 'disabled');
+    const emailRow = document.getElementById('org-member-email-row');
+    if (emailRow) emailRow.hidden = source !== 'cloud';
+    if (orgEmailEl) orgEmailEl.setAttribute('readonly', 'readonly');
   } else {
     manual?.removeAttribute('hidden');
     if (connected) connected.hidden = true;
     if (disconnect) disconnect.hidden = true;
+    if (resetBtn) resetBtn.hidden = false;
+    if (modeEl) modeEl.removeAttribute('disabled');
+    if (orgEmailEl) orgEmailEl.removeAttribute('readonly');
   }
 }
 
 // ── Storage helpers ─────────────────────────────────────────────────────────
-function parseDelaySeconds(value, fallback = 60) {
+function parseDelaySeconds(value, fallback = 60, max = 600) {
   const parsed = parseInt(String(value ?? ''), 10);
   if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(600, Math.max(5, parsed));
+  return Math.min(max, Math.max(5, parsed));
 }
 
 function readSyncSettings() {
@@ -270,6 +294,11 @@ function applyProfileChrome(profile) {
   document.querySelectorAll('.profile-org-only').forEach((el) => {
     el.hidden = !isOrg;
   });
+
+  if (resecureDelayInput) {
+    // Security posture: org members shouldn't be able to keep secrets unlocked for ages.
+    resecureDelayInput.max = String(isOrg ? 120 : 600);
+  }
 }
 
 function refreshOrgPassphraseStatus(fromVault, settings = {}) {
@@ -325,8 +354,10 @@ document.getElementById('setup-personal-passphrase')?.addEventListener('input', 
 
 async function finishSetup(profile, extraSettings = {}, passphrase = '') {
   const profileDefaults = PROFILE_DEFAULTS[profile] || PROFILE_DEFAULTS.personal;
+  // Preserve any org provisioning fields already written by ORG_JOIN / managed policy.
+  const current = await readSyncSettings();
   const patch = migrateSettings({
-    ...defaults,
+    ...current,
     ...profileDefaults,
     ...extraSettings,
     setupComplete: true,
@@ -362,13 +393,26 @@ document.getElementById('setup-finish-personal')?.addEventListener('click', asyn
 
 document.getElementById('setup-org-connect')?.addEventListener('click', async () => {
   const joinCode = document.getElementById('setup-org-join-code')?.value.trim() || '';
+  const email = document.getElementById('setup-org-email')?.value.trim() || '';
+  if (!email) {
+    showStatus('Enter your work email for secure sharing.');
+    return;
+  }
+
   const result = await orgMessage('ORG_JOIN', { joinCode });
   if (!result?.ok) {
     showStatus(result?.error || 'Could not join organization.');
     return;
   }
+
+  const registered = await orgMessage('ORG_REGISTER_MEMBER', { email });
+  if (registered?.error) {
+    showStatus(registered.error);
+    return;
+  }
+
+  await finishSetup('organization', { orgMemberEmail: email.toLowerCase() });
   showStatus(`Joined ${result.orgDisplayName || 'your organization'}.`);
-  await loadSettings();
 });
 
 document.getElementById('setup-org-signin')?.addEventListener('click', async () => {
@@ -381,6 +425,9 @@ document.getElementById('setup-org-signin')?.addEventListener('click', async () 
 });
 
 document.getElementById('disconnect-org')?.addEventListener('click', async () => {
+  // Real deployments: only IT/admin can remove a device from an org.
+  showStatus('Ask your admin to remove this device.');
+  return;
   if (!confirm('Leave this organization? You will need to join again to use team secure.')) return;
   const result = await orgMessage('ORG_DISCONNECT');
   if (!result?.ok) {
@@ -409,6 +456,7 @@ function refreshPassphraseStrength() {
 function applySettingsToForm(settings) {
   const profile = settings.securityProfile || 'personal';
   applyProfileChrome(profile);
+  wirePasswordGeneratorSettings(settings);
 
   const customUrl = settings.publicUnlockUrl?.trim() || '';
   const urlEl = document.getElementById('publicUnlockUrl');
@@ -429,10 +477,14 @@ function applySettingsToForm(settings) {
   const resecureOrg = document.getElementById('resecureAfterUnlock-org');
   if (resecurePersonal) resecurePersonal.checked = resecure;
   if (resecureOrg) resecureOrg.checked = resecure;
-  resecureDelayInput.value = String(parseDelaySeconds(settings.resecureDelaySeconds));
+  const delayMax = profile === 'organization' ? 120 : 600;
+  resecureDelayInput.value = String(parseDelaySeconds(settings.resecureDelaySeconds, 60, delayMax));
 
   const selModeEl = document.getElementById('selectionUiMode');
   if (selModeEl) selModeEl.value = settings.selectionUiMode || defaults.selectionUiMode;
+
+  const orgEmailEl = document.getElementById('orgMemberEmail');
+  if (orgEmailEl) orgEmailEl.value = settings.orgMemberEmail || '';
 
   return profile;
 }
@@ -459,6 +511,7 @@ async function loadSettings() {
 
   if (settings.orgProvisionSource === 'cloud') {
     await orgMessage('ORG_SYNC');
+    await orgMessage('ORG_SYNC_SHARES');
     settings = await readSyncSettings();
   }
 
@@ -507,7 +560,8 @@ form?.addEventListener('submit', async (event) => {
   const fromVault = profile === 'organization' && passphraseFromVaultInput?.checked;
   const newPassphrase = passphraseInput?.value.trim() || '';
   const orgPassphrase = document.getElementById('org-passphrase')?.value.trim() || '';
-  const resecureDelaySeconds = parseDelaySeconds(resecureDelayInput.value);
+  const delayMax = profile === 'organization' ? 120 : 600;
+  const resecureDelaySeconds = parseDelaySeconds(resecureDelayInput.value, 60, delayMax);
 
   if (profile === 'personal' && newPassphrase) {
     const a = GoldspirePassphrasePolicy?.assessPassphrase?.(newPassphrase, 'personal');
@@ -537,6 +591,12 @@ form?.addEventListener('submit', async (event) => {
     showFloatingButton: showOnPageUi,
     showSelectionPill: showOnPageUi,
     setupComplete: true,
+    orgMemberEmail: document.getElementById('orgMemberEmail')?.value.trim().toLowerCase() || '',
+    passwordLength: parseInt(String(passwordLengthInput?.value || 16), 10) || 16,
+    passwordLowercase: passwordLowercaseInput?.checked !== false,
+    passwordUppercase: passwordUppercaseInput?.checked !== false,
+    passwordDigits: passwordDigitsInput?.checked !== false,
+    passwordSymbols: passwordSymbolsInput?.checked !== false,
   });
 
   const submitButton = form.querySelector('button[type="submit"]');
@@ -545,6 +605,10 @@ form?.addEventListener('submit', async (event) => {
   try {
     const current = await readSyncSettings();
     await writeSyncSettings({ ...current, ...savedSettings });
+
+    if (profile === 'organization' && savedSettings.orgMemberEmail && isOrgProvisioned({ ...current, ...savedSettings })) {
+      await orgMessage('ORG_REGISTER_MEMBER', { email: savedSettings.orgMemberEmail });
+    }
 
     if (profile === 'organization' && fromVault && !isOrgProvisioned({ ...current, ...savedSettings })) {
       await GoldspireSecrets.savePassphrase('', 'organization');
@@ -603,35 +667,106 @@ document.querySelectorAll('.tabs__btn').forEach((button) => {
 });
 
 // ── Home actions ──────────────────────────────────────────────────────────
-function generateLocalPassword() {
+function generateLocalPassword(options = {}) {
   const lower = 'abcdefghijkmnopqrstuvwxyz';
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const digits = '23456789';
   const symbols = '!@#$%&*-_+=?';
-  const all = lower + upper + digits + symbols;
-  const bytes = crypto.getRandomValues(new Uint32Array(16));
-  return Array.from(bytes, (b) => all[b % all.length]).join('');
+
+  const pools = [];
+  if (options.lowercase) pools.push(lower);
+  if (options.uppercase) pools.push(upper);
+  if (options.digits) pools.push(digits);
+  if (options.symbols) pools.push(symbols);
+
+  const length = Math.min(64, Math.max(8, Number(options.length) || 16));
+  if (pools.length === 0) throw new Error('Choose at least one character set.');
+
+  // Ensure at least one char from each selected pool.
+  const required = pools.map((pool) => {
+    const b = crypto.getRandomValues(new Uint8Array(1))[0];
+    return pool[b % pool.length];
+  });
+
+  const all = pools.join('');
+  const remaining = Math.max(0, length - required.length);
+  const bytes = crypto.getRandomValues(new Uint32Array(remaining));
+  const rest = Array.from(bytes, (b) => all[b % all.length]);
+
+  const out = [...required, ...rest];
+  // Shuffle output.
+  const shuffleBytes = crypto.getRandomValues(new Uint32Array(out.length));
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = shuffleBytes[i] % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out.join('');
+}
+
+function getPasswordOptionsFromUi() {
+  return {
+    length: parseInt(String(passwordLengthInput?.value || 16), 10) || 16,
+    lowercase: passwordLowercaseInput?.checked !== false,
+    uppercase: passwordUppercaseInput?.checked !== false,
+    digits: passwordDigitsInput?.checked !== false,
+    symbols: passwordSymbolsInput?.checked !== false,
+  };
 }
 
 document.getElementById('generate-password')?.addEventListener('click', () => {
-  generatedPassword.textContent = generateLocalPassword();
+  try {
+    generatedPassword.textContent = generateLocalPassword(getPasswordOptionsFromUi());
+  } catch (e) {
+    showStatus(e?.message || 'Could not generate password.');
+  }
 });
 
 document.getElementById('copy-password')?.addEventListener('click', async () => {
-  const value = generatedPassword.textContent === '—' ? generateLocalPassword() : generatedPassword.textContent;
+  let value = generatedPassword.textContent;
+  if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
   generatedPassword.textContent = value;
   await navigator.clipboard.writeText(value);
   showStatus('Copied.');
 });
 
 document.getElementById('insert-password')?.addEventListener('click', () => {
-  const value = generatedPassword.textContent === '—' ? generateLocalPassword() : generatedPassword.textContent;
+  let value = generatedPassword.textContent;
+  if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
   generatedPassword.textContent = value;
   sendToActiveTab('INSERT_TEXT', { text: value });
   showStatus('Inserted.');
 });
 
+function wirePasswordGeneratorSettings(settings) {
+  if (passwordLengthInput) passwordLengthInput.value = String(settings.passwordLength || 16);
+  if (passwordLowercaseInput) passwordLowercaseInput.checked = settings.passwordLowercase !== false;
+  if (passwordUppercaseInput) passwordUppercaseInput.checked = settings.passwordUppercase !== false;
+  if (passwordDigitsInput) passwordDigitsInput.checked = settings.passwordDigits !== false;
+  if (passwordSymbolsInput) passwordSymbolsInput.checked = settings.passwordSymbols !== false;
+}
+
+async function persistPasswordGeneratorSettings() {
+  try {
+    const current = await readSyncSettings();
+    await writeSyncSettings({
+      ...current,
+      passwordLength: parseInt(String(passwordLengthInput?.value || 16), 10) || 16,
+      passwordLowercase: passwordLowercaseInput?.checked !== false,
+      passwordUppercase: passwordUppercaseInput?.checked !== false,
+      passwordDigits: passwordDigitsInput?.checked !== false,
+      passwordSymbols: passwordSymbolsInput?.checked !== false,
+    });
+  } catch {
+    // ignore
+  }
+}
+
+[passwordLengthInput, passwordLowercaseInput, passwordUppercaseInput, passwordDigitsInput, passwordSymbolsInput]
+  .filter(Boolean)
+  .forEach((el) => el.addEventListener('change', () => { persistPasswordGeneratorSettings(); }));
+
 document.getElementById('action-secure')?.addEventListener('click', () => sendToActiveTab('SECURE_SELECTION'));
+document.getElementById('action-secure-options')?.addEventListener('click', () => sendToActiveTab('SECURE_WITH_OPTIONS'));
 document.getElementById('action-unlock')?.addEventListener('click', () => sendToActiveTab('UNLOCK_SELECTION'));
 
 function refreshSelectionPreview() {
