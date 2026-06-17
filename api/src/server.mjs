@@ -50,31 +50,33 @@ function getCorsOrigin(req) {
   return ALLOWED_ORIGINS.has(origin) ? origin : '';
 }
 
-function writeCors(res, req) {
+function corsHeaders(req) {
   const allowOrigin = getCorsOrigin(req);
-  if (!allowOrigin) return;
-  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (!allowOrigin) return {};
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Credentials': 'true',
+  };
 }
 
 function json(res, req, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
+    ...corsHeaders(req),
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(payload),
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Policy-Version, X-Extension-Version',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   });
-  writeCors(res, req);
   res.end(payload);
 }
 
 function text(res, req, status, body, contentType = 'text/plain; charset=utf-8') {
   res.writeHead(status, {
+    ...corsHeaders(req),
     'Content-Type': contentType,
   });
-  writeCors(res, req);
   res.end(body);
 }
 
@@ -115,9 +117,11 @@ const server = createServer(async (req, res) => {
   const { pathname } = url;
 
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Policy-Version, X-Extension-Version',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS' });
-    writeCors(res, req);
+    res.writeHead(204, {
+      ...corsHeaders(req),
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Policy-Version, X-Extension-Version',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    });
     res.end();
     return;
   }
@@ -144,8 +148,7 @@ const server = createServer(async (req, res) => {
       const clientVersion = req.headers['x-policy-version'];
       const result = await syncPolicy(token, deviceId, clientVersion);
       if (result.unchanged) {
-        res.writeHead(304);
-        writeCors(res, req);
+        res.writeHead(304, corsHeaders(req));
         res.end();
         return;
       }
