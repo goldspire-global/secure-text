@@ -269,6 +269,14 @@ body {
   margin-bottom: 8px;
 }
 
+.card--nested {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid #2a3444;
+  border-radius: 8px;
+}
+
 .card--collapsible summary {
   cursor: pointer;
   font-size: 13px;
