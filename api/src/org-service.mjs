@@ -14,12 +14,16 @@ function orgPayload(org, provisionToken) {
     policyVersion: org.policy_version,
     provisionToken,
     settings: {
-      orgId: org.id,
-      orgDisplayName: org.display_name,
-      passphraseFromVault: settings.passphraseFromVault === true,
-      useSavedPassphrase: settings.useSavedPassphrase !== false,
-      defaultSecureMode: settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
-      enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
+    passphraseFromVault: settings.passphraseFromVault === true,
+    useSavedPassphrase: settings.useSavedPassphrase !== false,
+    defaultSecureMode: settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
+    enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
+    membershipPolicy: ['open', 'invite', 'domain'].includes(settings.membershipPolicy)
+      ? settings.membershipPolicy
+      : 'invite',
+    allowedEmailDomains: Array.isArray(settings.allowedEmailDomains)
+      ? settings.allowedEmailDomains
+      : [],
       ...(settings.resecureDelaySeconds != null
         ? { resecureDelaySeconds: settings.resecureDelaySeconds }
         : {}),

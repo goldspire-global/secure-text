@@ -31,6 +31,12 @@
         </div>
 
         <div class="field">
+          <label for="allowed-domain">Allowed email domain (optional)</label>
+          <input id="allowed-domain" name="allowedEmailDomain" placeholder="company.com" autocomplete="off" />
+          <div class="hint">If set, only <code>@company.com</code> addresses can register. Otherwise you must add each member in the admin console before they can join.</div>
+        </div>
+
+        <div class="field">
           <label for="team-passphrase">Team passphrase</label>
           <input id="team-passphrase" name="teamPassphrase" type="password" required minlength="12" autocomplete="new-password" />
           <div class="hint">At least 12 characters. Members receive this automatically when they join — store it in your team password manager.</div>
@@ -97,6 +103,7 @@
           displayName: document.getElementById('display-name').value.trim(),
           adminEmail: document.getElementById('admin-email').value.trim(),
           teamPassphrase: document.getElementById('team-passphrase').value,
+          allowedEmailDomain: document.getElementById('allowed-domain').value.trim(),
         };
 
         const result = await app.apiPublic('/v1/orgs', {

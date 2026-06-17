@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { normalizeEmail } from './auth.mjs';
+import { MEMBERSHIP_POLICIES } from './membership.mjs';
 
 const JOIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -40,7 +41,28 @@ function defaultSettings(overrides = {}) {
     useSavedPassphrase: true,
     defaultSecureMode: 'team',
     enforceStrongPassphrase: true,
+    membershipPolicy: 'invite',
+    allowedEmailDomains: [],
     ...overrides,
+  };
+}
+
+function publicSettings(settings) {
+  const parsed = typeof settings === 'object' && settings ? settings : {};
+  return {
+    passphraseFromVault: parsed.passphraseFromVault === true,
+    useSavedPassphrase: parsed.useSavedPassphrase !== false,
+    defaultSecureMode: parsed.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
+    enforceStrongPassphrase: parsed.enforceStrongPassphrase !== false,
+    membershipPolicy: ['open', 'invite', 'domain'].includes(parsed.membershipPolicy)
+      ? parsed.membershipPolicy
+      : 'invite',
+    allowedEmailDomains: Array.isArray(parsed.allowedEmailDomains)
+      ? parsed.allowedEmailDomains
+      : [],
+    ...(parsed.resecureDelaySeconds != null
+      ? { resecureDelaySeconds: parsed.resecureDelaySeconds }
+      : {}),
   };
 }
 
@@ -51,15 +73,7 @@ function publicOrgRow(row) {
     displayName: row.display_name,
     policyVersion: row.policy_version,
     adminEmail: row.admin_email || null,
-    settings: {
-      passphraseFromVault: settings.passphraseFromVault === true,
-      useSavedPassphrase: settings.useSavedPassphrase !== false,
-      defaultSecureMode: settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
-      enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
-      ...(settings.resecureDelaySeconds != null
-        ? { resecureDelaySeconds: settings.resecureDelaySeconds }
-        : {}),
-    },
+    settings: publicSettings(settings),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -94,7 +108,15 @@ export async function createOrganization(body = {}) {
     throw httpError(400, 'Team passphrase must be at least 12 characters.');
   }
 
+  const allowedEmailDomains = parseAllowedDomains(body);
   const settings = defaultSettings(body.settings);
+  if (allowedEmailDomains.length > 0) {
+    settings.membershipPolicy = 'domain';
+    settings.allowedEmailDomains = allowedEmailDomains;
+  } else if (body.membershipPolicy && MEMBERSHIP_POLICIES.has(String(body.membershipPolicy))) {
+    settings.membershipPolicy = String(body.membershipPolicy);
+  }
+
   const orgId = slugifyOrgId(displayName);
   const joinCode = generateJoinCode();
   const adminToken = generateAdminToken();
@@ -127,6 +149,15 @@ export async function createOrganization(body = {}) {
        VALUES ($1, $2, true)`,
       [joinCode, orgId],
     );
+
+    if (adminEmail) {
+      await client.query(
+        `INSERT INTO org_members (org_id, email, display_name, active)
+         VALUES ($1, $2, $3, true)
+         ON CONFLICT (org_id, email) DO NOTHING`,
+        [orgId, adminEmail, 'Admin'],
+      );
+    }
 
     await client.query('COMMIT');
 
@@ -186,8 +217,15 @@ export async function updateOrganization(admin, body = {}) {
     const current = typeof admin.org.settings === 'object' && admin.org.settings
       ? admin.org.settings
       : {};
+    const merged = { ...current, ...body.settings };
+    if (merged.membershipPolicy && !MEMBERSHIP_POLICIES.has(merged.membershipPolicy)) {
+      throw httpError(400, 'membershipPolicy must be open, invite, or domain.');
+    }
+    if (merged.allowedEmailDomains) {
+      merged.allowedEmailDomains = parseAllowedDomains({ allowedEmailDomains: merged.allowedEmailDomains });
+    }
     patches.push(`settings = $${index++}::jsonb`);
-    values.push(JSON.stringify({ ...current, ...body.settings }));
+    values.push(JSON.stringify(merged));
   }
 
   if (patches.length === 0) {
@@ -329,7 +367,7 @@ export async function deactivateMember(admin, email) {
   const pool = getPool();
   const result = await pool.query(
     `UPDATE org_members
-     SET active = false, updated_at = now()
+     SET active = false, device_id = NULL, updated_at = now()
      WHERE org_id = $1 AND email = $2 AND active = true
      RETURNING email`,
     [admin.org.id, normalized],
@@ -337,4 +375,34 @@ export async function deactivateMember(admin, email) {
 
   if (result.rowCount === 0) throw httpError(404, 'Member not found.');
   return { ok: true, email: normalized };
+}
+
+export async function addOrgMember(admin, body = {}) {
+  const email = normalizeEmail(body.email);
+  const displayName = String(body.displayName || body.display_name || '').trim() || null;
+  if (!email || !email.includes('@')) throw httpError(400, 'Valid member email is required.');
+
+  const pool = getPool();
+  const result = await pool.query(
+    `INSERT INTO org_members (org_id, email, display_name, active)
+     VALUES ($1, $2, $3, true)
+     ON CONFLICT (org_id, email) DO UPDATE SET
+       display_name = COALESCE(EXCLUDED.display_name, org_members.display_name),
+       active = true,
+       updated_at = now()
+     RETURNING email, display_name, device_id IS NOT NULL AS registered`,
+    [admin.org.id, email, displayName],
+  );
+
+  return { ok: true, member: result.rows[0] };
+}
+
+function parseAllowedDomains(body = {}) {
+  const raw = body.allowedEmailDomains ?? body.allowedEmailDomain ?? body.emailDomain ?? '';
+  const values = Array.isArray(raw)
+    ? raw
+    : String(raw || '').split(',').map((s) => s.trim());
+  return values
+    .map((d) => d.replace(/^@+/, '').toLowerCase())
+    .filter(Boolean);
 }

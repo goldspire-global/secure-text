@@ -58,6 +58,19 @@
             <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
             <div class="hint">Rotating bumps policy version — members sync automatically within a few hours (or on next popup open).</div>
           </div>
+          <div class="field">
+            <label for="settings-membership-policy">Membership policy</label>
+            <select id="settings-membership-policy">
+              <option value="invite">Invite list — admin adds emails first</option>
+              <option value="domain">Email domain — any matching work email</option>
+              <option value="open">Open — any email (not recommended)</option>
+            </select>
+          </div>
+          <div class="field" id="domains-row">
+            <label for="settings-domains">Allowed email domains</label>
+            <input id="settings-domains" placeholder="company.com, subsidiary.com" />
+            <div class="hint">Comma-separated. Required when policy is “Email domain”.</div>
+          </div>
           <div class="btn-row">
             <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
             <button type="submit" class="btn btn--sm">Save changes</button>
@@ -83,6 +96,18 @@
 
       <div class="card">
         <h2>Members</h2>
+        <p class="lede">Add work emails before members join. They still need the join code, but can only register an email on this list (unless domain policy is enabled).</p>
+        <form id="add-member-form" class="btn-row" style="align-items: flex-end;">
+          <div class="field" style="flex:1; margin:0;">
+            <label for="member-email">Email</label>
+            <input id="member-email" type="email" required placeholder="colleague@company.com" />
+          </div>
+          <div class="field" style="flex:1; margin:0;">
+            <label for="member-name">Name (optional)</label>
+            <input id="member-name" placeholder="Jane Doe" />
+          </div>
+          <button type="submit" class="btn btn--sm">Add member</button>
+        </form>
         <table>
           <thead>
             <tr><th>Email</th><th>Name</th><th>Registered</th><th>Joined</th><th></th></tr>
@@ -127,9 +152,11 @@
 
         document.getElementById('org-title').textContent = org.displayName;
         document.getElementById('org-meta').textContent =
-          `ID: ${org.orgId} · Policy version ${org.policyVersion}`;
+          `ID: ${org.orgId} · Policy v${org.policyVersion} · Membership: ${org.settings?.membershipPolicy || 'invite'}`;
         document.getElementById('settings-name').value = org.displayName;
         document.getElementById('settings-email').value = org.adminEmail || '';
+        document.getElementById('settings-membership-policy').value = org.settings?.membershipPolicy || 'invite';
+        document.getElementById('settings-domains').value = (org.settings?.allowedEmailDomains || []).join(', ');
 
         const codesBody = document.getElementById('codes-body');
         codesBody.innerHTML = codes.joinCodes.map((row) => `
@@ -236,6 +263,13 @@
       const body = {
         displayName: document.getElementById('settings-name').value.trim(),
         adminEmail: document.getElementById('settings-email').value.trim(),
+        settings: {
+          membershipPolicy: document.getElementById('settings-membership-policy').value,
+          allowedEmailDomains: document.getElementById('settings-domains').value
+            .split(',')
+            .map((s) => s.trim().replace(/^@+/, ''))
+            .filter(Boolean),
+        },
       };
       const passphrase = document.getElementById('settings-passphrase').value;
       if (passphrase) body.teamPassphrase = passphrase;
@@ -256,6 +290,26 @@
 
     document.getElementById('generate-rotate-passphrase').addEventListener('click', () => {
       document.getElementById('settings-passphrase').value = app.generatePassphrase(24);
+    });
+
+    document.getElementById('add-member-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await app.apiAdmin('/v1/orgs/me/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('member-email').value.trim(),
+            displayName: document.getElementById('member-name').value.trim(),
+          }),
+        });
+        document.getElementById('member-email').value = '';
+        document.getElementById('member-name').value = '';
+        app.setStatus(dashStatus, 'Member added.', 'ok');
+        await loadDashboard();
+      } catch (error) {
+        app.setStatus(dashStatus, error.message, 'error');
+      }
     });
 
     dashboard.addEventListener('click', async (event) => {

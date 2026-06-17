@@ -1,6 +1,7 @@
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { authenticateRequest, normalizeEmail } from './auth.mjs';
+import { assertMemberEmailAllowed, loadOrgSettings } from './membership.mjs';
 
 function validatePublicKeyJwk(jwk) {
   if (!jwk || typeof jwk !== 'object') throw httpError(400, 'publicKeyJwk is required.');
@@ -17,6 +18,9 @@ export async function registerMember(token, deviceId, body = {}) {
   validatePublicKeyJwk(body.publicKeyJwk);
 
   const pool = getPool();
+  const orgSettings = await loadOrgSettings(pool, auth.org_id);
+  await assertMemberEmailAllowed(pool, auth.org_id, email, auth.device_id, orgSettings);
+
   const result = await pool.query(
     `INSERT INTO org_members (org_id, email, display_name, public_key_jwk, device_id, active)
      VALUES ($1, $2, $3, $4::jsonb, $5, true)
@@ -46,7 +50,7 @@ export async function listMembers(token, deviceId, query = '') {
 
   const result = term
     ? await pool.query(
-        `SELECT email, display_name, public_key_jwk, device_id IS NOT NULL AS registered
+        `SELECT email, display_name, public_key_jwk, (device_id IS NOT NULL AND public_key_jwk IS NOT NULL) AS registered
          FROM org_members
          WHERE org_id = $1
            AND active = true
@@ -57,7 +61,7 @@ export async function listMembers(token, deviceId, query = '') {
         [auth.org_id, `%${term.replace(/[%_]/g, '')}%`, auth.member_email || ''],
       )
     : await pool.query(
-        `SELECT email, display_name, public_key_jwk, device_id IS NOT NULL AS registered
+        `SELECT email, display_name, public_key_jwk, (device_id IS NOT NULL AND public_key_jwk IS NOT NULL) AS registered
          FROM org_members
          WHERE org_id = $1
            AND active = true

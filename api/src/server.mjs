@@ -25,6 +25,7 @@ import {
   listDevices,
   revokeDevice,
   deactivateMember,
+  addOrgMember,
 } from './admin-service.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -251,6 +252,12 @@ const server = createServer(async (req, res) => {
 
       if (req.method === 'GET' && pathname === '/v1/orgs/me/members') {
         json(res, req, 200, await listMembersAdmin(admin));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/orgs/me/members') {
+        const body = await readBody(req);
+        json(res, req, 201, await addOrgMember(admin, body));
         return;
       }
 
