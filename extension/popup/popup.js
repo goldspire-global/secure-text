@@ -20,6 +20,8 @@ const PROFILE_DEFAULTS = {
     resecureDelaySeconds: 45,
     defaultSecureMode: 'team',
     copilotEnabled: true,
+    productAnalytics: true,
+    selectionUiMode: 'quiet',
   },
 };
 
@@ -533,6 +535,14 @@ async function finishSetup(profile, extraSettings = {}, passphrase = '') {
   if (profile === 'personal' && passphrase) {
     await GoldspireSecrets.savePassphrase(passphrase, 'personal');
   }
+
+  global.GoldspireVeilEvents?.emit?.({
+    type: 'lifecycle',
+    category: 'setup_complete',
+    source: profile,
+    action: 'setup',
+    outcome: 'ok',
+  }).catch?.(() => {});
 
   showMain(profile);
   await loadSettings();

@@ -60,12 +60,12 @@
     banner.className = 'gst-relock-banner';
     banner.innerHTML = `
       <div class="gst-relock-banner__text">
-        <strong>Secret visible</strong>
-        <span data-countdown>Re-locking in ${seconds}s</span>
+        <strong>Visible</strong>
+        <span data-countdown>Re-lock in ${seconds}s</span>
       </div>
       <div class="gst-relock-banner__actions">
-        <button type="button" class="gst-btn gst-btn--ghost" data-action="keep">Keep visible</button>
-        <button type="button" class="gst-btn gst-btn--primary" data-action="now">Re-lock</button>
+        <button type="button" class="gst-btn gst-btn--ghost gst-btn--sm" data-action="keep">Keep</button>
+        <button type="button" class="gst-btn gst-btn--primary gst-btn--sm" data-action="now">Re-lock</button>
       </div>
     `;
 

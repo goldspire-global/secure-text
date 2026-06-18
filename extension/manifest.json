@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Veil",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Browser security copilot by Goldspire. Highlight text → [redacted]. Recipients unlock on the same page.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],

@@ -17,7 +17,10 @@
   }
 
   function removePrompt() {
-    document.getElementById(PROMPT_ID)?.remove();
+    const el = document.getElementById(PROMPT_ID);
+    if (!el) return;
+    el.classList.add('gst-ui--exit');
+    window.setTimeout(() => el.remove(), 180);
   }
 
   function showVeilCopilot({

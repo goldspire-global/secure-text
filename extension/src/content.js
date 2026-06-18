@@ -335,12 +335,17 @@
   }
 
   async function resolveTeamPassphrase(settings) {
+    const profile = getProfile(settings);
+    if (profile === 'organization' && settings.useSavedPassphrase !== false) {
+      const stored = (await GoldspireSecrets.loadPassphrase?.(profile)) || '';
+      if (stored.trim()) return stored.trim();
+    }
     if (settings.passphraseFromVault) {
       return (await GoldspireSecrets.loadSessionTeamPassphrase?.()) || '';
     }
     const fromSettings = settings.passphrase?.trim() || '';
     if (fromSettings) return fromSettings;
-    return (await GoldspireSecrets.loadPassphrase?.(getProfile(settings))) || '';
+    return (await GoldspireSecrets.loadPassphrase?.(profile)) || '';
   }
 
   async function copyWithAutoClear(text, settings) {
@@ -675,12 +680,20 @@
 
   function broadcastSelectionToTop() {
     if (isTopFrame) return;
-    const preview = GoldspireSelection.getLivePreview();
+    const raw = GoldspireSelection.getLivePreview();
     const inEditable = isComposeContext();
+    let relayPreview = '';
+    if (GoldspireRedacted.isRedactedToken(raw)) {
+      relayPreview = GoldspireRedacted.LABEL;
+    } else if (GoldspireDetector?.isSensitiveSelectionText?.(raw)) {
+      relayPreview = '[selection]';
+    } else if (raw) {
+      relayPreview = raw.length > 40 ? `${raw.slice(0, 40)}…` : raw;
+    }
     try {
       window.top.postMessage({
         source: 'goldspire-selection-relay',
-        preview,
+        preview: relayPreview,
         token: frameToken,
         inEditable,
       }, '*');
@@ -1401,7 +1414,7 @@
       !message.showOptions &&
       settings.defaultSecureMode === 'team' &&
       teamPassphrase &&
-      (settings.passphraseFromVault || settings.useSavedPassphrase !== false);
+      settings.useSavedPassphrase !== false;
 
     if (canQuickSecure) {
       await executeSecureBatch(context, settings, {

@@ -72,6 +72,9 @@
       useSavedPassphrase: settings.useSavedPassphrase !== false,
       defaultSecureMode: settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
       enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
+      copilotEnabled: settings.copilotEnabled !== false,
+      productAnalytics: settings.productAnalytics !== false,
+      selectionUiMode: settings.selectionUiMode || 'quiet',
       resecureDelaySeconds: settings.resecureDelaySeconds,
       dlpPolicy: dlpRaw,
       teamId: String(settings.teamId || '').trim(),
@@ -105,10 +108,13 @@
       orgId: payload.orgId,
       orgDisplayName: payload.orgDisplayName,
       orgPolicyVersion: payload.policyVersion,
-      passphraseFromVault: payload.passphraseFromVault,
-      useSavedPassphrase: payload.useSavedPassphrase,
-      defaultSecureMode: payload.defaultSecureMode,
-      enforceStrongPassphrase: payload.enforceStrongPassphrase,
+      passphraseFromVault: payload.passphraseFromVault === true,
+      useSavedPassphrase: payload.useSavedPassphrase !== false,
+      defaultSecureMode: payload.defaultSecureMode || 'team',
+      enforceStrongPassphrase: payload.enforceStrongPassphrase !== false,
+      copilotEnabled: payload.copilotEnabled !== false,
+      productAnalytics: payload.productAnalytics !== false,
+      selectionUiMode: payload.selectionUiMode || 'quiet',
     };
 
     if (payload.resecureDelaySeconds != null) {
@@ -138,6 +144,7 @@
       await global.GoldspireSecrets?.savePassphrase?.(payload.teamPassphrase, 'organization');
       patch.useSavedPassphrase = true;
       patch.passphraseFromVault = false;
+      patch.setupComplete = true;
     }
 
     await writeSyncSettings(patch);

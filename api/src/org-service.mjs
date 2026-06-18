@@ -15,6 +15,11 @@ function orgPayload(org, provisionToken, teamContext = null) {
     useSavedPassphrase: settings.useSavedPassphrase !== false,
     defaultSecureMode: settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team',
     enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
+    copilotEnabled: settings.copilotEnabled !== false,
+    productAnalytics: settings.productAnalytics !== false,
+    selectionUiMode: ['quiet', 'smart', 'always'].includes(settings.selectionUiMode)
+      ? settings.selectionUiMode
+      : 'quiet',
     membershipPolicy: ['open', 'invite', 'domain'].includes(settings.membershipPolicy)
       ? settings.membershipPolicy
       : 'invite',

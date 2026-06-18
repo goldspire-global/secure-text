@@ -38,7 +38,7 @@
       await deps.replaceText(request.replaceText, masked);
     }
 
-    await logAction(ACTION_IDS.mask, request);
+    await logAction(ACTION_IDS.mask, request, { outcome: 'ok' });
     return { ok: true, action: ACTION_IDS.mask, text: masked };
   }
 
@@ -56,7 +56,7 @@
         selectionContext: context,
         selectionText: context.selectedText,
       });
-      await logAction(ACTION_IDS.encrypt, request);
+      await logAction(ACTION_IDS.encrypt, request, { outcome: 'ok' });
       return { ok: true, action: ACTION_IDS.encrypt, result };
     }
 
@@ -74,7 +74,7 @@
           copyLink: false,
           silentBatch: request.options?.silent !== false,
         });
-        await logAction(ACTION_IDS.encrypt, request);
+        await logAction(ACTION_IDS.encrypt, request, { outcome: 'ok' });
         return { ok: true, action: ACTION_IDS.encrypt, result };
       }
     }
@@ -88,7 +88,7 @@
       silent: request.options?.silent !== false,
     });
 
-    await logAction(ACTION_IDS.encrypt, request);
+    await logAction(ACTION_IDS.encrypt, request, { outcome: 'ok' });
     return { ok: true, action: ACTION_IDS.encrypt, result };
   }
 
@@ -103,12 +103,12 @@
     const copied = await deps.copySecureText(text, request.settings, request.options);
     if (!copied?.ok) return copied || { ok: false, error: 'copy_failed' };
 
-    await logAction(ACTION_IDS.copy_secure, request);
+    await logAction(ACTION_IDS.copy_secure, request, { outcome: 'ok' });
     return { ok: true, action: ACTION_IDS.copy_secure, ...copied };
   }
 
   async function executeBlock(request = {}) {
-    await logAction(ACTION_IDS.block, request);
+    await logAction(ACTION_IDS.block, request, { outcome: 'blocked' });
     return { ok: true, action: ACTION_IDS.block, blocked: true };
   }
 
@@ -151,7 +151,7 @@
         );
       }
 
-      await logAction(ACTION_IDS.tokenize, request);
+      await logAction(ACTION_IDS.tokenize, request, { outcome: 'ok' });
       global.GoldspireSecureUI?.showToast?.('Tokenized as secure placeholder.', 'success');
       return { ok: true, action: ACTION_IDS.tokenize, ...created };
     } catch (error) {

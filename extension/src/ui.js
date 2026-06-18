@@ -24,7 +24,7 @@
       toast.classList.add('gst-toast--visible');
     });
 
-    window.setTimeout(() => toast.remove(), 3600);
+    window.setTimeout(() => dismissToast(toast), 3200);
   }
 
   function removePrompt() {
@@ -32,7 +32,16 @@
       document.removeEventListener('keydown', activePromptKeyHandler);
       activePromptKeyHandler = null;
     }
-    document.getElementById(PROMPT_ID)?.remove();
+    const el = document.getElementById(PROMPT_ID);
+    if (!el) return;
+    el.classList.add('gst-ui--exit');
+    window.setTimeout(() => el.remove(), 200);
+  }
+
+  function dismissToast(toast) {
+    if (!toast) return;
+    toast.classList.remove('gst-toast--visible');
+    window.setTimeout(() => toast.remove(), 220);
   }
 
   function attachPromptKeyboard(onCancel) {
@@ -230,14 +239,15 @@
 
     const overlay = document.createElement('div');
     overlay.id = PROMPT_ID;
-    overlay.className = 'gst-overlay';
+    overlay.className = 'gst-overlay gst-overlay--compact';
+    const copyValues = new Map();
     overlay.innerHTML = `
-      <div class="gst-dialog gst-dialog--wide" role="dialog" aria-modal="true">
+      <div class="gst-dialog gst-dialog--compact" role="dialog" aria-modal="true">
         <h2 class="gst-dialog__title">${escapeHtml(title)}</h2>
-        <div class="gst-result">
+        <div class="gst-result gst-result--compact">
           ${lines
             .map(
-              (line) => `
+              (line, index) => `
                 <div class="gst-result__row">
                   <span class="gst-result__label">${escapeHtml(line.label)}</span>
                   <code class="gst-result__value">${escapeHtml(line.value)}</code>
@@ -246,29 +256,34 @@
             )
             .join('')}
         </div>
-        <div class="gst-dialog__actions">
+        <div class="gst-dialog__actions gst-dialog__actions--compact">
           ${copyItems
             .map(
-              (item) =>
-                `<button type="button" class="gst-btn gst-btn--ghost" data-copy="${escapeHtml(item.value)}">${escapeHtml(item.label)}</button>`,
+              (item, index) =>
+                `<button type="button" class="gst-btn gst-btn--ghost gst-btn--sm" data-copy-index="${index}">${escapeHtml(item.label)}</button>`,
             )
             .join('')}
           ${extraActions
             .map(
               (action) =>
-                `<button type="button" class="gst-btn gst-btn--ghost" data-extra-action="${escapeHtml(action.id)}">${escapeHtml(action.label)}</button>`,
+                `<button type="button" class="gst-btn gst-btn--ghost gst-btn--sm" data-extra-action="${escapeHtml(action.id)}">${escapeHtml(action.label)}</button>`,
             )
             .join('')}
-          <button type="button" class="gst-btn gst-btn--primary" data-action="close">Done</button>
+          <button type="button" class="gst-btn gst-btn--primary gst-btn--sm" data-action="close">Done</button>
         </div>
       </div>
     `;
 
+    copyItems.forEach((item, index) => {
+      copyValues.set(String(index), item.value);
+    });
+
     overlay.addEventListener('click', async (event) => {
-      const copyButton = event.target.closest('[data-copy]');
+      const copyButton = event.target.closest('[data-copy-index]');
       if (copyButton) {
-        await navigator.clipboard.writeText(copyButton.dataset.copy || '');
-        showToast('Copied to clipboard.', 'success');
+        const value = copyValues.get(copyButton.dataset.copyIndex || '') || '';
+        await navigator.clipboard.writeText(value);
+        showToast('Copied.', 'success');
         return;
       }
       const extra = event.target.closest('[data-extra-action]');

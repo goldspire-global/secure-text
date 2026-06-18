@@ -6,6 +6,7 @@ const ALLOWED_TYPES = new Set([
   'detection',
   'action',
   'policy_block',
+  'lifecycle',
   'unknown',
 ]);
 
@@ -27,7 +28,16 @@ function sanitizeEvent(raw = {}) {
     source: String(raw.source || '').slice(0, 32),
     action: String(raw.action || '').slice(0, 32),
     confidence: Math.min(100, Math.max(0, Math.round(Number(raw.confidence) || 0))),
+    outcome: String(raw.outcome || '').slice(0, 24),
   };
+}
+
+function formatActionWithOutcome(action, outcome) {
+  const base = String(action || '').slice(0, 24);
+  const tag = String(outcome || '').slice(0, 8);
+  if (!tag) return base;
+  const combined = `${base}:${tag}`;
+  return combined.slice(0, 32);
 }
 
 function rejectIfContainsContent(event) {
@@ -121,7 +131,7 @@ export async function ingestExtensionEvents(token, deviceId, body = {}) {
           row.severity,
           row.host,
           row.source,
-          row.action,
+          formatActionWithOutcome(row.action, row.outcome),
           row.confidence,
         ],
       );

@@ -50,6 +50,9 @@ function defaultSettings(overrides = {}) {
       categories: {},
       aiSurfaces: { defaultAction: 'block', categories: {} },
     },
+    copilotEnabled: true,
+    productAnalytics: true,
+    selectionUiMode: 'quiet',
     ...overrides,
   };
 }

@@ -2,12 +2,24 @@
   all: initial;
   position: fixed;
   inset: 0;
-  z-index: 2147483647;
+  z-index: 2147483646;
   display: grid;
   place-items: center;
-  background: rgba(8, 10, 18, 0.55);
+  background: rgba(8, 10, 18, 0.42);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   animation: gst-fade-in 0.2s ease both;
+}
+
+.gst-overlay--compact {
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 12px 14px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.gst-overlay--compact .gst-dialog {
+  pointer-events: auto;
 }
 
 .gst-overlay--sheet,
@@ -108,14 +120,14 @@
 }
 
 .gst-dialog {
-  width: min(420px, calc(100vw - 32px));
-  border-radius: 14px;
+  width: min(340px, calc(100vw - 28px));
+  border-radius: 12px;
   background: #111522;
   color: #f4f6fb;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 20px;
-  animation: gst-dialog-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  padding: 14px 16px;
+  animation: gst-dialog-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .gst-dialog--compact {
@@ -214,14 +226,15 @@
 
 .gst-toast {
   position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%) translateY(12px);
-  z-index: 2147483647;
-  max-width: min(360px, calc(100vw - 32px));
-  padding: 12px 14px;
-  border-radius: 12px;
-  font: 600 13px/1.4 "Segoe UI", system-ui, sans-serif;
+  right: 14px;
+  bottom: 14px;
+  left: auto;
+  transform: translateY(8px);
+  z-index: 2147483645;
+  max-width: min(280px, calc(100vw - 28px));
+  padding: 8px 11px;
+  border-radius: 10px;
+  font: 600 11px/1.35 "Segoe UI", system-ui, sans-serif;
   color: #f8fafc;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   text-align: center;
@@ -231,7 +244,7 @@
 
 .gst-toast--visible {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .gst-toast--info {
@@ -413,16 +426,17 @@
 
 .gst-relock-banner {
   position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%) translateY(16px);
-  z-index: 2147483647;
+  right: 14px;
+  bottom: 14px;
+  left: auto;
+  transform: translateY(10px);
+  z-index: 2147483644;
   display: flex;
   align-items: center;
-  gap: 14px;
-  width: min(560px, calc(100vw - 24px));
-  padding: 12px 14px;
-  border-radius: 14px;
+  gap: 10px;
+  width: min(300px, calc(100vw - 28px));
+  padding: 8px 10px;
+  border-radius: 10px;
   background: #111827;
   border: 1px solid rgba(212, 160, 23, 0.35);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -611,12 +625,12 @@
 /* Veil copilot — floating pop, no full-screen overlay */
 .gst-veil-pop {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 14px;
+  bottom: 14px;
   z-index: 2147483647;
-  width: min(280px, calc(100vw - 32px));
-  padding: 8px 10px;
-  border-radius: 10px;
+  width: min(248px, calc(100vw - 28px));
+  padding: 7px 9px;
+  border-radius: 9px;
   background: #111522;
   color: #f4f6fb;
   border: 1px solid rgba(212, 160, 23, 0.35);
@@ -948,15 +962,15 @@
 /* Veil selection copilot bar */
 .gst-veil-selection-bar {
   position: fixed;
-  right: 18px;
-  bottom: 72px;
-  z-index: 2147483644;
+  right: 14px;
+  bottom: 58px;
+  z-index: 2147483643;
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: min(420px, calc(100vw - 36px));
-  padding: 8px 10px;
-  border-radius: 12px;
+  gap: 6px;
+  max-width: min(300px, calc(100vw - 28px));
+  padding: 6px 8px;
+  border-radius: 10px;
   background: #111522;
   border: 1px solid rgba(212, 160, 23, 0.35);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
@@ -1039,6 +1053,21 @@
 }
 
 @keyframes gst-banner-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gst-ui--exit {
+  animation: gst-ui-exit 0.18s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes gst-ui-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+.gst-btn--sm {
+  padding: 5px 9px;
+  font-size: 11px;
 }

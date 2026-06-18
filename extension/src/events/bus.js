@@ -9,6 +9,7 @@
   function isEnabled(settings) {
     if (!settings) return false;
     if (settings.copilotEnabled === true) return true;
+    if (settings.productAnalytics !== false && settings.orgId) return true;
     const mode = String(settings.dlpMode || 'off').toLowerCase();
     return mode === 'observe' || mode === 'enforce';
   }
@@ -23,6 +24,7 @@
       source: String(event.source || ''),
       action: String(event.action || ''),
       confidence: Number(event.confidence) || 0,
+      outcome: String(event.outcome || '').slice(0, 32),
     };
   }
 
