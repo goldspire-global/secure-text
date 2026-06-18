@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Veil",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Browser security copilot by Goldspire. Highlight text → [redacted]. Recipients unlock on the same page.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
@@ -90,6 +90,7 @@
         "src/actions/runner.js",
         "src/observe/context.js",
         "src/observe/paste-insert.js",
+        "src/share-recipients.js",
         "src/copilot/snooze.js",
         "src/copilot/explain.js",
         "src/copilot/prompt.js",

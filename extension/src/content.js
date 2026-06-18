@@ -793,6 +793,29 @@
     }).then((data) => options.onSubmit(data));
   }
 
+  function showConfirmTop(options) {
+    if (isTopFrame) {
+      return new Promise((resolve, reject) => {
+        GoldspireSecureUI.showConfirm({
+          ...options,
+          onConfirm: () => resolve(),
+          onCancel: () => {
+            options.onCancel?.();
+            reject(new Error('Cancelled'));
+          },
+        });
+      });
+    }
+
+    return delegatePromptToTop({
+      kind: 'confirm',
+      title: options.title,
+      message: options.message,
+      confirmLabel: options.confirmLabel,
+      cancelLabel: options.cancelLabel,
+    });
+  }
+
   function showPromptTop(options) {
     if (isTopFrame) {
       return new Promise((resolve, reject) => {
@@ -1308,6 +1331,24 @@
     });
   }
 
+  async function runDirectShare(context, settings, recipientsInput) {
+    const recipientEmails = GoldspireShareRecipients.validateDirectShareRecipients(
+      GoldspireShareRecipients.parseRecipientEmails(recipientsInput),
+    );
+    const warning = GoldspireShareRecipients.composeMismatchWarning(
+      recipientEmails,
+      GoldspireShareRecipients.readComposeRecipients(),
+    );
+    if (warning) {
+      await showConfirmTop({
+        title: 'Check recipients',
+        message: warning,
+        confirmLabel: 'Continue anyway',
+      });
+    }
+    await deliverDirectShare(context, settings, recipientEmails);
+  }
+
   async function deliverDirectShare(context, settings, recipientEmails) {
     const targets = sortTargetsForReplacement(validateSecureTargets(context));
     const securedList = [];
@@ -1319,12 +1360,12 @@
           mode: 'one-time',
           unlockSecret,
           copyLink: false,
-          silentOneTime: true,
           skipClipboard: true,
         }),
       );
     }
     const deliveredLines = [];
+    const copyItems = [];
 
     for (const secured of securedList) {
       const delivered = await orgShareMessage('ORG_DELIVER_SHARE', {
@@ -1343,11 +1384,28 @@
       }
     }
 
+    if (securedList.length === 1) {
+      deliveredLines.push({
+        label: 'Your backup code',
+        value: securedList[0].unlockSecret,
+      });
+      copyItems.push({ label: 'Copy backup code', value: securedList[0].unlockSecret });
+    } else {
+      securedList.forEach((secured, index) => {
+        deliveredLines.push({
+          label: `Backup code ${index + 1}`,
+          value: secured.unlockSecret,
+        });
+        copyItems.push({ label: `Copy code ${index + 1}`, value: secured.unlockSecret });
+      });
+    }
+
     showResultDialogTop({
       title: securedList.length > 1
         ? `Secured and sent to ${recipientEmails.length} ${recipientEmails.length === 1 ? 'person' : 'people'}`
         : 'Secured and sent',
       lines: deliveredLines,
+      copyItems,
     });
   }
 
@@ -1368,14 +1426,7 @@
           },
         ],
         onSubmit: async ({ recipients }) => {
-          const recipientEmails = String(recipients || '')
-            .split(/[,;\s]+/)
-            .map((entry) => entry.trim().toLowerCase())
-            .filter(Boolean);
-          if (recipientEmails.length === 0) {
-            throw new Error('Enter a work email address.');
-          }
-          await deliverDirectShare(context, settings, recipientEmails);
+          await runDirectShare(context, settings, recipients);
         },
       });
     } catch (error) {
@@ -1466,14 +1517,7 @@
         const isOneTime = mode === 'one-time';
 
         if (isDirect) {
-          const recipientEmails = String(recipients || '')
-            .split(/[,;\s]+/)
-            .map((entry) => entry.trim().toLowerCase())
-            .filter(Boolean);
-          if (recipientEmails.length === 0) {
-            throw new Error('Enter at least one colleague work email.');
-          }
-          await deliverDirectShare(context, settings, recipientEmails);
+          await runDirectShare(context, settings, recipients);
           return;
         }
 
@@ -1753,6 +1797,18 @@
           modes: resolvedPrompt.modes || [],
           defaultMode: resolvedPrompt.defaultMode || 'team',
           onSubmit: async (data) => reply({ data }),
+          onCancel: () => reply({ cancelled: true }),
+        });
+        return;
+      }
+
+      if (kind === 'confirm') {
+        GoldspireSecureUI.showConfirm({
+          title: resolvedPrompt.title,
+          message: resolvedPrompt.message,
+          confirmLabel: resolvedPrompt.confirmLabel,
+          cancelLabel: resolvedPrompt.cancelLabel,
+          onConfirm: () => reply({ data: true }),
           onCancel: () => reply({ cancelled: true }),
         });
         return;

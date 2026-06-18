@@ -317,6 +317,7 @@
     const panelHtml = {
       team: '<p class="gst-veil-pop__hint">Uses your saved team passphrase from Veil settings.</p>',
       direct: `
+        <p class="gst-veil-pop__hint">Unlock keys go only to the people you name — not everyone on the email thread. Use Team for groups or lists.</p>
         <div class="gst-veil-pop__field">
           <span class="gst-veil-pop__field-label">Work email(s)</span>
           <input class="gst-veil-pop__field-input" name="recipients" type="email" placeholder="colleague@company.com" autocomplete="email" />
@@ -395,11 +396,58 @@
     setMode(initialMode);
   }
 
+  function showConfirm({
+    title,
+    message,
+    confirmLabel = 'Continue',
+    cancelLabel = 'Cancel',
+    onConfirm,
+    onCancel,
+  }) {
+    removePrompt();
+
+    const overlay = document.createElement('div');
+    overlay.id = PROMPT_ID;
+    overlay.className = 'gst-overlay gst-overlay--compact';
+    overlay.innerHTML = `
+      <div class="gst-dialog gst-dialog--compact" role="dialog" aria-modal="true">
+        <h2 class="gst-dialog__title">${escapeHtml(title)}</h2>
+        <p class="gst-note">${escapeHtml(message)}</p>
+        <div class="gst-dialog__actions gst-dialog__actions--compact">
+          <button type="button" class="gst-btn gst-btn--ghost gst-btn--sm" data-action="cancel">${escapeHtml(cancelLabel)}</button>
+          <button type="button" class="gst-btn gst-btn--primary gst-btn--sm" data-action="confirm">${escapeHtml(confirmLabel)}</button>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener('click', async (event) => {
+      if (event.target === overlay || event.target.closest('[data-action="cancel"]')) {
+        removePrompt();
+        onCancel?.();
+        return;
+      }
+      const confirmBtn = event.target.closest('[data-action="confirm"]');
+      if (!confirmBtn) return;
+      confirmBtn.disabled = true;
+      try {
+        await onConfirm?.();
+        removePrompt();
+      } catch (error) {
+        confirmBtn.disabled = false;
+        showToast(error instanceof Error ? error.message : 'Something went wrong.', 'error');
+      }
+    });
+
+    document.documentElement.appendChild(overlay);
+    attachPromptKeyboard(onCancel);
+  }
+
   global.GoldspireSecureUI = {
     showToast,
     showPrompt,
     showTeamPassphrasePrompt,
     showSecureSheet,
+    showConfirm,
     teamPassphraseFields,
     showResultDialog,
     removePrompt,

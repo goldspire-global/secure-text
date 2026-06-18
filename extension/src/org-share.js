@@ -265,6 +265,9 @@
     const recipientKeys = {};
 
     for (const email of recipients) {
+      if (global.GoldspireShareRecipients?.isLikelyGroupMailbox?.(email)) {
+        throw new Error(`${email} looks like a group or list. Name individual colleagues, or use Team mode.`);
+      }
       const member = byEmail[email];
       if (!member) throw new Error(`${email} is not on your team.`);
       if (!member.publicKeyJwk) {
