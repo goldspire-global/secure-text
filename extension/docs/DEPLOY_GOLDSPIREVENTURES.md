@@ -36,6 +36,8 @@ Pages → your project → **Custom domains** → add:
 
 - `join-veil.goldspireventures.com`
 
+If Pages DNS provisioning is stuck, the repo ships a Worker proxy (`infra/veil-portal-worker`) that attaches `join-veil` via Workers custom domains (auto DNS). Deploy with `npx wrangler deploy` from that folder.
+
 ## 2) Deploy the org API (Railway)
 
 ### A. Create the service
