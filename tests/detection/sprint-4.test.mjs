@@ -120,3 +120,34 @@ test('tokenize returns coming soon stub', async () => {
   });
   assert.equal(result.ok, false);
 });
+
+test('tokenize replaces selection with veil placeholder', async () => {
+  const g = loadActionsStack();
+  let replaced = null;
+  g.GoldspireVeilTokens = {
+    createToken: async () => ({
+      ok: true,
+      tokenId: 'vt_test',
+      placeholder: '[veil:vt_test]',
+    }),
+  };
+  g.GoldspireVeilActions.registerDeps({
+    replaceSelection: (_context, text) => {
+      replaced = text;
+    },
+  });
+  const result = await g.GoldspireVeilActions.execute('tokenize', {
+    settings: {
+      copilotEnabled: true,
+      orgProvisionSource: 'cloud',
+      orgId: 'test',
+      passphrase: 'team-passphrase-ok-2026',
+    },
+    selectionContext: { kind: 'input', selectedText: 'sk-live-abc', start: 0, end: 11 },
+    text: 'sk-live-abc',
+    context: { source: 'paste' },
+    detections: [{ category: 'api_key', confidence: 95 }],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(replaced, '[veil:vt_test]');
+});

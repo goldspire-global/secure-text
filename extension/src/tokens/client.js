@@ -31,13 +31,19 @@
       profile,
     });
 
-    const record = await global.GoldspireVeilTokenApi?.createTokenRecord?.({
-      ciphertext,
-      category: options.category || '',
-      ttlMs: options.ttlMs,
-      maxReads: options.maxReads,
-      burnAfterRead: options.burnAfterRead,
-    });
+    let record;
+    try {
+      record = await global.GoldspireVeilTokenApi?.createTokenRecord?.({
+        ciphertext,
+        category: options.category || '',
+        ttlMs: options.ttlMs,
+        maxReads: options.maxReads ?? 25,
+        burnAfterRead: options.burnAfterRead ?? false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not create token.';
+      return { ok: false, error: 'create_failed', message };
+    }
 
     global.GoldspireSecrets?.clearMemoryString?.(unlockSecret);
 
@@ -56,7 +62,20 @@
       return { ok: false, error: 'org_required' };
     }
 
-    const record = await global.GoldspireVeilTokenApi?.resolveTokenRecord?.(tokenId);
+    let record;
+    try {
+      record = await global.GoldspireVeilTokenApi?.resolveTokenRecord?.(tokenId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (/not found|404/i.test(message)) {
+        return { ok: false, error: 'not_found' };
+      }
+      if (/expired|read limit|410/i.test(message)) {
+        return { ok: false, error: 'expired' };
+      }
+      return { ok: false, error: 'resolve_failed', message: message || 'Could not resolve token.' };
+    }
+
     if (!record?.ciphertext) return { ok: false, error: 'not_found' };
 
     const profile = settings.securityProfile === 'organization' ? 'organization' : 'personal';
@@ -68,11 +87,29 @@
     }
     if (!unlockSecret) return { ok: false, error: 'no_passphrase' };
 
-    const plaintext = await global.GoldspireSecureCrypto.decryptText(record.ciphertext, unlockSecret, {
-      profile,
-      mode: 'team',
-    });
+    let plaintext;
+    try {
+      plaintext = await global.GoldspireSecureCrypto.decryptText(record.ciphertext, unlockSecret, {
+        profile,
+        mode: 'team',
+      });
+    } catch {
+      return { ok: false, error: 'wrong_passphrase' };
+    }
     global.GoldspireSecrets?.clearMemoryString?.(unlockSecret);
+
+    try {
+      await global.GoldspireVeilTokenApi?.consumeTokenRecord?.(tokenId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (/not found|404/i.test(message)) {
+        return { ok: false, error: 'not_found' };
+      }
+      if (/expired|read limit|410/i.test(message)) {
+        return { ok: false, error: 'expired' };
+      }
+      return { ok: false, error: 'consume_failed', message: message || 'Could not finalize token reveal.' };
+    }
 
     return { ok: true, plaintext, tokenId: record.tokenId, category: record.category };
   }

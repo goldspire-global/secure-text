@@ -29,7 +29,7 @@ import {
   addOrgMember,
 } from './admin-service.mjs';
 import { ingestExtensionEvents, getSecurityEventSummary, exportSecurityEvents } from './events-service.mjs';
-import { createSecureToken, resolveSecureToken } from './token-service.mjs';
+import { createSecureToken } from './token-service.mjs';
 import {
   listTeams,
   createTeam,
@@ -244,7 +244,17 @@ const server = createServer(async (req, res) => {
     const tokenResolveMatch = pathname.match(/^\/v1\/extension\/tokens\/([^/]+)$/);
     if (req.method === 'GET' && tokenResolveMatch) {
       const { token, deviceId } = parseAuthHeaders(req);
-      const result = await resolveSecureToken(token, deviceId, decodeURIComponent(tokenResolveMatch[1]));
+      const { peekSecureToken } = await import('./token-service.mjs');
+      const result = await peekSecureToken(token, deviceId, decodeURIComponent(tokenResolveMatch[1]));
+      json(res, req, 200, result);
+      return;
+    }
+
+    const tokenConsumeMatch = pathname.match(/^\/v1\/extension\/tokens\/([^/]+)\/consume$/);
+    if (req.method === 'POST' && tokenConsumeMatch) {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const { consumeSecureToken } = await import('./token-service.mjs');
+      const result = await consumeSecureToken(token, deviceId, decodeURIComponent(tokenConsumeMatch[1]));
       json(res, req, 200, result);
       return;
     }

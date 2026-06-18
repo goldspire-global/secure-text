@@ -1,5 +1,5 @@
 /**
- * Veil copilot prompt — Encrypt / Mask / Allow (+ Tokenize stub).
+ * Veil copilot prompt — small floating card, not a full-screen modal.
  */
 (function (global) {
   const PROMPT_ID = 'goldspire-veil-copilot';
@@ -21,87 +21,83 @@
   }
 
   function showVeilCopilot({
-    title = 'Veil detected sensitive data',
-    subtitle = '',
     detections = [],
     actions = [],
     recommendedId = '',
     onAction,
     onDismiss,
     variant = 'default',
+    context = {},
   }) {
     removePrompt();
 
     const categories = [...new Set(detections.map((d) => d.category).filter(Boolean))];
     const summary = categories.length
       ? categories.map(formatCategoryLabel).join(', ')
-      : 'sensitive content';
+      : 'sensitive data';
 
-    const overlay = document.createElement('div');
-    overlay.id = PROMPT_ID;
-    overlay.className = 'gst-overlay gst-overlay--veil';
-    overlay.innerHTML = `
-      <div class="gst-dialog gst-dialog--veil" role="dialog" aria-modal="true">
-        <p class="gst-veil-kicker">Veil by Goldspire</p>
-        <h2 class="gst-dialog__title">${escapeHtml(title)}</h2>
-        ${subtitle ? `<p class="gst-veil-subtitle">${escapeHtml(subtitle)}</p>` : ''}
-        <p class="gst-veil-summary">Detected: <strong>${escapeHtml(summary)}</strong></p>
-        <div class="gst-veil-actions" data-veil-actions></div>
-        <div class="gst-dialog__actions gst-veil-footer">
-          <button type="button" class="gst-btn gst-btn--ghost" data-action="dismiss">Dismiss</button>
-        </div>
+    const recommended = actions.find((a) => a.id === recommendedId && a.id !== 'ignore');
+    const hint = recommended
+      ? global.GoldspireVeilActionRegistry?.recommendHint?.(recommended.id, context) || ''
+      : '';
+    const primaryActions = actions.filter((a) => a.id !== 'ignore');
+    const allowAction = actions.find((a) => a.id === 'ignore');
+
+    const pop = document.createElement('div');
+    pop.id = PROMPT_ID;
+    pop.className = `gst-veil-pop${variant === 'ai' ? ' gst-veil-pop--ai' : ''}`;
+    pop.innerHTML = `
+      <div class="gst-veil-pop__head">
+        <span class="gst-veil-pop__brand">Veil</span>
+        <span class="gst-veil-pop__detect">${escapeHtml(summary)}</span>
+        <button type="button" class="gst-veil-pop__close" data-action="dismiss" title="Dismiss">✕</button>
       </div>
+      <div class="gst-veil-pop__chips" data-veil-actions></div>
+      ${allowAction ? '<button type="button" class="gst-veil-pop__allow" data-action-id="ignore">Allow</button>' : ''}
     `;
 
-    const container = overlay.querySelector('[data-veil-actions]');
-    for (const action of actions) {
+    const container = pop.querySelector('[data-veil-actions]');
+    for (const action of primaryActions) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `gst-btn gst-veil-action${action.id === recommendedId ? ' gst-veil-action--recommended' : ''}${action.stub ? ' gst-veil-action--stub' : ''}`;
+      btn.className = `gst-veil-pop__chip${action.id === recommendedId ? ' gst-veil-pop__chip--pick' : ''}`;
       btn.dataset.actionId = action.id;
       btn.disabled = action.stub || action.available === false;
-      btn.innerHTML = `
-        <span class="gst-veil-action__label">${escapeHtml(action.label)}</span>
-        <span class="gst-veil-action__desc">${escapeHtml(action.description || '')}</span>
-      `;
-      if (action.stub) {
-        btn.title = 'Coming soon';
-      }
+      btn.textContent = action.label.replace(/…$/, '');
+      const title = action.id === recommendedId && hint
+        ? `${action.label} — ${hint}`
+        : (action.description || action.label);
+      btn.title = title;
       container.appendChild(btn);
     }
 
-    overlay.addEventListener('click', async (event) => {
-      const actionBtn = event.target.closest('[data-action-id]');
-      if (actionBtn) {
-        const actionId = actionBtn.dataset.actionId;
-        actionBtn.disabled = true;
-        try {
-          await onAction?.(actionId);
-          removePrompt();
-        } catch (error) {
-          actionBtn.disabled = false;
-          global.GoldspireSecureUI?.showToast?.(
-            error instanceof Error ? error.message : 'Action failed.',
-            'error',
-          );
-        }
-        return;
-      }
-      if (event.target === overlay || event.target.closest('[data-action="dismiss"]')) {
+    pop.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-action="dismiss"]')) {
         removePrompt();
         onDismiss?.();
+        return;
+      }
+      const actionBtn = event.target.closest('[data-action-id]');
+      if (!actionBtn) return;
+      const actionId = actionBtn.dataset.actionId;
+      actionBtn.disabled = true;
+      try {
+        await onAction?.(actionId);
+        removePrompt();
+      } catch (error) {
+        actionBtn.disabled = false;
+        global.GoldspireSecureUI?.showToast?.(
+          error instanceof Error ? error.message : 'Action failed.',
+          'error',
+        );
       }
     });
 
-    document.documentElement.appendChild(overlay);
+    document.documentElement.appendChild(pop);
 
     const primary = container.querySelector(`[data-action-id="${recommendedId}"]`)
-      || container.querySelector('.gst-veil-action:not([disabled])');
+      || container.querySelector('.gst-veil-pop__chip:not([disabled])');
     primary?.focus?.();
-
-    if (variant === 'ai') {
-      overlay.querySelector('.gst-dialog--veil')?.classList.add('gst-dialog--veil-ai');
-    }
   }
 
   global.GoldspireVeilCopilotUI = {

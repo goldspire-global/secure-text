@@ -505,23 +505,28 @@
   async function resolveVeilTokenId(tokenId, options = {}) {
     if (!ensureExtensionReady()) return { ok: false };
 
-    const settings = await getSettings();
-    if (!(await globalThis.GoldspireVeilTokens?.canUseTokens?.(settings))) {
-      GoldspireSecureUI.showToast('Join your team to reveal Veil tokens.', 'error');
-      return { ok: false, error: 'org_required' };
-    }
-
-    await ensureOrgSharingReady(settings);
-
-    const unlock = async (unlockSecret) => {
-      const result = await globalThis.GoldspireVeilTokens.resolveToken(tokenId, settings, { unlockSecret });
-      if (!result?.ok) {
-        const message = result?.error === 'not_found'
-          ? 'Token not found or already consumed.'
-          : 'Could not reveal token.';
-        GoldspireSecureUI.showToast(message, 'error');
-        return result;
+    try {
+      const settings = await getSettings();
+      if (!(await globalThis.GoldspireVeilTokens?.canUseTokens?.(settings))) {
+        GoldspireSecureUI.showToast('Join your team to reveal Veil tokens.', 'error');
+        return { ok: false, error: 'org_required' };
       }
+
+      await ensureOrgSharingReady(settings);
+
+      const unlock = async (unlockSecret) => {
+        const result = await globalThis.GoldspireVeilTokens.resolveToken(tokenId, settings, { unlockSecret });
+        if (!result?.ok) {
+          const message = result?.error === 'not_found'
+            ? 'Token not found — it may have expired or was created in another org.'
+            : result?.error === 'expired'
+              ? 'This token has expired or reached its reveal limit.'
+              : result?.error === 'wrong_passphrase'
+                ? 'Wrong team passphrase for this token.'
+                : result?.message || 'Could not reveal token.';
+          GoldspireSecureUI.showToast(message, 'error');
+          return result;
+        }
 
       const placeholder = globalThis.GoldspireVeilTokenFormat?.formatPlaceholder?.(tokenId) || `[veil:${tokenId}]`;
 
@@ -559,6 +564,17 @@
       },
     });
     return { ok: true };
+    } catch (error) {
+      if (isInvalidatedError(error)) {
+        warnStaleContext();
+        return { ok: false };
+      }
+      GoldspireSecureUI.showToast(
+        error instanceof Error ? error.message : 'Could not reveal token.',
+        'error',
+      );
+      return { ok: false };
+    }
   }
 
   async function resolveVeilSelection(message = {}) {
@@ -727,6 +743,31 @@
         reject(new Error('Could not open dialog.'));
       }
     });
+  }
+
+  function showSecureSheetTop(options) {
+    if (isTopFrame) {
+      return new Promise((resolve, reject) => {
+        GoldspireSecureUI.showSecureSheet({
+          ...options,
+          onSubmit: async (data) => {
+            const result = await options.onSubmit(data);
+            resolve(result);
+          },
+          onCancel: () => {
+            options.onCancel?.();
+            reject(new Error('Cancelled'));
+          },
+        });
+      });
+    }
+
+    return delegatePromptToTop({
+      kind: 'secure-sheet',
+      title: options.title,
+      modes: options.modes,
+      defaultMode: options.defaultMode,
+    }).then((data) => options.onSubmit(data));
   }
 
   function showPromptTop(options) {
@@ -898,7 +939,14 @@
 
     pill.querySelector('.gst-pill-half--options')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!getActivePreview()) return;
+      const preview = getActivePreview();
+      if (!preview?.trim()) {
+        if (isTopFrame && remoteSelectionPreview?.trim() && remoteSelectionToken) {
+          forwardToRelayedFrame('SECURE_WITH_OPTIONS', { showOptions: true });
+          return;
+        }
+        return;
+      }
       runSafe(handleCommand({ type: 'SECURE_WITH_OPTIONS', showOptions: true }));
     });
 
@@ -1298,7 +1346,9 @@
   async function secureSelection(message = {}) {
     if (!ensureExtensionReady()) return;
 
-    const context = getSelectionContext(message);
+    const context = message.selectionContext
+      ? resolveContext(message.selectionContext)
+      : getSelectionContext(message);
     if (!context?.selectedText?.trim()) {
       if (!message.silent) {
         showToastTop('Highlight text first, then Ctrl+Shift+S or right-click.', 'error');
@@ -1355,66 +1405,23 @@
 
     const sharingAvailable = canUseOrgSharing(settings);
 
-    if (message.showOptions && sharingAvailable && profile === 'organization') {
-      await showOrgSharePrompt(context, settings);
-      return;
-    }
-
     const selectionSummary = getSelectionSummary();
+    const defaultMode = settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team';
     const protectionOptions = [
-      { value: 'team', label: 'Team passphrase', checked: settings.defaultSecureMode === 'team' },
+      { value: 'team', label: 'Team', checked: defaultMode === 'team' },
       ...(sharingAvailable
         ? [{ value: 'direct', label: 'Specific people', checked: false }]
         : []),
-      { value: 'one-time', label: 'One-time code', checked: settings.defaultSecureMode === 'one-time' },
-      { value: 'custom', label: 'Custom passphrase', checked: settings.defaultSecureMode === 'custom' },
+      { value: 'one-time', label: 'One-time', checked: defaultMode === 'one-time' },
     ];
 
-    showPromptTop({
-      title: selectionSummary?.multi ? `Secure ${selectionSummary.count} selections` : 'Secure selection',
-      submitLabel: 'Secure as [redacted]',
-      fields: [
-        {
-          type: 'radio-group',
-          name: 'mode',
-          label: 'Protection',
-          options: protectionOptions,
-        },
-        {
-          name: 'recipients',
-          label: 'Recipient work emails',
-          type: 'text',
-          placeholder: sharingAvailable ? 'colleague@company.com, teammate@company.com' : '',
-          hidden: !sharingAvailable,
-        },
-        {
-          name: 'passphrase',
-          label: 'Team passphrase',
-          type: 'password',
-          value: settings.passphraseFromVault ? '' : settings.useSavedPassphrase ? settings.passphrase : '',
-        },
-        {
-          name: 'customPassphrase',
-          label: 'Custom passphrase',
-          type: 'password',
-        },
-        {
-          type: 'checkbox',
-          name: 'copyLink',
-          label: 'Copy backup unlock link (one-time mode)',
-          checked: false,
-        },
-      ],
-      onSubmit: async ({ mode, passphrase, customPassphrase, copyLink, recipients }) => {
+    await showSecureSheetTop({
+      title: selectionSummary?.multi ? `Secure ${selectionSummary.count} items` : 'Secure selection',
+      modes: protectionOptions.map(({ value, label }) => ({ value, label })),
+      defaultMode,
+      onSubmit: async ({ mode, recipients }) => {
         const isDirect = mode === 'direct';
-        const isOneTime = mode === 'one-time' || isDirect;
-        const unlockSecret = isOneTime
-          ? GoldspireSecureCrypto.generateOneTimeCode(16)
-          : mode === 'custom'
-            ? customPassphrase?.trim()
-            : passphrase?.trim() || teamPassphrase;
-
-        if (!unlockSecret) throw new Error('Passphrase is required.');
+        const isOneTime = mode === 'one-time';
 
         if (isDirect) {
           const recipientEmails = String(recipients || '')
@@ -1424,22 +1431,39 @@
           if (recipientEmails.length === 0) {
             throw new Error('Enter at least one colleague work email.');
           }
-
           await deliverDirectShare(context, settings, recipientEmails);
           return;
         }
 
-        if (!isOneTime && settings.enforceStrongPassphrase !== false && mode !== 'custom') {
-          GoldspirePassphrasePolicy?.assertPassphrase?.(unlockSecret, profile, { mode });
+        if (isOneTime) {
+          await executeSecureBatch(context, settings, {
+            mode: 'one-time',
+            unlockSecret: GoldspireSecureCrypto.generateOneTimeCode(16),
+            copyLink: false,
+          });
+          return;
+        }
+
+        const unlockSecret = teamPassphrase;
+        if (!unlockSecret) {
+          if (settings.passphraseFromVault) {
+            throw new Error('Open Veil and enter your team passphrase for this session.');
+          }
+          throw new Error('Set your team passphrase in Veil settings first.');
+        }
+
+        if (settings.enforceStrongPassphrase !== false) {
+          GoldspirePassphrasePolicy?.assertPassphrase?.(unlockSecret, profile, { mode: 'team' });
         }
 
         await executeSecureBatch(context, settings, {
-          mode: isOneTime ? 'one-time' : mode,
+          mode: 'team',
           unlockSecret,
-          copyLink,
+          copyLink: false,
         });
       },
     });
+    return { handled: true };
   }
 
   async function unlockSelection(message = {}) {
@@ -1681,6 +1705,17 @@
         return;
       }
 
+      if (kind === 'secure-sheet') {
+        GoldspireSecureUI.showSecureSheet({
+          title: resolvedPrompt.title,
+          modes: resolvedPrompt.modes || [],
+          defaultMode: resolvedPrompt.defaultMode || 'team',
+          onSubmit: async (data) => reply({ data }),
+          onCancel: () => reply({ cancelled: true }),
+        });
+        return;
+      }
+
       if (kind === 'result-dialog') {
         GoldspireSecureUI.showResultDialog({
           title: resolvedPrompt.title,
@@ -1759,7 +1794,12 @@
     runSafe(resolveVeilTokenId(tokenId, { replaceNode: node, copyResult: false }));
   });
 
-  GoldspirePasteObserve?.initPasteObserve?.({ getSettings, runSafe });
+  GoldspirePasteObserve?.initPasteObserve?.({
+    getSettings,
+    getSettingsSync: () => cachedUiSettings,
+    runSafe,
+    isComposeContext,
+  });
 
   GoldspireVeilActions?.registerDeps?.({
     getSettings,

@@ -59,7 +59,18 @@
     return global.GoldspireVeilActions?.execute?.(actionId, request);
   }
 
-  async function applyPasteAction(actionId, { text, target, context, detections, settings, caret }) {
+  async function applyPasteAction(actionId, {
+    text,
+    target,
+    context,
+    detections,
+    settings,
+    caret,
+    alreadyInserted = false,
+    fieldState = null,
+    match = null,
+    selectionContext = null,
+  }) {
     const request = {
       text,
       context,
@@ -68,27 +79,69 @@
     };
 
     if (actionId === 'ignore') {
-      global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+      let nextFieldState = fieldState;
+      if (!alreadyInserted) {
+        global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+        nextFieldState = global.GoldspirePasteInsert?.readFieldState?.(target) || fieldState;
+      }
+      global.GoldspireVeilSnooze?.allowComposition?.(
+        context.host,
+        text,
+        match,
+        nextFieldState,
+      );
       await runAction('ignore', request);
       return { ok: true, inserted: text };
     }
 
     if (actionId === 'mask') {
       const masked = global.GoldspireVeilMask?.maskSensitiveText?.(text, context) || text;
-      const selectionContext = global.GoldspirePasteInsert?.insertAtCaret?.(caret, masked);
-      await runAction('mask', { ...request, selectionContext, text: masked });
+      let nextSelection = selectionContext;
+      if (alreadyInserted && fieldState && match?.raw) {
+        nextSelection = global.GoldspirePasteInsert?.replaceFieldMatch?.(fieldState, match.raw, masked);
+      } else {
+        nextSelection = global.GoldspirePasteInsert?.insertAtCaret?.(caret, masked);
+      }
+      await runAction('mask', { ...request, selectionContext: nextSelection, text: masked });
       return { ok: true, inserted: masked };
     }
 
     if (actionId === 'encrypt') {
-      const selectionContext = global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
-      global.GoldspireSelection?.captureSelection?.();
+      let nextSelection = selectionContext;
+      if (!nextSelection) {
+        if (alreadyInserted && fieldState && match?.raw) {
+          nextSelection = global.GoldspirePasteInsert?.buildSelectionForMatch?.(fieldState, match);
+        } else {
+          nextSelection = global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+        }
+      }
+      if (nextSelection?.selectedText?.trim()) {
+        global.GoldspireSelection?.rememberSelection?.(nextSelection);
+      }
       const result = await runAction('encrypt', {
         ...request,
-        selectionContext,
-        options: { silent: false },
+        selectionContext: nextSelection,
+        options: { showSecureOptions: false, silent: false },
       });
       return result;
+    }
+
+    if (actionId === 'tokenize') {
+      let nextSelection = selectionContext;
+      if (!nextSelection) {
+        if (alreadyInserted && fieldState && match?.raw) {
+          nextSelection = global.GoldspirePasteInsert?.buildSelectionForMatch?.(fieldState, match);
+        } else {
+          nextSelection = global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+        }
+      }
+      return runAction('tokenize', {
+        ...request,
+        selectionContext: nextSelection,
+        fieldState,
+        match,
+        alreadyInserted,
+      });
     }
 
     if (actionId === 'block') {
@@ -116,6 +169,7 @@
       title,
       subtitle,
       detections,
+      context,
       actions,
       recommendedId,
       onAction,
@@ -132,16 +186,37 @@
     detections,
     settings,
     caret,
+    alreadyInserted = false,
+    fieldState = null,
+    match = null,
   }) {
     const action = policyResult.action;
+    const actionArgs = {
+      text,
+      target,
+      context,
+      detections,
+      settings,
+      caret,
+      alreadyInserted,
+      fieldState,
+      match,
+    };
 
     if (action === 'block' && policyResult.enforced) {
-      await applyPasteAction('block', { text, target, context, detections, settings, caret });
+      if (!alreadyInserted) {
+        await applyPasteAction('block', actionArgs);
+      } else if (fieldState && match?.raw) {
+        global.GoldspirePasteInsert?.replaceFieldMatch?.(fieldState, match.raw, '');
+        global.GoldspireSecureUI?.showToast?.('Sensitive text removed by policy.', 'error');
+      } else {
+        global.GoldspireSecureUI?.showToast?.('Paste blocked by policy.', 'error');
+      }
       return { handled: true, blocked: true };
     }
 
     if (action === 'auto_mask' && policyResult.enforced) {
-      await applyPasteAction('mask', { text, target, context, detections, settings, caret });
+      await applyPasteAction('mask', actionArgs);
       global.GoldspireSecureUI?.showToast?.(policyResult.message || 'Masked by policy.', 'info');
       return { handled: true, autoMasked: true };
     }
@@ -154,7 +229,9 @@
       if (isCopilotEnabled(settings) && detections.length) {
         return { handled: false, showCopilot: true };
       }
-      global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+      if (!alreadyInserted) {
+        global.GoldspirePasteInsert?.insertAtCaret?.(caret, text);
+      }
       return { handled: true, allowed: true };
     }
 

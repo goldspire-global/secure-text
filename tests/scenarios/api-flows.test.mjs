@@ -77,7 +77,7 @@ test('scenario: tokenize ciphertext roundtrip via API', { skip: !hasDatabase() }
   const crypto = loadExtensionCrypto();
   const { createOrganization } = await import('../../api/src/admin-service.mjs');
   const { joinWithCode } = await import('../../api/src/org-service.mjs');
-  const { createSecureToken, resolveSecureToken } = await import('../../api/src/token-service.mjs');
+  const { createSecureToken, peekSecureToken, consumeSecureToken } = await import('../../api/src/token-service.mjs');
   const { closePool } = await import('../../api/src/db.mjs');
 
   const created = await createOrganization({
@@ -103,15 +103,17 @@ test('scenario: tokenize ciphertext roundtrip via API', { skip: !hasDatabase() }
   });
   assert.ok(stored.tokenId.startsWith('vt_'));
 
-  const resolved = await resolveSecureToken(joined.provisionToken, deviceId, stored.tokenId);
-  const plaintext = await crypto.decryptText(resolved.ciphertext, TEAM_PASS, {
+  const peeked = await peekSecureToken(joined.provisionToken, deviceId, stored.tokenId);
+  const plaintext = await crypto.decryptText(peeked.ciphertext, TEAM_PASS, {
     mode: 'team',
     profile: 'organization',
   });
   assert.equal(plaintext, secret);
 
+  await consumeSecureToken(joined.provisionToken, deviceId, stored.tokenId);
+
   await assert.rejects(
-    () => resolveSecureToken(joined.provisionToken, deviceId, stored.tokenId),
+    () => peekSecureToken(joined.provisionToken, deviceId, stored.tokenId),
     (err) => err.status === 404 || err.status === 410,
   );
 

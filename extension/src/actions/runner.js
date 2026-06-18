@@ -50,7 +50,17 @@
 
     const settings = request.settings || (await deps.getSettings?.()) || {};
 
-    if (deps.executeSecureBatch && request.selectionContext) {
+    if (request.options?.showSecureOptions && deps?.secureSelection) {
+      const result = await deps.secureSelection({
+        showOptions: true,
+        selectionContext: context,
+        selectionText: context.selectedText,
+      });
+      await logAction(ACTION_IDS.encrypt, request);
+      return { ok: true, action: ACTION_IDS.encrypt, result };
+    }
+
+    if (deps.executeSecureBatch && context) {
       const teamPassphrase = await deps.resolveTeamPassphrase?.(settings);
       const canQuick =
         settings.defaultSecureMode === 'team'
@@ -73,6 +83,8 @@
 
     const result = await deps.secureSelection({
       ...(request.options || {}),
+      selectionContext: context,
+      selectionText: context.selectedText,
       silent: request.options?.silent !== false,
     });
 
@@ -112,16 +124,38 @@
     const settings = request.settings || (await deps?.getSettings?.()) || {};
     const category = request.detections?.[0]?.category || '';
 
-    const created = await global.GoldspireVeilTokens?.createToken?.(text, settings, { category });
-    if (!created?.ok) return created || { ok: false, error: 'tokenize_failed' };
+    try {
+      const created = await global.GoldspireVeilTokens?.createToken?.(text, settings, { category });
+      if (!created?.ok) {
+        const msg = created?.error === 'no_passphrase'
+          ? 'Set your team passphrase in Veil settings first.'
+          : created?.error === 'org_required'
+            ? 'Sign in to your organization in Veil settings.'
+            : 'Could not create token.';
+        global.GoldspireSecureUI?.showToast?.(msg, 'error');
+        return created || { ok: false, error: 'tokenize_failed' };
+      }
 
-    if (request.selectionContext && deps?.replaceSelection) {
-      deps.replaceSelection(request.selectionContext, created.placeholder);
+      if (request.selectionContext && deps?.replaceSelection) {
+        deps.replaceSelection(request.selectionContext, created.placeholder);
+      } else if (request.fieldState && request.match?.raw) {
+        global.GoldspirePasteInsert?.replaceFieldMatch?.(
+          request.fieldState,
+          request.match.raw,
+          created.placeholder,
+        );
+      }
+
+      await logAction(ACTION_IDS.tokenize, request);
+      global.GoldspireSecureUI?.showToast?.('Tokenized as secure placeholder.', 'success');
+      return { ok: true, action: ACTION_IDS.tokenize, ...created };
+    } catch (error) {
+      global.GoldspireSecureUI?.showToast?.(
+        error instanceof Error ? error.message : 'Tokenize failed.',
+        'error',
+      );
+      return { ok: false, error: 'tokenize_failed' };
     }
-
-    await logAction(ACTION_IDS.tokenize, request);
-    global.GoldspireSecureUI?.showToast?.('Tokenized as secure placeholder.', 'success');
-    return { ok: true, action: ACTION_IDS.tokenize, ...created };
   }
 
   async function execute(actionId, request = {}) {
@@ -129,7 +163,16 @@
     const gate = global.GoldspireVeilActionRegistry?.availabilityFor?.(actionId, request.context, settings);
 
     if (gate && !gate.available && actionId !== ACTION_IDS.ignore) {
-      if (gate.stub || actionId === ACTION_IDS.tokenize) {
+      if (actionId === ACTION_IDS.tokenize) {
+        const msg = gate.reason === 'org_required'
+          ? 'Sign in to your organization in Veil settings.'
+          : gate.reason === 'not_on_ai_surface'
+            ? 'Tokenize is not available on AI chat surfaces.'
+            : 'Tokenize is not available.';
+        global.GoldspireSecureUI?.showToast?.(msg, 'error');
+        return { ok: false, error: gate.reason || 'unavailable', action: actionId };
+      }
+      if (gate.stub) {
         return { ok: false, error: gate.reason || 'unavailable', action: actionId };
       }
       return { ok: false, error: gate.reason || 'unavailable', action: actionId };

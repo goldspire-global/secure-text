@@ -66,6 +66,7 @@
       detections,
       settings,
       selectionContext,
+      options: actionId === 'encrypt' ? { showSecureOptions: true } : undefined,
     });
     hide();
   }

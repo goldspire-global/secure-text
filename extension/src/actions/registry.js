@@ -14,8 +14,8 @@
   const ACTION_DEFS = Object.freeze({
     encrypt: {
       id: ACTION_IDS.encrypt,
-      label: 'Encrypt',
-      description: 'Replace with [redacted] secured text',
+      label: 'Secure',
+      description: 'Replace with [redacted] — team, specific people, or one-time',
       priority: 10,
     },
     mask: {
@@ -45,7 +45,7 @@
     ignore: {
       id: ACTION_IDS.ignore,
       label: 'Allow',
-      description: 'Continue without changes',
+      description: 'Keep this text as-is for now',
       priority: 60,
     },
   });
@@ -149,11 +149,31 @@
     return ACTION_IDS.mask;
   }
 
+  function recommendHint(actionId, context = {}) {
+    const ai = isAiSurface(context);
+    if (actionId === ACTION_IDS.encrypt && !ai) {
+      return 'Best for email and chat — recipients with your team passphrase can unlock.';
+    }
+    if (actionId === ACTION_IDS.mask) {
+      return ai
+        ? 'Hides values before sending to AI.'
+        : 'Quick redaction when you only need to hide the value.';
+    }
+    if (actionId === ACTION_IDS.tokenize) {
+      return 'Reversible placeholder stored by your organization.';
+    }
+    if (actionId === ACTION_IDS.ignore) {
+      return 'Only if you\'re sure this is safe to share.';
+    }
+    return '';
+  }
+
   global.GoldspireVeilActionRegistry = {
     ACTION_IDS,
     ACTION_DEFS,
     listAvailable,
     recommendPrimary,
+    recommendHint,
     availabilityFor,
     isAiSurface,
     isActionEnabled,

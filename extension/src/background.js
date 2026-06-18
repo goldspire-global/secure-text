@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js');
+importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -506,6 +506,28 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     GoldspireOrgShare.deliverSharesForMembers(message)
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error?.message || 'Share delivery failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'VEIL_TOKEN_API') {
+    (async () => {
+      try {
+        let result;
+        if (message.method === 'createTokenRecord') {
+          result = await GoldspireVeilTokenApi.createTokenRecord(message.payload || {});
+        } else if (message.method === 'resolveTokenRecord' || message.method === 'peekTokenRecord') {
+          result = await GoldspireVeilTokenApi.resolveTokenRecord(message.payload?.tokenId);
+        } else if (message.method === 'consumeTokenRecord') {
+          result = await GoldspireVeilTokenApi.consumeTokenRecord(message.payload?.tokenId);
+        } else {
+          sendResponse({ ok: false, error: 'Unknown token API method.' });
+          return;
+        }
+        sendResponse({ ok: true, result });
+      } catch (error) {
+        sendResponse({ ok: false, error: error?.message || 'Token API failed.' });
+      }
+    })();
     return true;
   }
 

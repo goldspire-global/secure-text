@@ -319,6 +319,7 @@
 
   global.GoldspireSelection = {
     captureSelection,
+    rememberSelection: remember,
     getActiveSelection,
     buildSelectionContext,
     buildInsertionContext,

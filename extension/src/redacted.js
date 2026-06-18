@@ -150,6 +150,14 @@
     }
   }
 
+  function countRedactedLabels(root) {
+    if (!root) return 0;
+    const text = root.innerText || root.textContent || '';
+    if (!/\[\.?redacted\]/i.test(text)) return 0;
+    const matches = text.match(/\[\.?redacted\]/gi);
+    return matches ? matches.length : 0;
+  }
+
   function findInsertedLink(root, unlockBaseUrl) {
     if (!root) return null;
     const scope = root.querySelectorAll ? root : document;
@@ -166,20 +174,6 @@
     return null;
   }
 
-  async function pasteHtmlAtSelection(html, plainText) {
-    try {
-      if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') return false;
-      const item = new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
-        'text/plain': new Blob([plainText], { type: 'text/plain' }),
-      });
-      await navigator.clipboard.write([item]);
-      return document.execCommand('paste');
-    } catch {
-      return false;
-    }
-  }
-
   async function insertRichRedacted(resolved, fullMarker, settings, { forEmail = false } = {}) {
     const unlockBaseUrl = getUnlockBaseUrl(settings, { forEmail });
     const href = buildUnlockHref(fullMarker, unlockBaseUrl);
@@ -188,6 +182,7 @@
     const editableRoot = findComposeRoot(resolved);
     const selection = resolved.selection || window.getSelection();
     const html = buildAnchorHtml(fullMarker, unlockBaseUrl);
+    const insertRoot = editableRoot || document.body;
 
     if (editableRoot) editableRoot.focus();
 
@@ -195,26 +190,31 @@
     selection?.removeAllRanges?.();
     selection?.addRange?.(range);
 
-    const findLink = () => findInsertedLink(editableRoot || document.body, unlockBaseUrl);
+    const findLink = () => findInsertedLink(insertRoot, unlockBaseUrl);
 
     let linkNode = null;
+    const canInsertHtml = Boolean(document.queryCommandSupported?.('insertHTML'));
 
-    if (document.queryCommandSupported?.('insertHTML')) {
+    if (canInsertHtml) {
       document.execCommand('insertHTML', false, html);
       linkNode = findLink();
+      // Outlook/Gmail rewrite anchors into native pills (e.g. [.redacted]). Never insert twice.
+      notifyRichEditor(editableRoot);
+      return {
+        kind: 'token',
+        node: linkNode,
+        fullMarker,
+        display: LABEL,
+        unlockBaseUrl,
+        href,
+        persistedAsLink: Boolean(linkNode?.getAttribute?.('href')?.includes('#')),
+      };
     }
 
-    if (!linkNode) {
-      const pasted = await pasteHtmlAtSelection(html, LABEL);
-      if (pasted) linkNode = findLink();
-    }
-
-    if (!linkNode) {
-      const link = createLink(fullMarker, unlockBaseUrl);
-      range.insertNode(link);
-      link.after(document.createTextNode('\u00A0'));
-      linkNode = link.isConnected ? link : null;
-    }
+    const link = createLink(fullMarker, unlockBaseUrl);
+    range.insertNode(link);
+    link.after(document.createTextNode('\u00A0'));
+    linkNode = link.isConnected ? link : null;
 
     notifyRichEditor(editableRoot);
 

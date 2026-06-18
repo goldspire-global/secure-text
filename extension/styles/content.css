@@ -9,6 +9,103 @@
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+.gst-overlay--sheet,
+.gst-overlay--veil-compact {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 14px 16px;
+  background: transparent;
+  pointer-events: none;
+  place-items: unset;
+}
+
+.gst-overlay--sheet .gst-dialog,
+.gst-overlay--veil-compact .gst-dialog {
+  pointer-events: auto;
+  align-self: flex-end;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.gst-dialog--sheet,
+.gst-dialog--veil-compact {
+  width: min(280px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+}
+
+.gst-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.gst-sheet__close {
+  all: unset;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.gst-sheet__close:hover {
+  color: #e2e8f0;
+}
+
+.gst-sheet__title {
+  margin: 0 0 8px !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+.gst-sheet__actions {
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+.gst-sheet__actions .gst-btn--primary {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.gst-field--chips {
+  margin-bottom: 8px;
+}
+
+.gst-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gst-note {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #9ca3af;
+}
+
+.gst-result--compact {
+  margin-bottom: 8px;
+}
+
+.gst-result--compact .gst-result__row {
+  margin-bottom: 6px;
+}
+
+.gst-result--compact .gst-result__value {
+  font-size: 12px;
+  word-break: break-all;
+}
+
 .gst-dialog {
   width: min(420px, calc(100vw - 32px));
   border-radius: 14px;
@@ -491,7 +588,173 @@
   color: #e2e8f0;
 }
 
-/* Veil copilot prompt */
+/* Veil copilot — floating pop, no full-screen overlay */
+.gst-veil-pop {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  width: min(280px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #111522;
+  color: #f4f6fb;
+  border: 1px solid rgba(212, 160, 23, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.gst-veil-pop__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-height: 0;
+}
+
+.gst-veil-pop__brand {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #d4a017;
+  flex-shrink: 0;
+}
+
+.gst-veil-pop__detect {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gst-veil-pop__close {
+  all: unset;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.gst-veil-pop__close:hover {
+  color: #e2e8f0;
+}
+
+.gst-veil-pop__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.gst-veil-pop__chip {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1a2030;
+  color: #f4f6fb;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.gst-veil-pop__chip:hover:not(:disabled) {
+  border-color: rgba(212, 160, 23, 0.45);
+}
+
+.gst-veil-pop__chip--pick {
+  background: linear-gradient(180deg, #f0c14b 0%, #d4a017 100%);
+  color: #17130a;
+  border-color: transparent;
+}
+
+.gst-veil-pop__chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gst-veil-pop__allow {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  margin-left: auto;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: inherit;
+}
+
+.gst-veil-pop__allow:hover {
+  color: #e2e8f0;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__hint {
+  margin: 0 0 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #94a3b8;
+}
+
+.gst-veil-pop__field {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 6px;
+}
+
+.gst-veil-pop__field[hidden],
+.gst-veil-pop__hint[hidden],
+.gst-conditional[hidden],
+.gst-note[hidden],
+.gst-field[hidden] {
+  display: none !important;
+}
+
+.gst-veil-pop__field-label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.gst-veil-pop__field-input {
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0b0f19;
+  color: #f4f6fb;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.gst-veil-pop__field-input:focus {
+  outline: none;
+  border-color: rgba(212, 160, 23, 0.55);
+}
+
+.gst-veil-pop__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+/* Veil copilot prompt (legacy sheet classes — unlock modals) */
+.gst-veil-compact__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f4f6fb;
+}
+
 .gst-dialog--veil {
   width: min(440px, calc(100vw - 32px));
 }
@@ -512,15 +775,72 @@
 }
 
 .gst-veil-summary {
-  margin: 0 0 14px;
-  font-size: 13px;
-  color: #e2e8f0;
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #b8bfd1;
+}
+
+.gst-veil-recommend {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(212, 160, 23, 0.1);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e8dcc0;
 }
 
 .gst-veil-actions {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.gst-veil-actions--compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.gst-veil-chip {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #151b2b;
+  color: #f4f6fb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gst-veil-chip:hover:not(:disabled) {
+  border-color: rgba(212, 160, 23, 0.45);
+}
+
+.gst-veil-chip--recommended {
+  background: linear-gradient(180deg, #f0c14b 0%, #d4a017 100%);
+  color: #17130a;
+  border-color: transparent;
+}
+
+.gst-veil-chip--stub,
+.gst-veil-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gst-veil-footer--compact {
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.gst-veil-allow {
+  font-size: 12px;
+  padding: 4px 8px;
 }
 
 .gst-veil-action {

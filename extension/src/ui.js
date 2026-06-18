@@ -281,10 +281,106 @@
     document.documentElement.appendChild(overlay);
   }
 
+  function showSecureSheet({
+    title = 'Secure selection',
+    modes = [],
+    defaultMode = 'team',
+    onSubmit,
+    onCancel,
+  }) {
+    removePrompt();
+    document.getElementById('goldspire-veil-copilot')?.remove();
+
+    const initialMode = modes.some((m) => m.value === defaultMode)
+      ? defaultMode
+      : (modes[0]?.value || 'team');
+
+    const panelHtml = {
+      team: '<p class="gst-veil-pop__hint">Uses your saved team passphrase from Veil settings.</p>',
+      direct: `
+        <div class="gst-veil-pop__field">
+          <span class="gst-veil-pop__field-label">Work email(s)</span>
+          <input class="gst-veil-pop__field-input" name="recipients" type="email" placeholder="colleague@company.com" autocomplete="email" />
+        </div>
+      `,
+      'one-time': '<p class="gst-veil-pop__hint">Recipient gets a one-time unlock code.</p>',
+    };
+
+    const pop = document.createElement('div');
+    pop.id = PROMPT_ID;
+    pop.className = 'gst-veil-pop gst-veil-pop--secure';
+    pop.innerHTML = `
+      <div class="gst-veil-pop__head">
+        <span class="gst-veil-pop__brand">Veil</span>
+        <span class="gst-veil-pop__detect">${escapeHtml(title)}</span>
+        <button type="button" class="gst-veil-pop__close" data-action="cancel" title="Close">✕</button>
+      </div>
+      <div class="gst-veil-pop__chips" data-mode-chips></div>
+      <div class="gst-veil-pop__panel" data-panel-slot></div>
+      <div class="gst-veil-pop__actions">
+        <button type="button" class="gst-veil-pop__chip gst-veil-pop__chip--pick" data-action="submit">Secure</button>
+      </div>
+    `;
+
+    const chipsEl = pop.querySelector('[data-mode-chips]');
+    for (const mode of modes) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `gst-veil-pop__chip${mode.value === initialMode ? ' gst-veil-pop__chip--pick' : ''}`;
+      btn.dataset.mode = mode.value;
+      btn.textContent = mode.label;
+      chipsEl.appendChild(btn);
+    }
+
+    let activeMode = initialMode;
+
+    function setMode(mode) {
+      activeMode = mode;
+      chipsEl.querySelectorAll('[data-mode]').forEach((chip) => {
+        chip.classList.toggle('gst-veil-pop__chip--pick', chip.dataset.mode === mode);
+      });
+      const slot = pop.querySelector('[data-panel-slot]');
+      if (slot) slot.innerHTML = panelHtml[mode] || '';
+      if (mode === 'direct') {
+        slot?.querySelector('[name="recipients"]')?.focus();
+      }
+    }
+
+    chipsEl.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-mode]');
+      if (!chip) return;
+      setMode(chip.dataset.mode);
+    });
+
+    pop.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-action="cancel"]')) {
+        removePrompt();
+        onCancel?.();
+        return;
+      }
+      if (!event.target.closest('[data-action="submit"]')) return;
+      const submitBtn = pop.querySelector('[data-action="submit"]');
+      submitBtn.disabled = true;
+      try {
+        const recipients = pop.querySelector('[name="recipients"]')?.value || '';
+        await onSubmit({ mode: activeMode, recipients });
+        removePrompt();
+      } catch (error) {
+        submitBtn.disabled = false;
+        showToast(error instanceof Error ? error.message : 'Something went wrong.', 'error');
+      }
+    });
+
+    document.documentElement.appendChild(pop);
+    attachPromptKeyboard(onCancel);
+    setMode(initialMode);
+  }
+
   global.GoldspireSecureUI = {
     showToast,
     showPrompt,
     showTeamPassphrasePrompt,
+    showSecureSheet,
     teamPassphraseFields,
     showResultDialog,
     removePrompt,

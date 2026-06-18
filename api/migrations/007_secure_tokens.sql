@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS secure_tokens (
   ciphertext TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT '',
   expires_at TIMESTAMPTZ,
-  burn_after_read BOOLEAN NOT NULL DEFAULT true,
+  burn_after_read BOOLEAN NOT NULL DEFAULT false,
   read_count INTEGER NOT NULL DEFAULT 0,
   max_reads INTEGER NOT NULL DEFAULT 5,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

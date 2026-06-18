@@ -31,7 +31,7 @@
     sessionUntil = Date.now() + ms;
   }
 
-  async function snoozeHost(host = '') {
+  async   function snoozeHost(host = '') {
     const key = String(host || '').trim();
     if (!key) return;
     hosts.add(key);
@@ -46,11 +46,35 @@
     }
   }
 
+  const compositionAllowed = [];
+
+  function allowComposition(host, text, match, fieldState) {
+    compositionAllowed.push({
+      host: String(host || '').trim(),
+      matchRaw: String(match?.raw || text || '').trim(),
+      fieldSnapshot: String(fieldState?.text || text || ''),
+    });
+    if (compositionAllowed.length > 24) compositionAllowed.shift();
+  }
+
+  function isCompositionAllowed(host, text, match, fieldState) {
+    const key = String(host || '').trim();
+    const matchRaw = String(match?.raw || text || '').trim();
+    const fieldText = String(fieldState?.text || text || '');
+    return compositionAllowed.some(
+      (entry) => entry.host === key
+        && entry.matchRaw === matchRaw
+        && entry.fieldSnapshot === fieldText,
+    );
+  }
+
   global.GoldspireVeilSnooze = {
     load,
     isSnoozed,
     snoozeSession,
     snoozeHost,
+    allowComposition,
+    isCompositionAllowed,
     STORAGE_KEY,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

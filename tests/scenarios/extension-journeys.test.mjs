@@ -36,7 +36,76 @@ test('journey: paste with copilot on shows prompt when DLP is off', async () => 
     stopPropagation() {},
   };
 
-  await g.GoldspirePasteObserve.handlePaste(event, async () => settings);
+  await g.GoldspirePasteObserve.handlePaste(event, async () => settings, () => settings);
+  assert.equal(prompted, true);
+});
+
+test('journey: beforeinput insertFromPaste triggers copilot synchronously', async () => {
+  const g = loadVeilStack();
+  let prompted = false;
+  g.GoldspireVeilCopilotUI = {
+    showVeilCopilot: ({ onDismiss }) => {
+      prompted = true;
+      onDismiss?.();
+    },
+  };
+  g.GoldspirePasteInsert.getCaretState = () => ({
+    kind: 'input',
+    element: { value: '', selectionStart: 0, selectionEnd: 0, dispatchEvent() {} },
+    start: 0,
+    end: 0,
+  });
+  g.GoldspirePasteInsert.insertAtCaret = () => null;
+
+  const settings = { copilotEnabled: true, dlpMode: 'off' };
+  let prevented = false;
+  const event = {
+    inputType: 'insertFromPaste',
+    data: 'AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe',
+    target: { tagName: 'DIV', parentElement: null },
+    preventDefault() { prevented = true; },
+    stopPropagation() {},
+  };
+
+  await new Promise((resolve, reject) => {
+    g.GoldspirePasteObserve.handleBeforeInput(
+      event,
+      () => settings,
+      async () => settings,
+      (promise) => promise.then(resolve).catch(reject),
+    );
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(prompted, true);
+});
+
+test('journey: typing sensitive text triggers copilot on field scan', async () => {
+  const g = loadVeilStack();
+  let prompted = false;
+  g.GoldspireVeilCopilotUI = {
+    showVeilCopilot: ({ onDismiss }) => {
+      prompted = true;
+      onDismiss?.();
+    },
+  };
+
+  const apiKey = 'sk-live-abcdefghijklmnopqrstuvwxyz';
+  const input = {
+    tagName: 'TEXTAREA',
+    value: apiKey,
+    dispatchEvent() {},
+    focus() {},
+    setSelectionRange() {},
+  };
+  const settings = { copilotEnabled: true, dlpMode: 'off' };
+
+  await g.GoldspirePasteObserve.scanTypedField(
+    input,
+    async () => settings,
+    () => settings,
+    () => true,
+  );
   assert.equal(prompted, true);
 });
 
