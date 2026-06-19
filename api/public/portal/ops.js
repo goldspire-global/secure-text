@@ -1,9 +1,18 @@
 /**
- * Veil platform ops dashboard — served from API host only (veil-api…/ops.html).
+ * Veil platform ops dashboard — tabbed layout, API host only.
  */
 (function (global) {
   const TOKEN_KEY = 'veilOpsToken';
   let refreshTimer = null;
+  let activeTab = 'overview';
+
+  const TABS = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'api', label: 'API' },
+    { id: 'clients', label: 'Clients' },
+    { id: 'security', label: 'Security' },
+    { id: 'events', label: 'Event log' },
+  ];
 
   function apiBase() {
     return String(global.location?.origin || '').replace(/\/$/, '');
@@ -39,12 +48,8 @@
     const response = await fetch(`${apiBase()}/v1/ops/summary?days=${days}`, {
       headers: { Authorization: `Bearer ${t}` },
     });
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('Invalid ops token.');
-    }
-    if (response.status === 429) {
-      throw new Error('Rate limited — wait a minute and retry.');
-    }
+    if (response.status === 401 || response.status === 403) throw new Error('Invalid ops token.');
+    if (response.status === 429) throw new Error('Rate limited — wait a minute and retry.');
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(body.message || body.error || `Request failed (${response.status}).`);
@@ -52,51 +57,67 @@
     return response.json();
   }
 
-  function renderTable(headers, rows, emptyColspan) {
-    if (!rows) return `<p class="hint-inline">No data.</p>`;
+  function tableCard(title, headers, rowHtml, emptyColspan, tall) {
+    const scrollClass = tall ? 'ops-scroll ops-scroll--tall' : 'ops-scroll';
+    const body = rowHtml.length
+      ? rowHtml.join('')
+      : `<tr><td colspan="${emptyColspan}" class="ops-empty">No data in this window.</td></tr>`;
     const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
-    const body = rows.length
-      ? rows.join('')
-      : `<tr><td colspan="${emptyColspan}">No data in this window.</td></tr>`;
-    return `<table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    return `
+      <div class="ops-card">
+        <h3>${escapeHtml(title)}</h3>
+        <div class="${scrollClass}">
+          <table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+        </div>
+      </div>`;
   }
 
-  function renderSummary(container, data) {
+  function renderKpis(kpiEl, data) {
     const avail = data.availability || {};
     const org = data.orgStats || {};
     const pct = avail.availability_pct != null ? `${avail.availability_pct}%` : '—';
+    kpiEl.hidden = false;
+    kpiEl.innerHTML = `
+      <div class="ops-stat ${statClass(avail.availability_pct)}"><strong>${escapeHtml(pct)}</strong><span>Availability</span></div>
+      <div class="ops-stat"><strong>${avail.healthy ?? 0}/${avail.samples ?? 0}</strong><span>Health samples</span></div>
+      <div class="ops-stat"><strong>${org.org_count ?? 0}</strong><span>Orgs</span></div>
+      <div class="ops-stat"><strong>${org.active_members ?? 0}</strong><span>Members</span></div>
+      <div class="ops-stat"><strong>${org.active_devices ?? 0}</strong><span>Devices</span></div>
+    `;
+  }
 
+  function buildPanels(data) {
     const synthetic = (data.syntheticChecks || []).map((row) => {
       const at = row.checked_at ? new Date(row.checked_at).toLocaleString() : '';
-      const status = row.ok ? 'OK' : 'FAIL';
       return `<tr>
         <td>${escapeHtml(row.target_name)}</td>
-        <td>${escapeHtml(status)}</td>
+        <td>${row.ok ? 'OK' : 'FAIL'}</td>
         <td>${row.status_code ?? '—'}</td>
         <td>${row.latency_ms ?? '—'}ms</td>
         <td>${escapeHtml(at)}</td>
-        <td>${escapeHtml(row.message)}</td>
       </tr>`;
     });
 
-    const health = (data.health || []).slice(0, 24).map((row) => {
+    const alerts = (data.recentAlerts || []).map((row) => {
+      const at = row.alerted_at ? new Date(row.alerted_at).toLocaleString() : '';
+      return `<tr>
+        <td>${escapeHtml(at)}</td>
+        <td>${escapeHtml(row.severity)}</td>
+        <td>${escapeHtml(row.title)}</td>
+        <td>${row.delivered ? 'yes' : 'no'}</td>
+      </tr>`;
+    });
+
+    const health = (data.health || []).slice(0, 48).map((row) => {
       const at = row.checked_at ? new Date(row.checked_at).toLocaleString() : '';
       const status = row.ok ? (row.db_ok ? 'OK' : 'DB down') : 'Degraded';
       return `<tr>
         <td>${escapeHtml(at)}</td>
         <td>${escapeHtml(status)}</td>
         <td>${escapeHtml(row.version)}</td>
-        <td title="Process uptime when sampled — not SLA">${row.uptime_sec || 0}s</td>
+        <td title="Process age at sample">${row.uptime_sec || 0}s</td>
       </tr>`;
     });
-
-    const kinds = (data.eventsByKind || []).map((row) =>
-      `<tr><td>${escapeHtml(row.kind)}</td><td>${row.count}</td></tr>`,
-    );
-
-    const versions = (data.extensionVersions || []).map((row) =>
-      `<tr><td>${escapeHtml(row.extension_version)}</td><td>${escapeHtml(row.browser)}</td><td>${row.count}</td></tr>`,
-    );
 
     const apiErrors = (data.apiErrorsByRoute || []).map((row) =>
       `<tr><td>${escapeHtml(row.route)}</td><td>${row.errors}</td><td>${row.requests}</td></tr>`,
@@ -104,6 +125,14 @@
 
     const apiLatency = (data.apiLatencyByRoute || []).map((row) =>
       `<tr><td>${escapeHtml(row.route)}</td><td>${row.requests}</td><td>${row.errors || 0}</td><td>${row.avg_ms ?? '—'}ms</td></tr>`,
+    );
+
+    const versions = (data.extensionVersions || []).map((row) =>
+      `<tr><td>${escapeHtml(row.extension_version)}</td><td>${escapeHtml(row.browser)}</td><td>${row.count}</td></tr>`,
+    );
+
+    const kinds = (data.eventsByKind || []).map((row) =>
+      `<tr><td>${escapeHtml(row.kind)}</td><td>${row.count}</td></tr>`,
     );
 
     const security = (data.securityEventsByDay || []).map((row) => {
@@ -118,70 +147,70 @@
         <td>${escapeHtml(row.kind)}</td>
         <td>${escapeHtml(row.code)}</td>
         <td>${escapeHtml(row.source)}</td>
-        <td>${escapeHtml(row.extension_version)}</td>
         <td>${escapeHtml(row.message)}</td>
       </tr>`;
     });
 
-    const alerts = (data.recentAlerts || []).map((row) => {
-      const at = row.alerted_at ? new Date(row.alerted_at).toLocaleString() : '';
-      return `<tr>
-        <td>${escapeHtml(at)}</td>
-        <td>${escapeHtml(row.severity)}</td>
-        <td>${escapeHtml(row.title)}</td>
-        <td>${row.delivered ? 'yes' : 'no'}</td>
-      </tr>`;
-    });
-
-    container.innerHTML = `
-      <p class="hint-inline">Window: last ${data.windowDays} days · Auto-refresh every 60s while this tab is open.</p>
-      <div class="ops-grid">
-        <div class="ops-stat ${statClass(avail.availability_pct)}"><strong>${escapeHtml(pct)}</strong><span>API+DB availability</span></div>
-        <div class="ops-stat"><strong>${avail.healthy ?? 0}/${avail.samples ?? 0}</strong><span>Healthy health samples</span></div>
-        <div class="ops-stat"><strong>${org.org_count ?? 0}</strong><span>Organizations</span></div>
-        <div class="ops-stat"><strong>${org.active_members ?? 0}</strong><span>Active members</span></div>
-        <div class="ops-stat"><strong>${org.active_devices ?? 0}</strong><span>Active devices</span></div>
-      </div>
-
-      <h2 class="section-gap">Synthetic checks (portal + API)</h2>
-      ${renderTable(['Target', 'Status', 'HTTP', 'Latency', 'Checked', 'Message'], synthetic, 6)}
-
-      <h2 class="section-gap">Recent alerts</h2>
-      ${renderTable(['Time', 'Severity', 'Title', 'Webhook sent'], alerts, 4)}
-
-      <h2 class="section-gap">API health samples</h2>
-      <p class="hint-inline">“Process uptime” is the Node process age when sampled — use availability % for SLA.</p>
-      ${renderTable(['Checked', 'Status', 'Version', 'Process uptime'], health, 4)}
-
-      <h2 class="section-gap">API traffic (5xx by route)</h2>
-      ${renderTable(['Route', '5xx', 'Requests'], apiErrors, 3)}
-
-      <h2 class="section-gap">API traffic (volume &amp; avg latency)</h2>
-      ${renderTable(['Route', 'Requests', '5xx', 'Avg ms'], apiLatency, 4)}
-
-      <h2 class="section-gap">Extension telemetry by version</h2>
-      ${renderTable(['Version', 'Browser', 'Events'], versions, 3)}
-
-      <h2 class="section-gap">Client ops events by kind</h2>
-      ${renderTable(['Kind', 'Count'], kinds, 2)}
-
-      <h2 class="section-gap">Org security events by day</h2>
-      ${renderTable(['Day', 'Events'], security, 2)}
-
-      <h2 class="section-gap">Recent ops events</h2>
-      ${renderTable(['Time', 'Kind', 'Code', 'Source', 'Extension', 'Message'], recent, 6)}
-    `;
+    return {
+      overview: `
+        <p class="hint-inline">Last ${data.windowDays} days · refreshes every 60s · metadata only</p>
+        <div class="ops-columns">
+          ${tableCard('Synthetic checks', ['Target', 'Status', 'HTTP', 'Latency', 'Checked'], synthetic, 5)}
+          ${tableCard('Recent alerts', ['Time', 'Severity', 'Title', 'Sent'], alerts, 4)}
+        </div>`,
+      api: `
+        <div class="ops-columns">
+          ${tableCard('Health samples', ['Checked', 'Status', 'Version', 'Process age'], health, 4, true)}
+          ${tableCard('5xx by route', ['Route', '5xx', 'Requests'], apiErrors, 3)}
+        </div>
+        <div style="margin-top:0.85rem">
+          ${tableCard('Traffic & latency', ['Route', 'Requests', '5xx', 'Avg ms'], apiLatency, 4)}
+        </div>`,
+      clients: `
+        <div class="ops-columns">
+          ${tableCard('Extension versions', ['Version', 'Browser', 'Events'], versions, 3)}
+          ${tableCard('Ops events by kind', ['Kind', 'Count'], kinds, 2)}
+        </div>`,
+      security: tableCard('Security events by day', ['Day', 'Events'], security, 2),
+      events: tableCard('Recent ops events', ['Time', 'Kind', 'Code', 'Source', 'Message'], recent, 5, true),
+    };
   }
 
-  async function loadSummary(statusEl, summaryEl, daysInput) {
+  function renderTabs(tabsEl, panelsEl, panels) {
+    tabsEl.hidden = false;
+    tabsEl.innerHTML = TABS.map((tab) =>
+      `<button type="button" class="ops-tab" role="tab" data-tab="${tab.id}" aria-selected="${tab.id === activeTab}">${tab.label}</button>`,
+    ).join('');
+
+    panelsEl.innerHTML = TABS.map((tab) =>
+      `<div class="ops-panel" id="panel-${tab.id}" role="tabpanel" aria-hidden="${tab.id !== activeTab}">${panels[tab.id] || ''}</div>`,
+    ).join('');
+
+    tabsEl.querySelectorAll('.ops-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeTab = btn.getAttribute('data-tab');
+        tabsEl.querySelectorAll('.ops-tab').forEach((b) => {
+          b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+        });
+        panelsEl.querySelectorAll('.ops-panel').forEach((panel) => {
+          panel.setAttribute('aria-hidden', panel.id === `panel-${activeTab}` ? 'false' : 'true');
+        });
+      });
+    });
+  }
+
+  async function loadSummary(statusEl, kpiEl, tabsEl, panelsEl, daysInput) {
     if (statusEl) statusEl.textContent = 'Loading…';
     try {
       const data = await fetchSummary(Number(daysInput?.value) || 7);
-      renderSummary(summaryEl, data);
+      renderKpis(kpiEl, data);
+      renderTabs(tabsEl, panelsEl, buildPanels(data));
       if (statusEl) statusEl.textContent = `Updated ${new Date().toLocaleTimeString()}.`;
     } catch (error) {
       if (statusEl) statusEl.textContent = error.message || 'Could not load summary.';
-      summaryEl.innerHTML = '';
+      kpiEl.hidden = true;
+      tabsEl.hidden = true;
+      panelsEl.innerHTML = '';
     }
   }
 
@@ -190,15 +219,17 @@
     const tokenInput = document.getElementById('ops-token');
     const daysInput = document.getElementById('ops-days');
     const statusEl = document.getElementById('ops-status');
-    const summaryEl = document.getElementById('ops-summary');
+    const kpiEl = document.getElementById('ops-kpis');
+    const tabsEl = document.getElementById('ops-tabs');
+    const panelsEl = document.getElementById('ops-panels');
     const refreshBtn = document.getElementById('ops-refresh');
-    if (!form || !summaryEl) return;
+    if (!form || !panelsEl) return;
 
     if (tokenInput && token()) tokenInput.value = token();
 
     const run = async () => {
       setToken(tokenInput?.value?.trim() || '');
-      await loadSummary(statusEl, summaryEl, daysInput);
+      await loadSummary(statusEl, kpiEl, tabsEl, panelsEl, daysInput);
     };
 
     form.addEventListener('submit', (event) => {

@@ -43,13 +43,30 @@ Per-org detail remains in **admin.html** (security events, SIEM webhook).
 
 ## Alerts
 
-Set `OPS_ALERT_WEBHOOK_URL` to a Slack incoming webhook or any endpoint that accepts JSON:
+Set `OPS_ALERT_WEBHOOK_URL` to a **Microsoft Teams** incoming webhook (recommended) or Slack URL.
 
-```json
-{ "text": "...", "title": "...", "body": "...", "severity": "error", "service": "veil-api" }
+### Microsoft Teams
+
+1. Teams channel → **⋯** → **Workflows** (or **Connectors** → **Incoming Webhook** on classic teams).
+2. Create a workflow: **Post to a channel when a webhook request is received**.
+3. Copy the webhook URL (`https://…webhook.office.com/…` or Power Automate URL).
+4. On Railway:
+
+```
+OPS_ALERT_WEBHOOK_TYPE=teams
+OPS_ALERT_WEBHOOK_URL=<paste URL>
 ```
 
-Alerts are also stored in `platform_alert_log` and shown on the ops dashboard.
+Teams is auto-detected from the URL if `OPS_ALERT_WEBHOOK_TYPE` is unset.
+
+### Slack (alternative)
+
+```
+OPS_ALERT_WEBHOOK_TYPE=slack
+OPS_ALERT_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+Alerts use a 30-minute cooldown per alert key to avoid spam.
 
 ## Migrations
 

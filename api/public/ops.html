@@ -8,51 +8,67 @@
   <link rel="stylesheet" href="/portal/common.css" />
   <link rel="icon" href="/portal/favicon.png" sizes="48x48" />
   <style>
-    .ops-header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .ops-header h1 { margin: 0; }
-    .ops-badge { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(212,175,55,0.15); color: var(--gold, #d4af37); }
-    .ops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
-    .ops-stat { padding: 0.75rem 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; }
-    .ops-stat strong { display: block; font-size: 1.35rem; }
-    .ops-stat span { color: var(--muted, #9aa3b2); font-size: 0.8rem; }
+    .ops-shell { max-width: 1280px; margin: 0 auto; padding: 1rem 1.25rem 2rem; }
+    .ops-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .ops-top h1 { margin: 0.15rem 0 0; font-size: 1.5rem; }
+    .ops-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(212,175,55,0.15); color: var(--gold, #d4af37); white-space: nowrap; }
+    .ops-controls { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: flex-end; }
+    .ops-controls .field { margin: 0; min-width: 10rem; }
+    .ops-controls .field span { font-size: 0.75rem; }
+    .ops-controls input { padding: 0.45rem 0.55rem; }
+    .ops-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.65rem; margin-bottom: 1rem; }
+    @media (max-width: 900px) { .ops-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .ops-stat { padding: 0.65rem 0.75rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(0,0,0,0.15); }
+    .ops-stat strong { display: block; font-size: 1.2rem; line-height: 1.2; }
+    .ops-stat span { color: var(--muted, #9aa3b2); font-size: 0.72rem; }
     .ops-stat--ok strong { color: #6dd58c; }
     .ops-stat--warn strong { color: #f0b429; }
     .ops-stat--bad strong { color: #f07178; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .data-table th, .data-table td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
-    .data-table th { color: var(--muted, #9aa3b2); font-weight: 600; }
-    .hint-inline { color: var(--muted, #9aa3b2); font-size: 0.85rem; }
-    .section-gap { margin-top: 1.5rem; }
+    .ops-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem; }
+    .ops-tab { border: 1px solid transparent; background: transparent; color: var(--muted, #9aa3b2); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font: inherit; font-size: 0.85rem; }
+    .ops-tab[aria-selected="true"] { color: var(--gold, #d4af37); border-color: rgba(212,175,55,0.35); background: rgba(212,175,55,0.08); }
+    .ops-panel { display: none; }
+    .ops-panel[aria-hidden="false"] { display: block; }
+    .ops-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    @media (max-width: 960px) { .ops-columns { grid-template-columns: 1fr; } }
+    .ops-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.75rem; background: rgba(0,0,0,0.12); min-height: 0; }
+    .ops-card h3 { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; }
+    .ops-scroll { max-height: 280px; overflow: auto; }
+    .ops-scroll--tall { max-height: 420px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .data-table th, .data-table td { text-align: left; padding: 0.35rem 0.45rem; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+    .data-table th { color: var(--muted, #9aa3b2); font-weight: 600; position: sticky; top: 0; background: #12151c; z-index: 1; }
+    .hint-inline { color: var(--muted, #9aa3b2); font-size: 0.8rem; margin: 0 0 0.75rem; }
+    .ops-status { font-size: 0.8rem; color: var(--muted, #9aa3b2); min-height: 1.2em; }
+    .ops-empty { color: var(--muted, #9aa3b2); font-size: 0.85rem; padding: 0.5rem 0; }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <header class="ops-header card card--flat">
+  <div class="ops-shell">
+    <div class="ops-top card card--flat">
       <div>
-        <p class="eyebrow">Internal · API host only</p>
-        <h1>Veil platform ops</h1>
+        <p class="eyebrow" style="margin:0">Internal · veil-api only</p>
+        <h1>Platform ops</h1>
       </div>
-      <span class="ops-badge">noindex · metadata only</span>
-    </header>
-
-    <div class="card">
-      <form id="ops-form" class="form-stack">
+      <form id="ops-form" class="ops-controls">
         <label class="field">
-          <span>Ops token</span>
-          <input type="password" id="ops-token" autocomplete="off" placeholder="PLATFORM_OPS_TOKEN" />
+          <span>Token</span>
+          <input type="password" id="ops-token" autocomplete="off" placeholder="PLATFORM_OPS_TOKEN" style="width:14rem" />
         </label>
-        <div class="btn-row">
-          <label class="field" style="flex:1;min-width:8rem">
-            <span>Window (days)</span>
-            <input type="number" id="ops-days" min="1" max="30" value="7" />
-          </label>
-          <button type="submit" class="btn">Load summary</button>
-          <button type="button" class="btn btn--ghost" id="ops-refresh">Refresh</button>
-        </div>
-        <p class="hint" id="ops-status"></p>
+        <label class="field">
+          <span>Days</span>
+          <input type="number" id="ops-days" min="1" max="30" value="7" style="width:4.5rem" />
+        </label>
+        <button type="submit" class="btn btn--sm">Load</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="ops-refresh">Refresh</button>
+        <span class="ops-badge">noindex</span>
       </form>
-      <div id="ops-summary"></div>
     </div>
+
+    <p class="ops-status" id="ops-status"></p>
+    <div id="ops-kpis" class="ops-kpis" hidden></div>
+    <div id="ops-tabs" class="ops-tabs" hidden role="tablist"></div>
+    <div id="ops-panels"></div>
   </div>
   <script src="/portal/ops.js"></script>
   <script>GoldspireOpsDashboard.init();</script>
