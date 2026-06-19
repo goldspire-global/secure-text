@@ -37,7 +37,14 @@ import {
   assignMemberTeam,
 } from './teams-service.mjs';
 import { handleStripeWebhook } from './stripe-service.mjs';
+import {
+  ingestClientEvents,
+  getOpsSummary,
+  pingDatabase,
+  maybeRecordHealthCheck,
+} from './ops-service.mjs';
 
+const SERVER_STARTED_AT = Date.now();
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = join(apiRoot, 'public');
 const env = loadEnv();
@@ -143,12 +150,51 @@ const server = createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && pathname === '/health') {
-      json(res, req, 200, {
-        ok: true,
+      const version = process.env.npm_package_version || '1.2.3';
+      let dbOk = false;
+      try {
+        await pingDatabase();
+        dbOk = true;
+      } catch (error) {
+        console.error('health: database ping failed', error);
+      }
+      const uptimeSec = Math.floor((Date.now() - SERVER_STARTED_AT) / 1000);
+      await maybeRecordHealthCheck({ ok: dbOk, dbOk, version, uptimeSec }).catch(() => {});
+      json(res, req, dbOk ? 200 : 503, {
+        ok: dbOk,
+        db: dbOk ? 'ok' : 'down',
         service: 'veil-api',
-        version: process.env.npm_package_version || '1.2.3',
+        version,
+        uptimeSec,
         at: new Date().toISOString(),
       });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/ops/client-events') {
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const body = await readBody(req);
+      const result = await ingestClientEvents(body.events);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/summary') {
+      const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
+      if (!expected) {
+        throw httpError(503, 'Platform ops is not configured.');
+      }
+      const auth = String(req.headers.authorization || '');
+      const match = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = match ? match[1].trim() : '';
+      if (!provided || provided !== expected) {
+        throw httpError(401, 'Invalid ops token.');
+      }
+      const days = url.searchParams.get('days') || '7';
+      const result = await getOpsSummary(days);
+      json(res, req, 200, result);
       return;
     }
 
@@ -418,6 +464,8 @@ const server = createServer(async (req, res) => {
       '/install.html': 'install.html',
       '/privacy.html': 'privacy.html',
       '/terms.html': 'terms.html',
+      '/feedback.html': 'feedback.html',
+      '/ops.html': 'ops.html',
       '/unlock.html': 'unlock.html',
     };
     if (req.method === 'GET' && portalPages[pathname]) {
@@ -449,6 +497,15 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Goldspire org API listening on port ${port}`);
   console.log(`Join portal: http://localhost:${port}/veil/join`);
 });
+
+const SELF_HEALTH_MS = 5 * 60 * 1000;
+setInterval(() => {
+  const version = process.env.npm_package_version || '1.2.3';
+  const uptimeSec = Math.floor((Date.now() - SERVER_STARTED_AT) / 1000);
+  pingDatabase()
+    .then((dbOk) => maybeRecordHealthCheck({ ok: dbOk, dbOk, version, uptimeSec }))
+    .catch(() => maybeRecordHealthCheck({ ok: false, dbOk: false, version, uptimeSec }));
+}, SELF_HEALTH_MS).unref?.();
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, async () => {

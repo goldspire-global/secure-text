@@ -1,5 +1,7 @@
 (function (global) {
-  const SUPPORT_EMAIL = 'support@goldspireventures.com';
+  function supportEmail() {
+    return global.GoldspirePortal?.SUPPORT_EMAIL || '';
+  }
 
   const SUBJECTS = {
     feedback: 'Veil feedback',
@@ -59,14 +61,14 @@
       const kind = kindEl.value || 'feedback';
       const subject = SUBJECTS[kind] || SUBJECTS.feedback;
       const body = buildBody(messageEl.value, diagnostics);
-      const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const mailto = `mailto:${supportEmail()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       global.location.href = mailto;
     });
 
     copyBtn?.addEventListener('click', async () => {
       const kind = kindEl.value || 'feedback';
       const subject = SUBJECTS[kind] || SUBJECTS.feedback;
-      const text = `To: ${SUPPORT_EMAIL}\nSubject: ${subject}\n\n${buildBody(messageEl.value, diagnostics)}`;
+      const text = `To: ${supportEmail()}\nSubject: ${subject}\n\n${buildBody(messageEl.value, diagnostics)}`;
       try {
         await navigator.clipboard.writeText(text);
         if (statusEl) {

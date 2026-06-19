@@ -301,6 +301,12 @@
         id: 'org-revoked',
         message: 'Your team disconnected this browser. Open Veil → Settings to re-join, or continue in personal mode.',
       });
+      await global.GoldspireOpsTelemetry?.report?.({
+        kind: 'org_revoked',
+        code: 'revoked',
+        message: 'Org disconnected after token revocation',
+        source: 'org-provision',
+      });
     }
 
     return { ok: true };

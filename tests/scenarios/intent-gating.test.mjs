@@ -25,6 +25,7 @@ function loadIntentStack() {
     },
   });
   for (const file of [
+    'extension/src/detection/intent-config.js',
     'extension/src/detection/context.js',
     'extension/src/detection/intent.js',
     'extension/src/detection/gating.js',

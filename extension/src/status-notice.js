@@ -29,6 +29,14 @@
         at: Date.now(),
       },
     });
+    if (level === 'warn' || level === 'error') {
+      await global.GoldspireOpsTelemetry?.report?.({
+        kind: 'notice',
+        code: id || level,
+        message: text.slice(0, 200),
+        source: 'status-notice',
+      });
+    }
   }
 
   async function peekNotice(maxAgeMs = 24 * 60 * 60 * 1000) {

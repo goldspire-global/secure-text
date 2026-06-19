@@ -56,6 +56,10 @@
   function renderPortalFooter() {
     const footer = document.querySelector('[data-portal-footer]');
     if (!footer) return;
+    const support = global.GoldspirePortal?.SUPPORT_EMAIL || '';
+    const supportLink = support
+      ? `<a href="mailto:${support}">Support</a>`
+      : '<a href="feedback.html">Support</a>';
     footer.innerHTML = `
       <span>Veil by Goldspire</span>
       <a href="privacy.html">Privacy</a>
@@ -63,7 +67,7 @@
       <a href="install.html">Install</a>
       <a href="feedback.html">Feedback</a>
       <a href="unlock.html">Unlock page</a>
-      <a href="mailto:support@goldspireventures.com">Support</a>
+      ${supportLink}
     `;
   }
 

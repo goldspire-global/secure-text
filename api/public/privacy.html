@@ -37,10 +37,10 @@
       <p>Extension settings and passphrases are stored in your browser’s sync/local storage, encrypted on device where applicable. Cloud org data is hosted on infrastructure operated by Goldspire Ventures.</p>
 
       <h2>Your choices</h2>
-      <p>You can disconnect from an organization, uninstall the extension, or request org deletion by contacting your administrator or <a href="mailto:privacy@goldspireventures.com">privacy@goldspireventures.com</a>.</p>
+      <p>You can disconnect from an organization, uninstall the extension, or request org deletion by contacting your administrator or <a href="#" data-contact="privacy"></a>.</p>
 
       <h2>Contact</h2>
-      <p>Goldspire Ventures · privacy@goldspireventures.com</p>
+      <p>Goldspire Ventures · <span data-contact="privacy"></span></p>
     </div>
 
     <footer class="site-footer" data-portal-footer></footer>
@@ -48,9 +48,11 @@
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/contacts.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('privacy');
     GoldspirePortalNav.renderPortalFooter?.();
+    GoldspirePortalContacts?.applyContactEmails?.();
   </script>
 </body>
 </html>

@@ -1178,11 +1178,12 @@ const helpPortalLink = document.getElementById('help-portal-link');
 const helpInstallLink = document.getElementById('help-install-link');
 const helpPrivacyLink = document.getElementById('help-privacy-link');
 if (typeof GoldspireConstants !== 'undefined') {
-  const portal = GoldspireConstants.ORG_PORTAL_URL || '';
-  const base = portal.replace(/join\.html.*$/i, '') || 'https://join-veil.goldspireventures.com/';
-  if (helpPortalLink) helpPortalLink.href = `${base}index.html`;
-  if (helpInstallLink) helpInstallLink.href = `${base}install.html`;
-  if (helpPrivacyLink) helpPrivacyLink.href = `${base}privacy.html`;
+  const base = GoldspireConstants.PORTAL_ORIGIN
+    ? `${GoldspireConstants.PORTAL_ORIGIN.replace(/\/$/, '')}/`
+    : (GoldspireFeedback?.portalBaseUrl?.(GoldspireConstants) || '');
+  if (helpPortalLink && base) helpPortalLink.href = `${base}index.html`;
+  if (helpInstallLink && base) helpInstallLink.href = `${base}install.html`;
+  if (helpPrivacyLink && base) helpPrivacyLink.href = `${base}privacy.html`;
 }
 
 const shortcutHint = document.getElementById('shortcut-hint');

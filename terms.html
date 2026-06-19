@@ -39,7 +39,7 @@
       <p>We may update these terms. Continued use after changes constitutes acceptance.</p>
 
       <h2>Contact</h2>
-      <p>legal@goldspireventures.com</p>
+      <p><span data-contact="legal"></span></p>
     </div>
 
     <footer class="site-footer" data-portal-footer></footer>
@@ -47,9 +47,11 @@
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/contacts.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('terms');
     GoldspirePortalNav.renderPortalFooter?.();
+    GoldspirePortalContacts?.applyContactEmails?.();
   </script>
 </body>
 </html>

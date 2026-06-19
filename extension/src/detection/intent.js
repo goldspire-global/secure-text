@@ -1,24 +1,49 @@
 /**
  * Infer user intent from URL, form structure, and field semantics.
- * Drives when Veil should interrupt vs stay quiet.
+ * Product heuristics: GoldspireIntentConfig. Deployment hosts: GoldspireConstants.
  */
 (function (global) {
-  const MAIL_HOSTS = /(mail\.google|googlemail|outlook\.(live|office)|office365|hotmail|yahoo|proton\.me|protonmail|zoho)/i;
+  const compiled = {};
 
-  const COMPOSE_PATH = /\/(mail|compose|new|draft|inbox\/new|_compose)/i;
-  const FORM_PATH = /\/(signup|sign-up|register|registration|join|checkout|onboarding|profile|account|apply|enrol|enroll|patient|intake|application)/i;
-  const ADMIN_PATH = /\/(admin|dashboard|partner|devconsole|listing|submit|settings|manage)/i;
+  function intentCfg() {
+    return global.GoldspireIntentConfig || {};
+  }
 
-  const ADMIN_HOSTS = /(partner\.microsoft\.com|chrome\.google\.com\/webstore|microsoftedge\.microsoft\.com|join-veil\.|goldspireventures\.com\/(create|admin))/i;
+  function pattern(name, fallback) {
+    if (!compiled[name]) {
+      const source = intentCfg()[`${name}Pattern`] || fallback || '$^';
+      compiled[name] = new RegExp(source, 'i');
+    }
+    return compiled[name];
+  }
 
-  const PII_AUTOCOMPLETE = new Set([
-    'bday', 'bday-day', 'bday-month', 'bday-year',
-    'email', 'tel', 'given-name', 'family-name', 'name',
-    'street-address', 'postal-code', 'country', 'organization',
-    'cc-name', 'cc-number', 'cc-exp', 'cc-csc',
-  ]);
+  function piiAutocomplete() {
+    if (!compiled.piiAutocomplete) {
+      compiled.piiAutocomplete = new Set(intentCfg().piiAutocomplete || []);
+    }
+    return compiled.piiAutocomplete;
+  }
 
-  const PII_LABEL_RE = /\b(date of birth|d\.?o\.?b\.?|birth\s*date|email|e-mail|phone|mobile|first name|last name|full name|address|postcode|zip code|national insurance|ssn|social security)\b/i;
+  function deployment() {
+    return global.GoldspireConstants || {};
+  }
+
+  function isOwnPortalHost(host) {
+    const portalHost = deployment().PORTAL_HOST || '';
+    return Boolean(portalHost && host === portalHost);
+  }
+
+  function isOwnApiHost(host) {
+    const apiHost = deployment().API_HOST || '';
+    return Boolean(apiHost && host === apiHost);
+  }
+
+  function isAdminSurface(host, path) {
+    if (pattern('partnerAdminHost').test(host || '')) return true;
+    if (isOwnPortalHost(host) || isOwnApiHost(host)) return true;
+    if (pattern('adminPath').test(path || '')) return true;
+    return false;
+  }
 
   function resolveElement(target) {
     if (!target) return null;
@@ -63,9 +88,11 @@
     if (!form && !element) return false;
 
     const hints = fieldHints(element);
-    if (PII_AUTOCOMPLETE.has(hints.autocomplete)) return true;
+    const auto = piiAutocomplete();
+    const labelRe = pattern('piiLabel');
+    if (auto.has(hints.autocomplete)) return true;
     const combined = `${hints.labelText} ${hints.placeholder} ${hints.name} ${hints.id}`;
-    if (PII_LABEL_RE.test(combined)) return true;
+    if (labelRe.test(combined)) return true;
 
     if (!form || typeof form.querySelectorAll !== 'function') return false;
 
@@ -73,8 +100,8 @@
     const fields = form.querySelectorAll('input, textarea, select');
     for (const field of fields) {
       const h = fieldHints(field);
-      if (PII_AUTOCOMPLETE.has(h.autocomplete)) piiFields += 1;
-      else if (PII_LABEL_RE.test(`${h.labelText} ${h.placeholder} ${h.name}`)) piiFields += 1;
+      if (auto.has(h.autocomplete)) piiFields += 1;
+      else if (labelRe.test(`${h.labelText} ${h.placeholder} ${h.name}`)) piiFields += 1;
     }
     return piiFields >= 2;
   }
@@ -88,8 +115,8 @@
   }
 
   function isMailCompose(host, path, meta) {
-    if (!MAIL_HOSTS.test(host || '')) return false;
-    if (COMPOSE_PATH.test(path || '')) return true;
+    if (!pattern('mailHost').test(host || '')) return false;
+    if (pattern('composePath').test(path || '')) return true;
     if (meta.editorKind === 'contenteditable' || meta.editorKind === 'textarea') return true;
     return meta.fieldType === 'textarea' || meta.editorKind === 'structured';
   }
@@ -108,7 +135,6 @@
 
     const form = closestForm(element);
     const expectsPii = formExpectsPii(form, element);
-    const hints = fieldHints(element);
     const signals = [];
 
     if (partial.source === 'ai_prompt' || partial.isAiSurface) {
@@ -132,7 +158,7 @@
       };
     }
 
-    if (ADMIN_HOSTS.test(host) || ADMIN_PATH.test(path)) {
+    if (isAdminSurface(host, path)) {
       signals.push('admin_surface');
       return {
         intent: 'admin_portal',
@@ -165,17 +191,17 @@
       };
     }
 
-    if (FORM_PATH.test(path)) {
+    if (pattern('formPath').test(path)) {
       signals.push('form_url');
     }
     if (form) signals.push('html_form');
     if (expectsPii) signals.push('expected_pii');
 
-    if (form || FORM_PATH.test(path) || expectsPii) {
+    if (form || pattern('formPath').test(path) || expectsPii) {
       return {
         intent: 'form_data_entry',
         outboundRisk: 'low',
-        expectsPii: expectsPii || FORM_PATH.test(path),
+        expectsPii: expectsPii || pattern('formPath').test(path),
         inForm: Boolean(form),
         signals,
       };
@@ -205,6 +231,8 @@
     inferIntent,
     formExpectsPii,
     fieldHints,
-    MAIL_HOSTS,
+    isAdminSurface,
+    isOwnPortalHost,
+    mailHostPattern: () => pattern('mailHost'),
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

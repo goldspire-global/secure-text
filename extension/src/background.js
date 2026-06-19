@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
+importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -29,10 +29,12 @@ const CONTENT_FILES = [
   'src/org-capability.js',
   'src/copy.js',
   'src/status-notice.js',
+  'src/ops/telemetry.js',
   'src/resecure.js',
   'src/ui.js',
   'src/detector.js',
   'src/detection/context.js',
+  'src/detection/intent-config.js',
   'src/detection/intent.js',
   'src/detection/gating.js',
   'src/detection/compliance.js',
@@ -81,6 +83,23 @@ const MENU_LOG = 'Veil';
 
 const api = GoldspireBrowser.api;
 
+async function reportOpsEvent(entry) {
+  try {
+    await GoldspireOpsTelemetry?.report?.(entry);
+  } catch (error) {
+    console.warn(`${MENU_LOG}: ops telemetry queue failed`, error);
+  }
+}
+
+async function flushOpsTelemetry() {
+  try {
+    return await GoldspireOpsTelemetry?.flush?.();
+  } catch (error) {
+    console.warn(`${MENU_LOG}: ops telemetry flush failed`, error);
+    return { ok: false, reason: 'error' };
+  }
+}
+
 async function applyEnterprisePolicy() {
   try {
     await GoldspireManagedPolicy.applyManagedPolicy();
@@ -92,12 +111,26 @@ async function applyEnterprisePolicy() {
 async function syncCloudOrgPolicy() {
   try {
     const result = await GoldspireOrgProvision.syncOrgPolicy();
-    if (result?.reason === 'revoked') return result;
+    if (result?.reason === 'revoked') {
+      await reportOpsEvent({
+        kind: 'org_revoked',
+        code: 'revoked',
+        message: 'Org token revoked during sync',
+        source: 'background',
+      });
+      return result;
+    }
     if (result?.synced === false && result?.reason && result.reason !== 'not_provisioned' && result.reason !== 'not_cloud') {
       await GoldspireStatusNotice?.queueNotice?.({
         level: 'warn',
         id: 'org-sync-failed',
         message: 'Could not sync team settings. Veil will retry automatically.',
+      });
+      await reportOpsEvent({
+        kind: 'sync_failure',
+        code: result.reason,
+        message: 'Org policy sync failed',
+        source: 'background',
       });
     }
     return result;
@@ -107,6 +140,12 @@ async function syncCloudOrgPolicy() {
       level: 'warn',
       id: 'org-sync-error',
       message: 'Could not reach Veil to sync team settings. Check your connection.',
+    });
+    await reportOpsEvent({
+      kind: 'sync_failure',
+      code: 'network',
+      message: String(error?.message || 'Org sync error').slice(0, 200),
+      source: 'background',
     });
     return { synced: false, reason: 'error' };
   }
@@ -129,6 +168,12 @@ async function uploadVeilSecurityEvents() {
     if (result?.reason === 'revoked') return result;
     if (result?.ok === false && result?.reason === 'network') {
       console.warn(`${MENU_LOG}: veil event upload failed (network)`);
+      await reportOpsEvent({
+        kind: 'event_upload_failure',
+        code: 'network',
+        message: 'Security event upload failed',
+        source: 'background',
+      });
     }
     return result;
   } catch (error) {
@@ -142,6 +187,7 @@ function scheduleOrgSyncAlarm() {
   if (!api.alarms?.create) return;
   api.alarms.create('goldspire-org-sync', { periodInMinutes: minutes });
   api.alarms.create('goldspire-veil-events', { periodInMinutes: 15 });
+  api.alarms.create('goldspire-ops-telemetry', { periodInMinutes: 15 });
 }
 
 async function bootstrapPolicies() {
@@ -149,6 +195,7 @@ async function bootstrapPolicies() {
   await syncCloudOrgPolicy();
   await syncCloudOrgShares();
   await uploadVeilSecurityEvents();
+  await flushOpsTelemetry();
 }
 
 function isVeilTokenText(text) {
@@ -410,6 +457,9 @@ if (api.alarms?.onAlarm) {
     if (alarm.name === 'goldspire-veil-events') {
       uploadVeilSecurityEvents();
     }
+    if (alarm.name === 'goldspire-ops-telemetry') {
+      flushOpsTelemetry();
+    }
   });
 }
 
@@ -605,4 +655,10 @@ if (api.runtime.onMessageExternal) {
 
 self.addEventListener('unhandledrejection', (event) => {
   console.warn(`${MENU_LOG}: unhandled rejection`, event.reason);
+  reportOpsEvent({
+    kind: 'client_error',
+    code: 'unhandled_rejection',
+    message: String(event.reason?.message || event.reason || 'Unhandled rejection').slice(0, 200),
+    source: 'background',
+  });
 });

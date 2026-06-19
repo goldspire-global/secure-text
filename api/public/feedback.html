@@ -46,8 +46,8 @@
 
       <h2>Other ways to reach us</h2>
       <ul class="trust-list">
-        <li><a href="mailto:support@goldspireventures.com">support@goldspireventures.com</a> — product help and feedback</li>
-        <li><a href="mailto:security@goldspireventures.com">security@goldspireventures.com</a> — security vulnerabilities (see extension SECURITY.md)</li>
+        <li><a href="#" data-contact="support"></a> — product help and feedback</li>
+        <li><a href="#" data-contact="security"></a> — security vulnerabilities (see extension SECURITY.md)</li>
       </ul>
     </div>
 
@@ -56,10 +56,12 @@
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/contacts.js"></script>
   <script src="portal/feedback.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('feedback');
     GoldspirePortalNav.renderPortalFooter?.();
+    GoldspirePortalContacts?.applyContactEmails?.();
     GoldspirePortalFeedback.init();
   </script>
 </body>

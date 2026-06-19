@@ -39,6 +39,19 @@ function portalOrigin(url) {
   }
 }
 
+function hostname(url) {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
+
+function contactEmail(env, key, fallback) {
+  return env[key] || fallback;
+}
+
 if (!existsSync(envPath)) {
   console.error(`Missing ${envPath} — copy .env.example to .env first.`);
   process.exit(1);
@@ -50,6 +63,13 @@ const orgPortalUrl = env.ORG_PORTAL_URL ?? '';
 const unlockUrl = env.BUILT_IN_PUBLIC_UNLOCK_URL ?? 'https://goldspire-global.github.io/veil/unlock.html';
 const syncMinutes = Number(env.ORG_SYNC_INTERVAL_MINUTES) || 360;
 const portalOriginValue = portalOrigin(orgPortalUrl);
+const portalHost = hostname(orgPortalUrl);
+const apiHost = hostname(orgApiBase);
+const supportEmail = contactEmail(env, 'SUPPORT_EMAIL', 'support@goldspireventures.com');
+const securityEmail = contactEmail(env, 'SECURITY_EMAIL', 'security@goldspireventures.com');
+const privacyEmail = contactEmail(env, 'PRIVACY_EMAIL', 'privacy@goldspireventures.com');
+const salesEmail = contactEmail(env, 'SALES_EMAIL', 'sales@goldspireventures.com');
+const legalEmail = contactEmail(env, 'LEGAL_EMAIL', 'legal@goldspireventures.com');
 const portalUnlockUrl = unlockUrl;
 const earlyAccess = String(env.VEIL_EARLY_ACCESS ?? 'true').toLowerCase() !== 'false';
 const stripePaymentLinkTeam = env.STRIPE_PAYMENT_LINK_TEAM ?? '';
@@ -78,10 +98,18 @@ const constantsContents = `/**
     ORG_API_BASE: ${jsString(orgApiBase)},
     /** Organization sign-in / join portal. */
     ORG_PORTAL_URL: ${jsString(orgPortalUrl)},
+    /** Portal origin (scheme + host) for links and intent detection. */
+    PORTAL_ORIGIN: ${jsString(portalOriginValue)},
+    /** Portal hostname for intent detection. */
+    PORTAL_HOST: ${jsString(portalHost)},
+    /** API hostname for intent detection. */
+    API_HOST: ${jsString(apiHost)},
     /** Alarm interval for cloud policy sync (minutes). */
     ORG_SYNC_INTERVAL_MINUTES: ${syncMinutes},
     /** Product support and feedback email. */
-    SUPPORT_EMAIL: ${jsString(env.SUPPORT_EMAIL || 'support@goldspireventures.com')},
+    SUPPORT_EMAIL: ${jsString(supportEmail)},
+    /** Security vulnerability reports. */
+    SECURITY_EMAIL: ${jsString(securityEmail)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;
@@ -100,6 +128,11 @@ const portalConfigContents = `/**
     STRIPE_BILLING_PORTAL_URL: ${jsString(stripeBillingPortalUrl)},
     STORE_URL_CHROME: ${jsString(storeUrlChrome)},
     STORE_URL_EDGE: ${jsString(storeUrlEdge)},
+    SUPPORT_EMAIL: ${jsString(supportEmail)},
+    SECURITY_EMAIL: ${jsString(securityEmail)},
+    PRIVACY_EMAIL: ${jsString(privacyEmail)},
+    SALES_EMAIL: ${jsString(salesEmail)},
+    LEGAL_EMAIL: ${jsString(legalEmail)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;
@@ -109,7 +142,7 @@ writeFileSync(rootConstantsPath, constantsContents);
 writeFileSync(portalConfigPath, portalConfigContents);
 
 mkdirSync(join(apiPublicDir, 'portal'), { recursive: true });
-for (const file of ['common.css', 'app.js', 'config.js', 'nav.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'veil-mark.svg', 'favicon.png']) {
+for (const file of ['common.css', 'app.js', 'config.js', 'nav.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'contacts.js', 'ops.js', 'veil-mark.svg', 'favicon.png']) {
   cpSync(join(repoRoot, 'portal', file), join(apiPublicDir, 'portal', file), { force: true });
 }
 const unlockAssets = ['unlock.html', 'unlock.css', 'unlock.js'];
@@ -133,6 +166,7 @@ for (const page of [
   'privacy.html',
   'terms.html',
   'feedback.html',
+  'ops.html',
 ]) {
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }

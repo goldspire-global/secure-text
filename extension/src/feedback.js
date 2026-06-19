@@ -2,15 +2,24 @@
  * User feedback — mailto helpers with safe diagnostic metadata (no secrets).
  */
 (function (global) {
-  const SUPPORT_EMAIL = 'support@goldspireventures.com';
-  const SECURITY_EMAIL = 'security@goldspireventures.com';
-
   const SUBJECTS = {
     feedback: 'Veil feedback',
     bug: 'Veil issue report',
     falsePositive: 'Veil copilot false alert',
     security: 'Veil security report',
   };
+
+  function resolveConstants(overrides) {
+    return { ...(global.GoldspireConstants || {}), ...(overrides || {}) };
+  }
+
+  function supportEmail(constants) {
+    return resolveConstants(constants).SUPPORT_EMAIL || '';
+  }
+
+  function securityEmail(constants) {
+    return resolveConstants(constants).SECURITY_EMAIL || '';
+  }
 
   function detectBrowser(ua) {
     const s = ua || (typeof navigator !== 'undefined' ? navigator.userAgent : '');
@@ -21,13 +30,19 @@
   }
 
   function portalBaseUrl(constants) {
-    const portal = constants?.ORG_PORTAL_URL || '';
-    return portal.replace(/join\.html.*$/i, '') || 'https://join-veil.goldspireventures.com/';
+    const cfg = resolveConstants(constants);
+    if (cfg.PORTAL_ORIGIN) {
+      return cfg.PORTAL_ORIGIN.endsWith('/') ? cfg.PORTAL_ORIGIN : `${cfg.PORTAL_ORIGIN}/`;
+    }
+    const portal = cfg.ORG_PORTAL_URL || '';
+    if (!portal) return '';
+    const root = portal.replace(/join\.html.*$/i, '');
+    return root.endsWith('/') ? root : `${root}/`;
   }
 
   function feedbackPageUrl(constants, params = {}) {
-    const base = portalBaseUrl(constants);
-    const root = base.endsWith('/') ? base : `${base}/`;
+    const root = portalBaseUrl(constants);
+    if (!root) return '';
     const url = new URL('feedback.html', root);
     for (const [key, value] of Object.entries(params)) {
       if (value != null && value !== '') url.searchParams.set(key, String(value));
@@ -60,7 +75,9 @@
 
   function buildMailtoUrl(kind, options = {}) {
     const resolvedKind = SUBJECTS[kind] ? kind : 'feedback';
-    const to = options.email || (resolvedKind === 'security' ? SECURITY_EMAIL : SUPPORT_EMAIL);
+    const constants = resolveConstants(options.constants);
+    const to = options.email
+      || (resolvedKind === 'security' ? securityEmail(constants) : supportEmail(constants));
     const subject = SUBJECTS[resolvedKind];
     const bodyParts = [];
     if (options.message) {
@@ -89,6 +106,7 @@
 
   function openFeedbackPage(api, constants, params = {}) {
     const url = feedbackPageUrl(constants, params);
+    if (!url) return;
     if (api?.tabs?.create) {
       api.tabs.create({ url });
       return;
@@ -99,9 +117,9 @@
   }
 
   global.GoldspireFeedback = {
-    SUPPORT_EMAIL,
-    SECURITY_EMAIL,
     SUBJECTS,
+    supportEmail,
+    securityEmail,
     detectBrowser,
     portalBaseUrl,
     feedbackPageUrl,

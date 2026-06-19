@@ -12,5 +12,10 @@
     STRIPE_BILLING_PORTAL_URL: "",
     STORE_URL_CHROME: "",
     STORE_URL_EDGE: "",
+    SUPPORT_EMAIL: "support@goldspireventures.com",
+    SECURITY_EMAIL: "security@goldspireventures.com",
+    PRIVACY_EMAIL: "privacy@goldspireventures.com",
+    SALES_EMAIL: "sales@goldspireventures.com",
+    LEGAL_EMAIL: "legal@goldspireventures.com",
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

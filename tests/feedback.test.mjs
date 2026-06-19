@@ -8,13 +8,16 @@ import vm from 'node:vm';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function loadFeedback() {
+  const constants = readFileSync(join(repoRoot, 'extension/src/constants.js'), 'utf8');
   const g = { globalThis: {}, URL };
+  vm.runInNewContext(constants, g);
   vm.runInNewContext(readFileSync(join(repoRoot, 'extension/src/feedback.js'), 'utf8'), g);
   return g.globalThis.GoldspireFeedback;
 }
 
 test('feedback builds mailto with diagnostics and no secrets in template', () => {
   const fb = loadFeedback();
+  const support = fb.supportEmail();
   const mailto = fb.buildMailtoUrl('bug', {
     diagnostics: fb.buildDiagnostics({
       version: '1.2.3',
@@ -24,7 +27,7 @@ test('feedback builds mailto with diagnostics and no secrets in template', () =>
       pageUrl: 'https://mail.google.com/mail/u/0',
     }),
   });
-  assert.ok(mailto.startsWith('mailto:support@goldspireventures.com?'));
+  assert.ok(mailto.startsWith(`mailto:${support}?`));
   assert.match(mailto, /Veil%20issue%20report/);
   assert.match(mailto, /1\.2\.3/);
   assert.match(mailto, /Microsoft%20Edge/);

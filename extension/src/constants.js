@@ -19,9 +19,17 @@
     ORG_API_BASE: "https://veil-api.goldspireventures.com",
     /** Organization sign-in / join portal. */
     ORG_PORTAL_URL: "https://join-veil.goldspireventures.com/join.html",
+    /** Portal origin (scheme + host) for links and intent detection. */
+    PORTAL_ORIGIN: "https://join-veil.goldspireventures.com",
+    /** Portal hostname for intent detection. */
+    PORTAL_HOST: "join-veil.goldspireventures.com",
+    /** API hostname for intent detection. */
+    API_HOST: "veil-api.goldspireventures.com",
     /** Alarm interval for cloud policy sync (minutes). */
     ORG_SYNC_INTERVAL_MINUTES: 360,
     /** Product support and feedback email. */
     SUPPORT_EMAIL: "support@goldspireventures.com",
+    /** Security vulnerability reports. */
+    SECURITY_EMAIL: "security@goldspireventures.com",
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

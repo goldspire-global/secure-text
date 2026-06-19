@@ -86,7 +86,7 @@
           <li>Security review &amp; procurement pack</li>
           <li>Custom terms &amp; multi-year agreements</li>
         </ul>
-        <a class="btn btn--ghost" href="mailto:sales@goldspireventures.com?subject=Veil%20Custom%20plan">Contact sales</a>
+        <a class="btn btn--ghost" href="#" data-contact-href="sales" data-mail-subject="Veil Custom plan">Contact sales</a>
       </div>
     </section>
 
@@ -139,11 +139,13 @@
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/contacts.js"></script>
   <script src="portal/billing.js"></script>
   <script src="portal/pricing.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('pricing');
     GoldspirePortalNav.renderPortalFooter?.();
+    GoldspirePortalContacts?.applyContactEmails?.();
     GoldspireBilling.renderEarlyAccessBanner(document.querySelector('[data-early-access-banner]'));
   </script>
 </body>

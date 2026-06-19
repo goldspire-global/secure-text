@@ -1977,5 +1977,12 @@
   window.addEventListener('unhandledrejection', (event) => {
     if (isInvalidatedError(event.reason)) return;
     console.warn('[Veil]', event.reason);
+    globalThis.GoldspireOpsTelemetry?.report?.({
+      kind: 'client_error',
+      code: 'unhandled_rejection',
+      message: String(event.reason?.message || event.reason || 'Unhandled rejection').slice(0, 200),
+      source: 'content',
+      host: typeof location !== 'undefined' ? location.hostname || '' : '',
+    });
   });
 })();
