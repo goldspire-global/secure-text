@@ -1262,14 +1262,45 @@ async function collectFeedbackMeta() {
   } catch {
     pageUrl = '';
   }
+  let deviceHint = '';
+  try {
+    const stored = await api.storage.local.get(['deviceId']);
+    const deviceId = stored?.deviceId || '';
+    if (deviceId) deviceHint = String(deviceId).slice(0, 8);
+  } catch {
+    deviceHint = '';
+  }
   return {
     version: extensionVersion,
     browser: GoldspireFeedback?.detectBrowser?.() || 'Unknown',
     profile: settings.securityProfile || 'personal',
     copilot: settings.copilotEnabled === true,
     orgName: settings.orgDisplayName || '',
+    orgId: settings.orgId || '',
+    policyPackId: settings.policyPackId || settings.effectivePolicyPackId || '',
+    dlpEnabled: settings.dlp?.enabled === true,
     pageUrl,
+    deviceHint,
+    platform: typeof navigator !== 'undefined' ? navigator.platform || '' : '',
+    locale: typeof navigator !== 'undefined' ? navigator.language || '' : '',
   };
+}
+
+async function submitFeedbackTicket(kind, message = '') {
+  if (!GoldspireFeedback?.submitTicket) throw new Error('Feedback unavailable');
+  const meta = await collectFeedbackMeta();
+  const payload = GoldspireFeedback.buildTicketPayload(kind, message, meta, { source: 'extension_popup' });
+  const result = await GoldspireFeedback.submitTicket(GoldspireConstants.ORG_API_BASE, payload);
+  if (global.GoldspireOpsTelemetry?.report) {
+    await GoldspireOpsTelemetry.report({
+      kind: 'support_ticket',
+      code: result.ticketRef,
+      message: kind,
+      source: 'extension',
+    });
+    GoldspireOpsTelemetry.flush?.();
+  }
+  return result;
 }
 
 async function openFeedbackMail(kind) {
@@ -1290,17 +1321,24 @@ async function openFeedbackPortal(kind) {
     copilot: meta.copilot ? 'on' : 'off',
     page: meta.pageUrl,
     kind: kind || 'feedback',
+    orgId: meta.orgId,
+    orgName: meta.orgName,
+    policyPackId: meta.policyPackId,
+    dlp: meta.dlpEnabled ? 'on' : 'off',
+    deviceHint: meta.deviceHint,
   });
 }
 
 document.getElementById('feedback-send')?.addEventListener('click', () => {
-  openFeedbackMail('feedback').catch(() => showStatus('Could not open email.'));
+  submitFeedbackTicket('feedback', 'General feedback from extension popup')
+    .then((result) => showStatus(`Ticket ${result.ticketRef} submitted — thank you.`))
+    .catch(() => openFeedbackPortal('feedback').catch(() => showStatus('Could not submit — opened feedback page.')));
 });
 document.getElementById('feedback-bug')?.addEventListener('click', () => {
-  openFeedbackMail('bug').catch(() => showStatus('Could not open email.'));
+  openFeedbackPortal('bug').catch(() => showStatus('Could not open feedback page.'));
 });
 document.getElementById('feedback-false-positive')?.addEventListener('click', () => {
-  openFeedbackMail('falsePositive').catch(() => showStatus('Could not open email.'));
+  openFeedbackPortal('falsePositive').catch(() => showStatus('Could not open feedback page.'));
 });
 document.getElementById('feedback-portal-link')?.addEventListener('click', (event) => {
   event.preventDefault();

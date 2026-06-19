@@ -86,6 +86,16 @@
       labelText: '', placeholder: '', name: '', id: '', autocomplete: '',
     };
 
+    const fieldContext = {
+      fieldLabel: hints.labelText,
+      fieldPlaceholder: hints.placeholder,
+      fieldName: hints.name,
+      fieldId: hints.id,
+      fieldAutocomplete: hints.autocomplete,
+      autocomplete: hints.autocomplete,
+    };
+    const semantics = global.GoldspireFieldSemantics?.inferFieldSemantics?.(fieldContext);
+
     return global.GoldspireDetectionContext?.createContext?.({
       host,
       path,
@@ -97,14 +107,11 @@
       expectsPii: intentMeta.expectsPii,
       inForm: intentMeta.inForm,
       intentSignals: intentMeta.signals,
-      isNameField: intentMeta.isNameField || global.GoldspireDetectionIntent?.isNameField?.(element),
-      isGovernmentIdField: intentMeta.isGovernmentIdField || global.GoldspireDetectionIntent?.isGovernmentIdField?.(element),
-      fieldLabel: hints.labelText,
-      fieldPlaceholder: hints.placeholder,
-      fieldName: hints.name,
-      fieldId: hints.id,
-      fieldAutocomplete: hints.autocomplete,
-    }) || { host, path, source: partial.source || 'paste', ...meta, ...intentMeta };
+      isNameField: intentMeta.isNameField || semantics?.isPersonName || global.GoldspireDetectionIntent?.isNameField?.(element),
+      isGovernmentIdField: intentMeta.isGovernmentIdField || semantics?.isGovernmentId || global.GoldspireDetectionIntent?.isGovernmentIdField?.(element),
+      fieldSemantics: semantics,
+      ...fieldContext,
+    }) || { host, path, source: partial.source || 'paste', ...meta, ...intentMeta, fieldSemantics: semantics };
   }
 
   function shouldLogDetection(hit, minConfidence = 50) {

@@ -1,25 +1,31 @@
 /**
- * Context-aware disambiguation — suppress false positives and prefer field-appropriate IDs.
+ * Context-aware disambiguation — uses field semantics + intent, not detector-only guesses.
  */
 (function (global) {
-  const NAME_AUTOCOMPLETE = new Set(['name', 'given-name', 'family-name', 'nickname', 'additional-name']);
-  const NAME_LABEL_RE = /\b(first|last|full|given|family|sur|middle|maiden)\s*name\b/i;
-  const GOV_ID_LABEL_RE = /\b(pps|personal public service|national id|national insurance|nino|social security|ssn|tax id|student id)\b/i;
-
-  function fieldText(context = {}) {
-    return `${context.fieldLabel || ''} ${context.fieldPlaceholder || ''} ${context.fieldName || ''} ${context.fieldId || ''}`.trim();
+  function fieldSemantics(context = {}) {
+    if (context.fieldSemantics) return context.fieldSemantics;
+    return global.GoldspireFieldSemantics?.inferFieldSemantics?.(context) || {
+      semantics: [],
+      suppressCategories: [],
+      preferCategories: [],
+      isPersonName: false,
+      isGovernmentId: false,
+      isPaymentAccount: false,
+    };
   }
 
   function isNameFieldContext(context = {}) {
     if (context.isNameField) return true;
-    const auto = String(context.autocomplete || context.fieldAutocomplete || '').toLowerCase();
-    if (NAME_AUTOCOMPLETE.has(auto)) return true;
-    return NAME_LABEL_RE.test(fieldText(context));
+    return fieldSemantics(context).isPersonName;
   }
 
   function isGovernmentIdFieldContext(context = {}) {
     if (context.isGovernmentIdField) return true;
-    return GOV_ID_LABEL_RE.test(fieldText(context));
+    return fieldSemantics(context).isGovernmentId;
+  }
+
+  function isPaymentFieldContext(context = {}) {
+    return fieldSemantics(context).isPaymentAccount;
   }
 
   function isLowRiskFormField(context = {}) {
@@ -41,7 +47,7 @@
 
   function isHighConfidenceSecret(hit) {
     const cat = hit?.category || '';
-    const conf = Number(hit?.confidence) || 0;
+    const conf = Number(hit.confidence) || 0;
     if (cat === 'api_key' && conf >= 90) return true;
     if (cat === 'jwt' && conf >= 85) return true;
     if (cat === 'credit_card' && conf >= 85) return true;
@@ -66,13 +72,20 @@
     const input = String(text || '');
     if (!input || !detections.length) return detections;
 
+    const semantics = fieldSemantics(context);
+    const suppressSet = new Set(semantics.suppressCategories || []);
     const nameField = isNameFieldContext(context);
     const govIdField = isGovernmentIdFieldContext(context);
+    const paymentField = isPaymentFieldContext(context);
     const formContext = isLowRiskFormField(context);
     const ibanLead = hasIbanLead(input);
 
     let out = detections.filter((hit) => {
       const cat = hit?.category || '';
+
+      if (suppressSet.has(cat) && !isHighConfidenceSecret(hit)) {
+        return false;
+      }
 
       if (nameField && ['api_key', 'swift_bic', 'jwt', 'iban', 'credit_card', 'routing_number'].includes(cat)) {
         return isHighConfidenceSecret(hit);
@@ -98,7 +111,11 @@
         return false;
       }
 
-      if (cat === 'national_id' && ibanLead) {
+      if (cat === 'national_id' && ibanLead && paymentField) {
+        return false;
+      }
+
+      if (paymentField && cat === 'national_id' && ibanLead) {
         return false;
       }
 
@@ -109,6 +126,18 @@
       out = out.filter((hit) => hit.category !== 'iban' && hit.category !== 'swift_bic');
     }
 
+    if (paymentField && !govIdField) {
+      out = out.filter((hit) => hit.category !== 'national_id' || ibanLead);
+    }
+
+    const prefer = semantics.preferCategories || [];
+    if (prefer.length) {
+      const preferred = out.filter((hit) => prefer.includes(hit.category));
+      if (preferred.length) {
+        out = preferred.concat(out.filter((hit) => !prefer.includes(hit.category)));
+      }
+    }
+
     return global.GoldspireDetectionLib?.sortDetections?.(out) || out;
   }
 
@@ -116,6 +145,8 @@
     resolveDetections,
     isNameFieldContext,
     isGovernmentIdFieldContext,
+    isPaymentFieldContext,
     isLowRiskFormField,
+    fieldSemantics,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

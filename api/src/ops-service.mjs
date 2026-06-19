@@ -1,6 +1,7 @@
 import { timingSafeEqual, createHash } from 'node:crypto';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
+import { getSupportTicketStats } from './support-service.mjs';
 
 const MAX_CLIENT_BATCH = 25;
 const MAX_MESSAGE_LEN = 240;
@@ -11,6 +12,7 @@ const ALLOWED_KINDS = new Set([
   'event_upload_failure',
   'health',
   'notice',
+  'support_ticket',
 ]);
 
 const BLOCKED_META_KEYS = ['passphrase', 'secret', 'token_value', 'plaintext', 'matchedtext', 'payload'];
@@ -139,6 +141,7 @@ export async function getOpsSummary(days = 7) {
     synthetic,
     alerts,
     orgStats,
+    supportStats,
   ] = await Promise.all([
     pool.query(
       `SELECT checked_at, ok, db_ok, version, uptime_sec
@@ -233,6 +236,7 @@ export async function getOpsSummary(days = 7) {
          (SELECT COUNT(*)::int FROM device_provisions WHERE revoked_at IS NULL) AS active_devices,
          (SELECT COUNT(*)::int FROM org_members WHERE active = true) AS active_members`,
     ),
+    getSupportTicketStats(),
   ]);
 
   return {
@@ -248,6 +252,7 @@ export async function getOpsSummary(days = 7) {
     apiLatencyByRoute: apiLatency.rows,
     syntheticChecks: synthetic.rows,
     recentAlerts: alerts.rows,
+    support: supportStats,
   };
 }
 

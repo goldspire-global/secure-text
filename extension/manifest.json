@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Veil",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Protect secrets in email and web apps before you send. Free for personal use; teams get copilot, tokens, and policy sync.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
@@ -72,6 +72,7 @@
         "src/detector.js",
         "src/detection/context.js",
         "src/detection/intent-config.js",
+        "src/detection/field-semantics.js",
         "src/detection/intent.js",
         "src/detection/context-resolve.js",
         "src/detection/gating.js",

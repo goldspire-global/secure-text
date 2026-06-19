@@ -41,6 +41,31 @@
     .hint-inline { color: var(--muted, #9aa3b2); font-size: 0.8rem; margin: 0 0 0.75rem; }
     .ops-status { font-size: 0.8rem; color: var(--muted, #9aa3b2); min-height: 1.2em; }
     .ops-empty { color: var(--muted, #9aa3b2); font-size: 0.85rem; padding: 0.5rem 0; }
+    .ops-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .ops-card__head h3 { margin: 0; }
+    .ops-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .ops-filter { padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.2); color: inherit; font: inherit; font-size: 0.8rem; min-width: 10rem; }
+    .ops-support-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 0.85rem; }
+    @media (max-width: 960px) { .ops-support-grid { grid-template-columns: 1fr; } }
+    .ops-action-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .ops-link-list { margin: 0; padding-left: 1.1rem; font-size: 0.82rem; }
+    .ops-link-list a { color: var(--gold, #d4af37); }
+    .ops-ticket-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0.85rem; align-items: start; }
+    @media (max-width: 1100px) { .ops-ticket-layout { grid-template-columns: 1fr; } }
+    .ops-ticket-row { cursor: pointer; }
+    .ops-ticket-row:hover td { background: rgba(212,175,55,0.06); }
+    .ops-ticket-row--active td { background: rgba(212,175,55,0.12); }
+    .ops-ticket-detail { min-height: 12rem; }
+    .ops-card--detail h4 { margin: 0.75rem 0 0.35rem; font-size: 0.82rem; }
+    .ops-message-block { white-space: pre-wrap; font-size: 0.82rem; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.2); max-height: 10rem; overflow: auto; }
+    .ops-workflow { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .ops-pill { font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 4px; background: rgba(255,255,255,0.08); }
+    .ops-pill--new { color: #f0b429; }
+    .ops-pill--investigating { color: #6eb5ff; }
+    .ops-pill--waiting_customer { color: #c9a0ff; }
+    .ops-pill--resolved { color: #6dd58c; }
+    .ops-pill--closed { color: var(--muted, #9aa3b2); }
+    .data-table--compact td { font-size: 0.78rem; }
   </style>
 </head>
 <body>
@@ -49,6 +74,7 @@
       <div>
         <p class="eyebrow" style="margin:0">Internal · veil-api only</p>
         <h1>Platform ops</h1>
+        <p class="hint" style="margin:0.25rem 0 0;font-size:0.82rem;">Support tickets · monitor · trace · resolve</p>
       </div>
       <form id="ops-form" class="ops-controls">
         <label class="field">

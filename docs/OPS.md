@@ -41,6 +41,34 @@ After setting `OPS_CLIENT_INGEST_KEY` on Railway, add the same value to local `.
 
 Per-org detail remains in **admin.html** (security events, SIEM webhook).
 
+## Customer support tickets
+
+Feedback from **portal** (`feedback.html`) and the **extension** (popup + context menu) creates tickets via `POST /v1/support/tickets`. Each ticket gets a reference like `VLT-A1B2C3D4`.
+
+| Field | Auto-captured |
+|-------|----------------|
+| Extension version, browser, profile | Yes |
+| Org ID / name (team users) | Yes |
+| Page host (no query secrets) | Yes |
+| Copilot on/off, policy pack, DLP | Yes |
+| Customer message + optional email | User provided |
+
+Ops workflow in **`/ops.html` → Support tab**:
+
+1. **New** — ticket in queue; also logged as `support_ticket` in Event log
+2. **Investigating** — review diagnostics + related ops events (±24h, same version/host)
+3. **Waiting on customer** / **Resolved** / **Closed** — ops notes + resolution text
+
+Bug/security tickets trigger a Teams/Slack alert (same webhook as platform alerts).
+
+API (ops token required):
+
+- `GET /v1/ops/support/tickets?status=&kind=&q=`
+- `GET /v1/ops/support/tickets/VLT-XXXXXXXX`
+- `PATCH /v1/ops/support/tickets/VLT-XXXXXXXX` — `{ status, opsNotes, resolutionNotes, assignee }`
+
+Migration: `012_support_tickets.sql` — run `npm run db:migrate` on deploy.
+
 ## Alerts
 
 Set `OPS_ALERT_WEBHOOK_URL` to a **Microsoft Teams** incoming webhook (recommended) or Slack URL.

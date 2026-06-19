@@ -36,6 +36,7 @@ const CONTENT_FILES = [
   'src/detector.js',
   'src/detection/context.js',
   'src/detection/intent-config.js',
+  'src/detection/field-semantics.js',
   'src/detection/intent.js',
   'src/detection/context-resolve.js',
   'src/detection/gating.js',
@@ -262,11 +263,23 @@ async function openFeedbackFromMenu(tab) {
     profile: settings.securityProfile || 'personal',
     copilot: settings.copilotEnabled === true,
     orgName: settings.orgDisplayName || '',
+    orgId: settings.orgId || '',
+    policyPackId: settings.policyPackId || '',
+    dlpEnabled: settings.dlp?.enabled === true,
     pageUrl: GoldspireFeedback.sanitizePageUrl(tab?.url),
   };
-  const diagnostics = GoldspireFeedback.buildDiagnostics(meta);
-  const mailto = GoldspireFeedback.buildMailtoUrl('feedback', { diagnostics, meta });
-  GoldspireFeedback.openMailto(api, mailto);
+  GoldspireFeedback.openFeedbackPage(api, GoldspireConstants, {
+    v: meta.version,
+    browser: meta.browser,
+    profile: meta.profile,
+    copilot: meta.copilot ? 'on' : 'off',
+    page: meta.pageUrl,
+    kind: 'feedback',
+    orgId: meta.orgId,
+    orgName: meta.orgName,
+    policyPackId: meta.policyPackId,
+    dlp: meta.dlpEnabled ? 'on' : 'off',
+  });
 }
 
 function createMenus() {

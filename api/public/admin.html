@@ -274,19 +274,25 @@
 
   <dialog id="team-policy-dialog" class="admin-dialog">
     <form method="dialog" id="team-policy-form">
-      <h2 id="team-policy-title">Sub-team policy</h2>
+      <h2 id="team-policy-title">Sub-team rules</h2>
       <p class="hint" id="team-policy-lede"></p>
+      <div id="team-policy-explainer"></div>
       <div class="field">
-        <label for="team-policy-pack">Policy pack</label>
+        <label for="team-policy-pack">Starter rule set</label>
         <select id="team-policy-pack"></select>
-        <div class="hint">Stricter than org default — applies only to members assigned to this sub-team.</div>
+        <div class="hint" id="team-policy-pack-hint">Pick a pre-built pack, or leave on “Custom JSON” and edit below.</div>
       </div>
-      <details class="card card--flat" style="margin:0.75rem 0;padding:0.75rem;">
-        <summary>Advanced: custom JSON overlay</summary>
-        <textarea id="team-policy-json" rows="8" placeholder='{"enabled":true,"categories":{...}}' style="margin-top:0.5rem;font-family:ui-monospace,monospace;font-size:0.82rem;"></textarea>
+      <details class="card card--flat" style="margin:0.75rem 0;padding:0.75rem;" open>
+        <summary>Custom rules (JSON)</summary>
+        <p class="hint" style="margin:0.5rem 0 0;">Only include categories you want to differ from the company default. Detection still uses field context (labels, form type) — this JSON controls warn/block only.</p>
+        <div class="btn-row" style="margin:0.5rem 0;">
+          <button type="button" class="btn btn--ghost btn--sm" id="team-policy-insert-template">Insert sample template</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="team-policy-from-pack">Copy from selected pack</button>
+        </div>
+        <textarea id="team-policy-json" rows="14" placeholder='{"enabled":true,"defaultAction":"warn","categories":{...}}' style="margin-top:0.25rem;font-family:ui-monospace,monospace;font-size:0.82rem;"></textarea>
       </details>
       <div class="btn-row">
-        <button type="submit" class="btn btn--sm">Save policy</button>
+        <button type="submit" class="btn btn--sm">Save rules</button>
         <button type="button" class="btn btn--ghost btn--sm" id="team-policy-cancel">Cancel</button>
       </div>
     </form>
@@ -616,16 +622,32 @@
       const dialog = document.getElementById('team-policy-dialog');
       const packSelect = document.getElementById('team-policy-pack');
       const jsonField = document.getElementById('team-policy-json');
-      document.getElementById('team-policy-title').textContent = `Policy for ${team.name}`;
+      const packHint = document.getElementById('team-policy-pack-hint');
+      document.getElementById('team-policy-title').textContent = `Rules for ${team.name}`;
       document.getElementById('team-policy-lede').textContent =
-        'Members assigned to this sub-team get these rules on top of the org policy. Save, then ask them to reopen the extension (or wait for sync).';
+        'People assigned to this sub-team get these rules on top of the company default. Save, then ask them to reopen the extension (or wait for sync).';
+      const explainer = document.getElementById('team-policy-explainer');
+      if (explainer && window.GoldspirePolicyPacks?.policyExplainerHtml) {
+        explainer.innerHTML = GoldspirePolicyPacks.policyExplainerHtml();
+      }
       if (packSelect && window.GoldspirePolicyPacks && cachedOrg) {
         const packs = GoldspirePolicyPacks.packsForOrg(cachedOrg.settings);
         packSelect.innerHTML = [
-          '<option value="">— Use custom JSON below —</option>',
+          '<option value="">— Custom JSON only (no pack) —</option>',
           ...packs.map((pack) => `
-            <option value="${pack.id}"${pack.id === team.settings?.policyPackId ? ' selected' : ''}>${pack.label}</option>`),
+            <option value="${pack.id}"${pack.id === team.settings?.policyPackId ? ' selected' : ''}>${pack.label} — ${pack.description}</option>`),
         ].join('');
+        const updatePackHint = () => {
+          const id = packSelect.value?.trim();
+          const pack = id ? GoldspirePolicyPacks.get(id) : null;
+          if (packHint) {
+            packHint.textContent = pack
+              ? `${pack.label}: ${pack.description}`
+              : 'Edit the JSON below, or pick a starter pack and click “Copy from selected pack”.';
+          }
+        };
+        packSelect.onchange = updatePackHint;
+        updatePackHint();
       }
       if (jsonField) {
         jsonField.value = team.settings?.dlp
@@ -634,6 +656,30 @@
       }
       dialog?.showModal?.();
     }
+
+    function insertTeamPolicyTemplate() {
+      const packId = document.getElementById('team-policy-pack')?.value?.trim() || 'engineering';
+      const jsonField = document.getElementById('team-policy-json');
+      if (jsonField && window.GoldspirePolicyPacks?.sampleOverlayJson) {
+        jsonField.value = GoldspirePolicyPacks.sampleOverlayJson(packId);
+      }
+    }
+
+    function copyTeamPolicyFromPack() {
+      const packId = document.getElementById('team-policy-pack')?.value?.trim();
+      const jsonField = document.getElementById('team-policy-json');
+      if (!packId) {
+        app.setStatus(dashStatus, 'Select a starter pack first, or use Insert sample template.', 'error');
+        return;
+      }
+      const pack = GoldspirePolicyPacks?.get?.(packId);
+      if (pack && jsonField) {
+        jsonField.value = JSON.stringify(pack.dlp, null, 2);
+      }
+    }
+
+    document.getElementById('team-policy-insert-template')?.addEventListener('click', insertTeamPolicyTemplate);
+    document.getElementById('team-policy-from-pack')?.addEventListener('click', copyTeamPolicyFromPack);
 
     async function saveTeamPolicy(event) {
       event.preventDefault();

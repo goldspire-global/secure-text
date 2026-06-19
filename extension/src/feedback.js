@@ -69,8 +69,71 @@
     ];
     if (meta.copilot != null) lines.push(`Copilot: ${meta.copilot ? 'on' : 'off'}`);
     if (meta.orgName) lines.push(`Team: ${meta.orgName}`);
+    if (meta.orgId) lines.push(`Org ID: ${meta.orgId}`);
+    if (meta.policyPackId) lines.push(`Policy pack: ${meta.policyPackId}`);
+    if (meta.dlpEnabled != null) lines.push(`DLP enforce: ${meta.dlpEnabled ? 'on' : 'off'}`);
     if (meta.pageUrl) lines.push(`Page: ${meta.pageUrl}`);
+    if (meta.deviceHint) lines.push(`Device hint: ${meta.deviceHint}`);
     return lines.join('\n');
+  }
+
+  function pageHostFromUrl(raw) {
+    if (!raw) return '';
+    try {
+      return new URL(raw).hostname.toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+
+  function buildTicketPayload(kind, message, meta = {}, options = {}) {
+    const resolvedKind = SUBJECTS[kind] ? kind : 'feedback';
+    const pageUrl = sanitizePageUrl(meta.pageUrl || '');
+    return {
+      kind: resolvedKind,
+      message: String(message || '').trim(),
+      source: options.source || 'extension_popup',
+      contactEmail: String(options.contactEmail || '').trim(),
+      orgId: meta.orgId || '',
+      orgName: meta.orgName || '',
+      extensionVersion: meta.version || '',
+      browser: meta.browser || detectBrowser(),
+      profile: meta.profile || '',
+      pageHost: pageHostFromUrl(pageUrl),
+      diagnostics: {
+        version: meta.version || '',
+        browser: meta.browser || detectBrowser(),
+        profile: meta.profile || '',
+        copilot: meta.copilot === true,
+        orgName: meta.orgName || '',
+        orgId: meta.orgId || '',
+        pageUrl,
+        pageHost: pageHostFromUrl(pageUrl),
+        policyPackId: meta.policyPackId || '',
+        dlpEnabled: meta.dlpEnabled === true,
+        deviceHint: meta.deviceHint || '',
+        platform: meta.platform || '',
+        locale: meta.locale || '',
+      },
+    };
+  }
+
+  async function submitTicket(apiBase, payload, options = {}) {
+    const base = String(apiBase || '').replace(/\/$/, '');
+    if (!base) throw new Error('API not configured');
+    const response = await fetch(`${base}/v1/support/tickets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.message || body.error || `Ticket submit failed (${response.status})`);
+    }
+    return body;
   }
 
   function buildMailtoUrl(kind, options = {}) {
@@ -125,6 +188,8 @@
     feedbackPageUrl,
     sanitizePageUrl,
     buildDiagnostics,
+    buildTicketPayload,
+    submitTicket,
     buildMailtoUrl,
     openMailto,
     openFeedbackPage,

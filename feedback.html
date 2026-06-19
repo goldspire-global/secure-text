@@ -28,17 +28,25 @@
         </label>
 
         <label class="field">
+          <span>Your email (optional — for follow-up)</span>
+          <input type="email" id="feedback-email" name="email" autocomplete="email" placeholder="you@company.com" />
+        </label>
+
+        <label class="field">
           <span>Your message</span>
           <textarea id="feedback-message" name="message" rows="6" placeholder="What were you doing? What did you expect Veil to do?"></textarea>
         </label>
 
         <details class="card card--flat">
-          <summary>Diagnostic info (included automatically — no secrets)</summary>
+          <summary>Diagnostic info (attached automatically — no secrets)</summary>
           <pre id="feedback-diagnostics" class="diagnostics-block"></pre>
         </details>
 
+        <p class="hint" id="feedback-ticket-ref" hidden></p>
+
         <div class="btn-row">
-          <button type="submit" class="btn">Open email to send</button>
+          <button type="submit" class="btn">Submit ticket</button>
+          <button type="button" class="btn btn--ghost" id="feedback-email-btn">Email instead</button>
           <button type="button" class="btn btn--ghost" id="feedback-copy">Copy report text</button>
         </div>
         <p class="hint" id="feedback-status" hidden></p>

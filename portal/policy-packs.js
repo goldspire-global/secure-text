@@ -173,6 +173,68 @@
     },
   });
 
+  const ACTION_GLOSSARY = Object.freeze({
+    allow: 'Detection still runs for audit, but Veil will not warn or block.',
+    warn: 'Show the copilot suggestion — the user can proceed or mask.',
+    block: 'Prevent paste/send until the sensitive value is removed or masked.',
+    auto_mask: 'Replace the detected value with a Veil token automatically.',
+  });
+
+  const CATEGORY_GLOSSARY = Object.freeze({
+    national_id: 'Government IDs — PPS (Ireland), national insurance, generic national ID patterns.',
+    iban: 'International bank account numbers (must start with country code, e.g. IE12…).',
+    credit_card: 'Payment card numbers (Luhn-validated).',
+    api_key: 'API keys, secrets, and high-entropy tokens.',
+    jwt: 'JSON Web Tokens.',
+    ssn: 'US Social Security numbers.',
+    email: 'Email addresses.',
+    phone: 'Phone numbers.',
+    swift_bic: 'Bank SWIFT/BIC codes (8–11 uppercase alphanumerics).',
+    password: 'Password fields and obvious password-like strings.',
+  });
+
+  function buildSampleOverlay(packId) {
+    const pack = PACKS[String(packId || '').trim()] || PACKS.engineering;
+    const base = pack.dlp || PACKS.observational.dlp;
+    return {
+      version: 1,
+      enabled: true,
+      defaultAction: base.defaultAction || 'warn',
+      categories: {
+        national_id: base.categories?.national_id || { action: 'block', minSeverity: 'high' },
+        iban: base.categories?.iban || { action: 'warn', minSeverity: 'high' },
+        api_key: base.categories?.api_key || { action: 'block', minSeverity: 'high' },
+        jwt: base.categories?.jwt || { action: 'block', minSeverity: 'high' },
+        email: { action: 'allow', minSeverity: 'high' },
+      },
+      aiSurfaces: {
+        defaultAction: base.aiSurfaces?.defaultAction || 'block',
+        categories: {
+          api_key: { action: 'block' },
+          jwt: { action: 'block' },
+          national_id: { action: 'block' },
+          iban: { action: 'block' },
+        },
+      },
+    };
+  }
+
+  function policyExplainerHtml() {
+    const actions = Object.entries(ACTION_GLOSSARY)
+      .map(([key, text]) => `<li><code>${key}</code> — ${text}</li>`)
+      .join('');
+    return `
+      <p class="hint" style="margin:0.35rem 0 0;">
+        A <strong>policy pack</strong> is a pre-built rule set (which data types to warn/block, especially in email and AI tools).
+        Your <strong>company default</strong> applies to everyone unless they are on a sub-team with its own pack.
+        <strong>Custom JSON</strong> below overrides individual categories — you only need keys you want to change.
+      </p>
+      <details style="margin-top:0.5rem;">
+        <summary class="hint" style="cursor:pointer;">What each action means</summary>
+        <ul class="hint" style="margin:0.35rem 0 0;padding-left:1.1rem;">${actions}</ul>
+      </details>`;
+  }
+
   function normalizeEnabledPackIds(enabledPackIds, { industryId, policyPackId } = {}) {
     const industry = INDUSTRIES[String(industryId || '').trim()] || INDUSTRIES.other;
     const seeds = [
@@ -217,5 +279,16 @@
       const industry = INDUSTRIES[String(industryId || '').trim()] || INDUSTRIES.other;
       return PACKS[industry.recommendedPackId] || PACKS.observational;
     },
+    actionGlossary() {
+      return ACTION_GLOSSARY;
+    },
+    categoryGlossary() {
+      return CATEGORY_GLOSSARY;
+    },
+    buildSampleOverlay,
+    sampleOverlayJson(packId) {
+      return JSON.stringify(buildSampleOverlay(packId), null, 2);
+    },
+    policyExplainerHtml,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

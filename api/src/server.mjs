@@ -48,6 +48,12 @@ import {
   verifyOpsToken,
   verifyClientIngestKey,
 } from './ops-service.mjs';
+import {
+  createSupportTicket,
+  listSupportTickets,
+  getSupportTicket,
+  updateSupportTicket,
+} from './support-service.mjs';
 import { checkRateLimit } from './rate-limit.mjs';
 import { normalizeRoute, recordRequestMetric, flushRequestMetrics } from './request-metrics.mjs';
 import { raiseOpsAlert, sendOpsAlertTest } from './ops-alerts.mjs';
@@ -272,6 +278,71 @@ const server = createServer(async (req, res) => {
       const provided = match ? match[1].trim() : '';
       if (!verifyOpsToken(expected, provided)) throw httpError(401, 'Invalid ops token.');
       const result = await sendOpsAlertTest(env);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/support/tickets') {
+      const rl = checkRateLimit(req, 'support-tickets', { limit: 12, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const body = await readBody(req);
+      const result = await createSupportTicket(body, env);
+      json(res, req, 201, result);
+      return;
+    }
+
+    const opsTicketMatch = pathname.match(/^\/v1\/ops\/support\/tickets\/(VLT-[0-9A-F]{8})$/i);
+    if (opsTicketMatch) {
+      const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
+      if (!expected) throw httpError(503, 'Platform ops is not configured.');
+      const auth = String(req.headers.authorization || '');
+      const authMatch = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = authMatch ? authMatch[1].trim() : '';
+      if (!verifyOpsToken(expected, provided)) throw httpError(401, 'Invalid ops token.');
+
+      const ticketRef = opsTicketMatch[1].toUpperCase();
+      if (req.method === 'GET') {
+        const result = await getSupportTicket(ticketRef);
+        json(res, req, 200, result);
+        return;
+      }
+      if (req.method === 'PATCH') {
+        const rl = checkRateLimit(req, 'ops-support-patch', { limit: 60, windowMs: 60_000 });
+        if (!rl.allowed) {
+          json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+          return;
+        }
+        const body = await readBody(req);
+        const result = await updateSupportTicket(ticketRef, body);
+        json(res, req, 200, result);
+        return;
+      }
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/support/tickets') {
+      const rl = checkRateLimit(req, 'ops-support-list', { limit: 60, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
+      if (!expected) throw httpError(503, 'Platform ops is not configured.');
+      const auth = String(req.headers.authorization || '');
+      const match = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = match ? match[1].trim() : '';
+      if (!verifyOpsToken(expected, provided)) throw httpError(401, 'Invalid ops token.');
+      const result = await listSupportTickets({
+        status: url.searchParams.get('status') || '',
+        kind: url.searchParams.get('kind') || '',
+        q: url.searchParams.get('q') || '',
+        limit: url.searchParams.get('limit') || 50,
+      });
       json(res, req, 200, result);
       return;
     }

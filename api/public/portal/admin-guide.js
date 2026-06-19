@@ -107,13 +107,13 @@
   function subTeamGuideHtml() {
     return `
       <div class="guide-callout guide-callout--compact">
-        <strong>Department-specific packs</strong>
-        <p class="hint" style="margin:0.5rem 0 0;">Sub-teams let one group use a <em>different</em> pack than the company default. Example: a tech company keeps <strong>Engineering</strong> as the default, creates a <strong>Finance</strong> sub-team, enables the Finance pack in Access → Pack library, then assigns finance members here.</p>
+        <strong>Department-specific rule sets</strong>
+        <p class="hint" style="margin:0.5rem 0 0;">A <strong>policy pack</strong> is a pre-built list of what to warn or block (API keys, IBANs, PPS numbers, etc.). Your <strong>company default</strong> applies to most people. Sub-teams let one department use stricter or different rules — e.g. Finance blocks payment data while Engineering blocks secrets only.</p>
         <ol class="guide-steps">
-          <li>Enable packs you need under <strong>Access → Pack library</strong> (Finance is included for tech companies by default).</li>
-          <li><strong>Create</strong> a sub-team below (e.g. Finance, Legal, EU team).</li>
+          <li>Enable packs you need under <strong>Access → Pack library</strong>.</li>
+          <li><strong>Create</strong> a sub-team below (e.g. Finance, Legal).</li>
           <li>Go to <strong>People</strong> → assign members in the <strong>Sub-team</strong> column.</li>
-          <li>Click <strong>Set policy</strong> and pick a pack from your library.</li>
+          <li>Click <strong>Set policy</strong> → pick a starter pack or paste custom JSON (use <em>Insert sample template</em> for a guided starting point).</li>
           <li>Members pick up changes the next time they open the extension.</li>
         </ol>
       </div>`;
