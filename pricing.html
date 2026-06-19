@@ -29,7 +29,8 @@
         Personal use is free in the browser. Organizations get admin controls, policy packs, and team sharing —
         set up online in minutes, no sales call required.
       </p>
-      <p class="hint">Team and Enterprise cloud are <strong>free during early access</strong>. List prices below apply at general availability — no card required today.</p>
+      <p class="hint" data-billing-phase="early">Team and Enterprise cloud are <strong>free during early access</strong>. List prices below apply at general availability — no card required today.</p>
+      <p class="hint" data-billing-phase="paid" hidden>Team cloud is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe. Enterprise volume from 100+ seats — contact sales.</p>
       <div data-early-access-banner hidden></div>
       <p class="hint" data-price-currency-note hidden></p>
     </section>
@@ -51,7 +52,8 @@
       <div class="card price-card price-card--featured">
         <p class="eyebrow">Team</p>
         <p class="price-card__amount" data-price-team>$7 <span class="price-card__unit">/ user / mo</span></p>
-        <p class="hint">$84 / user / year (equivalent to $7 / mo) · min. 5 seats · <strong>free now</strong> in early access</p>
+        <p class="hint" data-billing-phase="early">$84 / user / year (equivalent to $7 / mo) · min. 5 seats · <strong>free now</strong> in early access</p>
+        <p class="hint" data-billing-phase="paid" hidden>$84 / user / year (equivalent to $7 / mo) · min. 5 seats · billed annually</p>
         <ul class="trust-list">
           <li>Everything in Personal</li>
           <li>Org admin, join codes, member directory</li>
@@ -99,7 +101,8 @@
         </div>
         <div>
           <h3>Team &amp; Enterprise</h3>
-          <p class="hint">Create your organization online — free during early access. At general availability, Team is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe. Enterprise volume from 100+ seats — contact sales.</p>
+          <p class="hint" data-billing-phase="early">Create your organization online — free during early access. At general availability, Team is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe.</p>
+          <p class="hint" data-billing-phase="paid" hidden>Create your organization online. Team is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe. New teams get a short trial before subscription is required.</p>
         </div>
         <div>
           <h3>Custom</h3>
@@ -146,7 +149,7 @@
     GoldspirePortalNav.renderPortalNav('pricing');
     GoldspirePortalNav.renderPortalFooter?.();
     GoldspirePortalContacts?.applyContactEmails?.();
-    GoldspireBilling.renderEarlyAccessBanner(document.querySelector('[data-early-access-banner]'));
+    GoldspireBilling.initBillingPage();
   </script>
 </body>
 </html>

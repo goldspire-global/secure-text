@@ -4,6 +4,8 @@ import { httpError } from './org-service.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { MEMBERSHIP_POLICIES } from './membership.mjs';
 import { getPolicyPack, resolveIndustrySettings, normalizeEnabledPackIds } from './policy-packs.mjs';
+import { initialBillingSettings, publicBillingSummary } from './billing.mjs';
+import { preserveServerBilling } from './billing-guard.mjs';
 
 const JOIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -46,6 +48,9 @@ function defaultSettings(overrides = {}) {
     aiSurfaces: { defaultAction: 'block', categories: {} },
   };
 
+  const safe = { ...overrides };
+  delete safe.billing;
+
   return {
     passphraseFromVault: false,
     useSavedPassphrase: true,
@@ -58,7 +63,7 @@ function defaultSettings(overrides = {}) {
     copilotEnabled: true,
     productAnalytics: true,
     selectionUiMode: 'smart',
-    ...overrides,
+    ...safe,
   };
 }
 
@@ -105,6 +110,7 @@ function publicOrgRow(row) {
     policyVersion: row.policy_version,
     adminEmail: row.admin_email || null,
     settings: publicSettings(settings),
+    billing: publicBillingSummary(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -151,6 +157,7 @@ export async function createOrganization(body = {}) {
   } else if (body.membershipPolicy && MEMBERSHIP_POLICIES.has(String(body.membershipPolicy))) {
     settings.membershipPolicy = String(body.membershipPolicy);
   }
+  settings.billing = initialBillingSettings();
 
   const orgId = slugifyOrgId(displayName);
   const joinCode = generateJoinCode();
@@ -252,7 +259,7 @@ export async function updateOrganization(admin, body = {}) {
     const current = typeof admin.org.settings === 'object' && admin.org.settings
       ? admin.org.settings
       : {};
-    const merged = { ...current, ...body.settings };
+    const merged = preserveServerBilling(current, body.settings);
     const dlpChanged = body.settings.dlp != null
       && JSON.stringify(body.settings.dlp) !== JSON.stringify(current.dlp);
     const packChanged = body.settings.policyPackId != null

@@ -48,9 +48,9 @@ Use this before announcing Veil publicly or onboarding paying customers.
 - [ ] Incident contact documented (`docs/OPS.md`)
 - [ ] Stripe: `npm run stripe:setup` → payment link in `.env` → `npm run env:apply`
 - [ ] Stripe webhook → `https://veil-api.goldspireventures.com/v1/webhooks/stripe` + `STRIPE_WEBHOOK_SECRET` on Railway
-- [ ] Portal deployed (`join-veil`) with `EARLY_ACCESS` + payment link in `portal/config.js`
-- [ ] Early access end date set: `VEIL_EARLY_ACCESS_END` in Pages env (see [BILLING.md](BILLING.md))
-- [ ] Admin billing UI tested with early access on and off
+- [ ] Stripe keys + `STRIPE_PRICE_ID_TEAM_ANNUAL` on Railway; webhook to `/v1/webhooks/stripe`
+- [ ] Early access end date set: `VEIL_EARLY_ACCESS_END` (see [BILLING.md](BILLING.md))
+- [ ] Billing UI + API enforcement tested (early access on and off)
 
 ## Customer success
 

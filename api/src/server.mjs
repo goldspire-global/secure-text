@@ -39,6 +39,8 @@ import {
   assignMemberTeam,
 } from './teams-service.mjs';
 import { handleStripeWebhook } from './stripe-service.mjs';
+import { platformConfig } from './billing.mjs';
+import { createTeamCheckoutSession } from './billing-checkout.mjs';
 import {
   ingestClientEvents,
   getOpsSummary,
@@ -274,6 +276,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/v1/platform/config') {
+      json(res, req, 200, platformConfig(env));
+      return;
+    }
+
     if (req.method === 'POST' && pathname === '/v1/webhooks/stripe') {
       const signature = req.headers['stripe-signature'];
       if (!signature) {
@@ -481,6 +488,16 @@ const server = createServer(async (req, res) => {
 
       if (req.method === 'GET' && pathname === '/v1/orgs/me/overview') {
         json(res, req, 200, await getOrgOverview(admin));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/orgs/me/billing/checkout') {
+        const rl = checkRateLimit(req, 'billing-checkout', { limit: 10, windowMs: 60_000 });
+        if (!rl.allowed) {
+          json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+          return;
+        }
+        json(res, req, 200, await createTeamCheckoutSession(admin));
         return;
       }
 

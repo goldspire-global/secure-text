@@ -16,7 +16,7 @@
     "api:dev": "node api/src/server.mjs",
     "dev": "npm run env:apply && npm run api:dev",
     "stripe:listen": "stripe listen --forward-to localhost:3015/v1/webhooks/stripe",
-    "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs tests/share-recipients.test.mjs tests/feedback.test.mjs",
+    "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs tests/share-recipients.test.mjs tests/feedback.test.mjs tests/billing.test.mjs",
     "test:daily-use": "node --test tests/scenarios/daily-use.test.mjs tests/scenarios/snooze.test.mjs tests/scenarios/copilot-settings-refresh.test.mjs",
     "test:detection": "node --test tests/detection/*.test.mjs",
     "test:scenarios": "node --test tests/scenarios/*.test.mjs",

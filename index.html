@@ -99,7 +99,8 @@
         <li><strong>Members</strong> install Veil and join with work email.</li>
         <li><strong>Everyone</strong> secures secrets in mail and web apps; admins apply a policy pack and review metadata-only activity.</li>
       </ol>
-      <p class="hint">IT can deploy the extension and team passphrase via Chrome or Edge policy — members skip manual setup. <a href="pricing.html">Team cloud is free during early access</a> ($84 / user / year at general availability).</p>
+      <p class="hint" data-billing-phase="early">IT can deploy the extension and team passphrase via Chrome or Edge policy — members skip manual setup. <a href="pricing.html">Team cloud is free during early access</a> ($84 / user / year at general availability).</p>
+      <p class="hint" data-billing-phase="paid" hidden>IT can deploy the extension and team passphrase via Chrome or Edge policy. <a href="pricing.html">Team cloud</a> is $84 / user / year (minimum 5 seats).</p>
     </section>
 
     <section class="trust card card--flat">
@@ -119,10 +120,12 @@
   </div>
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
+  <script src="portal/billing.js"></script>
   <script src="portal/nav.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('index');
     GoldspirePortalNav.renderPortalFooter?.();
+    GoldspireBilling.initBillingPage();
     (function () {
       const unlockLink = document.getElementById('unlock-page-link');
       const configured = window.GoldspirePortal?.UNLOCK_URL;

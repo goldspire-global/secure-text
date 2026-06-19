@@ -1,5 +1,6 @@
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
+import { assertProvisionedOrgCanOperate } from './billing-guard.mjs';
 
 export async function authenticateRequest(token, deviceId) {
   const bearer = String(token || '').trim();
@@ -10,8 +11,10 @@ export async function authenticateRequest(token, deviceId) {
   const pool = getPool();
   const result = await pool.query(
     `SELECT dp.org_id, dp.device_id, dp.revoked_at,
-            om.id AS member_id, om.email AS member_email
+            om.id AS member_id, om.email AS member_email,
+            o.settings, o.created_at
      FROM device_provisions dp
+     JOIN organizations o ON o.id = dp.org_id
      LEFT JOIN org_members om
        ON om.org_id = dp.org_id AND om.device_id = dp.device_id AND om.active = true
      WHERE dp.provision_token = $1 AND dp.device_id = $2`,
@@ -20,6 +23,7 @@ export async function authenticateRequest(token, deviceId) {
 
   if (result.rowCount === 0) throw httpError(401, 'Invalid provision token.');
   if (result.rows[0].revoked_at) throw httpError(401, 'Provision revoked.');
+  assertProvisionedOrgCanOperate(result.rows[0]);
   return result.rows[0];
 }
 

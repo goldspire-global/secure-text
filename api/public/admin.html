@@ -302,7 +302,6 @@
   <script>
     GoldspirePortalNav.renderPortalNav('admin');
     GoldspirePortalNav.renderPortalFooter?.();
-    GoldspireBilling.renderBillingStatus(document.getElementById('billing-status'));
 
     const app = GoldspirePortalApp;
     const loginCard = document.getElementById('login-card');
@@ -477,6 +476,10 @@
         renderDlpPackOptions(org.settings?.policyPackId || 'observational', org);
         renderPackLibrary(org);
         renderDlpStatus(org);
+        GoldspireBilling.renderBillingStatus(document.getElementById('billing-status'), {
+          orgBilling: org.billing,
+          apiAdmin: app.apiAdmin.bind(app),
+        });
 
         const codesBody = document.getElementById('codes-body');
         codesBody.innerHTML = codes.joinCodes.map((row) => `

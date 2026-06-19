@@ -19,7 +19,7 @@ For **IT admins and team owners**. Goal: set up your org end-to-end without supp
 6. **Save immediately:** admin sign-in key, join code — **admin key is shown once only**
 7. Copy the **invite email** from the success screen
 
-Early access: team cloud is free; no card required. See [pricing](https://join-veil.goldspireventures.com/pricing.html).
+Early access: team cloud is free; no card required. After general availability, subscribe in **Admin → Overview → Billing**. See [pricing](https://join-veil.goldspireventures.com/pricing.html).
 
 ---
 
@@ -114,8 +114,8 @@ See [extension/docs/ENTERPRISE.md](../extension/docs/ENTERPRISE.md).
 
 ## 8. Billing
 
-- **Overview** → Billing: early access status and future list price
-- Paid GA: subscribe via Stripe link when early access ends (we email admins first)
+- **Overview** → Billing: subscription status; subscribe via Stripe when required
+- Early-access orgs are grandfathered; new orgs get a short trial after GA
 
 Internal: [BILLING.md](BILLING.md)
 

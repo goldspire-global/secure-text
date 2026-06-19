@@ -1,6 +1,6 @@
 # Veil billing & early access (internal)
 
-How Team cloud pricing works, how long to run free early access, and how to switch to paid billing **without manual code changes on the end date**.
+How Team cloud pricing works, how long to run free early access, and how to switch to paid billing.
 
 ## List pricing (Team cloud)
 
@@ -11,84 +11,77 @@ How Team cloud pricing works, how long to run free early access, and how to swit
 | Enterprise | 100+ seats — custom contract; contact sales |
 | Personal extension | Free |
 
-Stripe payment link and billing portal URLs live in `.env` → `portal/config.js` via `npm run env:apply`.
+Stripe checkout (API) and optional payment-link URLs live in `.env` → `portal/config.js` via `npm run env:apply`.
 
-## What early access does today
+## What early access does
 
 When early access is **on**:
 
 - Create team requires **no card**
 - Portal shows green **Early access** banner (create, pricing)
 - Admin → **Overview → Billing** says “free, no card on file”
-- Optional “Preview Team checkout” link for procurement only
+- API allows all org operations
 
 When early access is **off**:
 
-- Banner hidden; Admin billing shows **Subscribe / manage seats** (Stripe payment link)
-- Terms/pricing pages still describe list price
+- Early-access copy hidden on pricing, create, index, terms (phase-aware UI)
+- Admin billing shows **Subscribe** (Stripe Checkout via API) or payment link fallback
+- **API enforces billing** on extension routes (join, sync, shares, tokens, events)
+- Unpaid orgs after grace: HTTP **402** — “Team subscription required”
+- Admin console stays available so teams can subscribe
 
-**Not enforced yet:** API does not block org usage if unpaid. Switchover is **portal + comms** first; add org-level `billingStatus` enforcement in a later sprint if needed.
+### Enforcement (server-side)
+
+| Route class | Unpaid after grace |
+|-------------|-------------------|
+| `POST /v1/extension/org/join` | Blocked |
+| All provision-token routes (`sync`, shares, tokens, events) | Blocked |
+| Admin `/v1/orgs/me/*` | Allowed (subscribe path) |
+| `POST /v1/orgs` (create) | Allowed (14-day grace from creation) |
+
+Billing state is stored in `organizations.settings.billing` — **clients cannot set it**. Admin PATCH strips any `billing` field from the request body. Only Stripe webhooks (signed) update subscription status.
+
+Orgs created during early access are **grandfathered** (`billing.status: exempt` or created before `VEIL_EARLY_ACCESS_END`).
 
 ## How long should free early access run?
-
-Use a **fixed public end date** plus internal gates. Recommended approach:
 
 | Phase | Suggested duration | Gate |
 |--------|-------------------|------|
 | **Pilot** | 4–8 weeks after first prod deploy | Chrome **or** Edge store live; ops dashboard green |
-| **Open early access** | **90 days** from announced GA date | Admin guide + feedback loop stable; &lt;2 support tickets/week per 10 orgs |
+| **Open early access** | **90 days** from announced GA date | Admin guide stable; low support load |
 | **Paid GA** | After end date | `VEIL_EARLY_ACCESS_END` passed or `VEIL_EARLY_ACCESS=false` |
 
-**Practical pick for Veil:** set `VEIL_EARLY_ACCESS_END` to **90 days after both store listings are approved**, announced on pricing/Terms at least 30 days ahead.
-
-Avoid ending early access before:
-
-- Store install links work without “search for Veil”
-- Admin self-serve path is documented ([ADMIN_GUIDE.md](ADMIN_GUIDE.md))
-- Stripe live payment link + webhook tested (`npm run stripe:setup`, `stripe listen`)
+Set `VEIL_EARLY_ACCESS_END` at least **30 days ahead** on pricing/Terms.
 
 ## Automating the switchover
 
 ### Option A — Automatic by date (recommended)
-
-Set once in `.env` (or Cloudflare Pages / Railway env for build):
 
 ```env
 VEIL_EARLY_ACCESS=true
 VEIL_EARLY_ACCESS_END=2026-12-31
 ```
 
-Run `npm run env:apply` and deploy the portal **once**. After midnight UTC on that date, `portal/billing.js` treats early access as **off** — banners and Admin billing UI switch to Subscribe **without another deploy**.
+Deploy portal once with `npm run env:apply`. After that date, portal UI and API both treat early access as off — **no redeploy required** for the date flip (env is baked at build; Railway API reads `.env` / Railway vars at runtime).
 
-The end date is baked into `portal/config.js` as `EARLY_ACCESS_END`; the browser compares `Date.now()` on each page load.
-
-### Option B — Immediate manual off
+### Option B — Immediate off
 
 ```env
 VEIL_EARLY_ACCESS=false
 ```
 
-`npm run env:apply` → redeploy Cloudflare Pages (and any env that runs apply-env on build).
-
-### Option C — Future: email + Stripe enforcement
-
-Not built yet. Suggested sequence when you add it:
-
-1. **T−30 days:** email `admin_email` from org table (“billing starts …”)
-2. **T−7 days:** reminder + payment link
-3. **T+0:** early access off (Option A or B)
-4. **T+14:** optional grace; then API returns 402 for new member joins if no `stripe_subscription_id`
+Redeploy **API (Railway)** and **portal (Cloudflare Pages)** after `npm run env:apply`.
 
 ## Switchover checklist (ops)
 
-- [ ] Set `VEIL_EARLY_ACCESS_END` (or `VEIL_EARLY_ACCESS=false`) in production env
-- [ ] `npm run env:apply` and confirm `api/public/portal/config.js` has correct values
-- [ ] Redeploy **join-veil** (Cloudflare Pages)
-- [ ] Verify pricing + create banners on/after end date (use browser date override or staging)
-- [ ] Verify Admin → Billing shows Subscribe + Stripe link works (test mode first)
-- [ ] Update Terms/pricing copy if end date changed
-- [ ] Email active org admins (export from `organizations.admin_email`)
-- [ ] Monitor support inbox and ops dashboard for 2 weeks
+- [ ] Set `VEIL_EARLY_ACCESS_END` (or `VEIL_EARLY_ACCESS=false`) in production
+- [ ] Confirm `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_TEAM_ANNUAL` on Railway
+- [ ] `npm run env:apply` → redeploy portal + push API to Railway
+- [ ] Verify pricing/create/index/terms — no early-access copy when off
+- [ ] Test Admin → Billing → Subscribe (Stripe test mode)
+- [ ] Test webhook: `stripe listen --forward-to localhost:3015/v1/webhooks/stripe`
+- [ ] Email active org admins (`organizations.admin_email`)
+- [ ] Monitor ops dashboard + support for 2 weeks
 
 ## Environment reference
 
@@ -96,7 +89,9 @@ Not built yet. Suggested sequence when you add it:
 |----------|---------|
 | `VEIL_EARLY_ACCESS` | `true` / `false` — master switch |
 | `VEIL_EARLY_ACCESS_END` | ISO date `YYYY-MM-DD` — auto-off after this day |
-| `STRIPE_PAYMENT_LINK_TEAM` | Checkout for Team seats |
+| `VEIL_BILLING_GRACE_DAYS` | Days after org create before API blocks (default `14`) |
+| `STRIPE_PRICE_ID_TEAM_ANNUAL` | Price for Checkout API |
+| `STRIPE_PAYMENT_LINK_TEAM` | Optional fallback link on marketing pages |
 | `STRIPE_BILLING_PORTAL_URL` | Manage subscription |
 | `STRIPE_WEBHOOK_SECRET` | Railway API `/v1/webhooks/stripe` |
 
@@ -104,4 +99,5 @@ Not built yet. Suggested sequence when you add it:
 
 - [MARKET_READY.md](MARKET_READY.md) — launch checklist
 - [scripts/setup-stripe-veil.mjs](../scripts/setup-stripe-veil.mjs) — create products/links
-- [portal/billing.js](../portal/billing.js) — UI logic
+- [api/src/billing.mjs](../api/src/billing.mjs) — enforcement logic
+- [portal/billing.js](../portal/billing.js) — portal UI

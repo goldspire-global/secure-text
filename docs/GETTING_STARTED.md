@@ -30,9 +30,9 @@ Pick the path that matches your role. Each guide is short and step-by-step so yo
 
 See [ADMIN_GUIDE.md — Policy packs & sub-teams](ADMIN_GUIDE.md#4-policy-packs--sub-teams).
 
-## Pricing & early access
+## Pricing
 
-Team cloud is **free during early access** (no card). List price at general availability: **$84 / user / year** (min. 5 seats). Details on the [pricing page](https://join-veil.goldspireventures.com/pricing.html) and in [BILLING.md](BILLING.md) (internal).
+Team cloud is **free during early access** (no card). At general availability: **$84 / user / year** (min. 5 seats), enforced by the API after a short trial. Details on the [pricing page](https://join-veil.goldspireventures.com/pricing.html) and in [BILLING.md](BILLING.md) (internal).
 
 ## Still stuck?
 

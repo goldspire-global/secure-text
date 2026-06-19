@@ -3,6 +3,7 @@ import { getPool } from './db.mjs';
 import { assertMemberEmailAllowed } from './membership.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { getMemberTeamPolicy } from './teams-service.mjs';
+import { assertProvisionedOrgCanOperate } from './billing-guard.mjs';
 
 async function touchDeviceClientInfo(pool, orgId, deviceId, clientInfo = {}) {
   const device = String(deviceId || '').trim();
@@ -91,7 +92,7 @@ export async function joinWithCode(joinCode, deviceId, email, clientInfo = {}) {
 
   const pool = getPool();
   const joinResult = await pool.query(
-    `SELECT jc.code, o.id, o.display_name, o.team_passphrase, o.policy_version, o.settings
+    `SELECT jc.code, o.id, o.display_name, o.team_passphrase, o.policy_version, o.settings, o.created_at
      FROM join_codes jc
      JOIN organizations o ON o.id = jc.org_id
      WHERE UPPER(REPLACE(REPLACE(jc.code, '-', ''), ' ', '')) = $1
@@ -106,6 +107,7 @@ export async function joinWithCode(joinCode, deviceId, email, clientInfo = {}) {
   }
 
   const org = joinResult.rows[0];
+  assertProvisionedOrgCanOperate(org);
   const orgSettings = typeof org.settings === 'object' && org.settings ? org.settings : {};
   await assertMemberEmailAllowed(pool, org.id, memberEmail, device, orgSettings);
 
@@ -153,7 +155,7 @@ export async function syncPolicy(token, deviceId, clientPolicyVersion, clientInf
   const pool = getPool();
   const result = await pool.query(
     `SELECT dp.provision_token, dp.policy_version AS client_version, dp.revoked_at,
-            o.id, o.display_name, o.team_passphrase, o.policy_version, o.settings
+            o.id, o.display_name, o.team_passphrase, o.policy_version, o.settings, o.created_at
      FROM device_provisions dp
      JOIN organizations o ON o.id = dp.org_id
      WHERE dp.provision_token = $1 AND dp.device_id = $2`,
@@ -168,6 +170,8 @@ export async function syncPolicy(token, deviceId, clientPolicyVersion, clientInf
   if (row.revoked_at) {
     throw httpError(401, 'Provision revoked.');
   }
+
+  assertProvisionedOrgCanOperate(row);
 
   await touchDeviceClientInfo(pool, row.id, device, clientInfo);
 

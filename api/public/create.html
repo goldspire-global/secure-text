@@ -106,7 +106,8 @@
           <li>Add member emails in <strong>Admin → People</strong> if you did not set a company domain.</li>
           <li>Send the invite email below — members join with your code and work email.</li>
         </ol>
-        <p class="hint">Team cloud is <strong>free during early access</strong>. No payment step required.</p>
+        <p class="hint" data-billing-phase="early">Team cloud is <strong>free during early access</strong>. No payment step required.</p>
+        <p class="hint" data-billing-phase="paid" hidden>After setup, subscribe in <strong>Admin → Overview → Billing</strong> when your trial ends.</p>
       </details>
 
       <details class="invite-box" style="margin-top:1rem;">
@@ -132,7 +133,7 @@
   <script>
     GoldspirePortalNav.renderPortalNav('create');
     GoldspirePortalNav.renderPortalFooter?.();
-    GoldspireBilling.renderEarlyAccessBanner(document.querySelector('[data-early-access-banner]'));
+    GoldspireBilling.initBillingPage();
     if (GoldspirePortalApp.loadAdminSession()?.adminToken) {
       window.location.replace('admin.html');
     }
