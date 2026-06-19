@@ -30,19 +30,27 @@
         </div>
 
         <div class="field">
+          <label for="industry">What kind of team is this?</label>
+          <select id="industry" name="industry" required></select>
+          <div class="hint" id="industry-pack-preview"></div>
+        </div>
+
+        <div class="field">
           <label for="allowed-domain">Company email domain</label>
           <input id="allowed-domain" name="allowedEmailDomain" placeholder="company.com" autocomplete="off" />
-          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. If blank, <strong>only people you add in Admin → Members</strong> can join — add their work emails before they try.</div>
+          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. If blank, <strong>only people you add in Admin → People</strong> can join — add their work emails before they try.</div>
         </div>
 
         <div class="field">
           <label for="team-passphrase">Team passphrase</label>
-          <input id="team-passphrase" name="teamPassphrase" type="password" required minlength="16" autocomplete="new-password" />
-          <div class="hint">At least 16 characters. Synced to members automatically when they join — also store a copy in your team password manager.</div>
+          <div class="input-with-action">
+            <input id="team-passphrase" name="teamPassphrase" type="password" required minlength="16" autocomplete="new-password" placeholder="At least 16 characters" />
+            <button type="button" class="btn btn--ghost btn--sm" id="generate-passphrase">Generate passphrase</button>
+          </div>
+          <div class="hint">Synced to members automatically when they join — also store a copy in your team password manager.</div>
         </div>
 
-        <div class="btn-row">
-          <button type="button" class="btn btn--ghost" id="generate-passphrase">Generate</button>
+        <div class="form-actions">
           <button type="submit" class="btn" id="submit-btn">Create team</button>
         </div>
       </form>
@@ -94,7 +102,7 @@
         <summary><strong>Next: install Veil &amp; invite members</strong></summary>
         <ol class="steps" style="margin-top:0.75rem;">
           <li><a href="install.html">Install the extension</a> in Chrome or Edge (store links on the install page).</li>
-          <li>Open <strong>Admin → Access</strong> and choose Finance, Healthcare, GDPR, or Engineering.</li>
+          <li id="success-policy-step">Your policy pack is ready — review it in <strong>Admin → Access</strong> if needed.</li>
           <li>Add member emails in <strong>Admin → People</strong> if you did not set a company domain.</li>
           <li>Send the invite email below — members join with your code and work email.</li>
         </ol>
@@ -119,6 +127,7 @@
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/policy-packs.js"></script>
   <script src="portal/billing.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('create');
@@ -135,6 +144,29 @@
     const formCard = document.getElementById('form-card');
     const successCard = document.getElementById('success-card');
     const successStatus = document.getElementById('success-status');
+    const industrySelect = document.getElementById('industry');
+    const industryPreview = document.getElementById('industry-pack-preview');
+
+    function renderIndustryOptions() {
+      if (!industrySelect || !window.GoldspirePolicyPacks) return;
+      industrySelect.innerHTML = GoldspirePolicyPacks.listIndustries().map((row) => `
+        <option value="${row.id}">${row.label}</option>
+      `).join('');
+      industrySelect.value = 'technology';
+      updateIndustryPreview();
+    }
+
+    function updateIndustryPreview() {
+      if (!industryPreview || !window.GoldspirePolicyPacks) return;
+      const industry = GoldspirePolicyPacks.getIndustry(industrySelect?.value);
+      const pack = GoldspirePolicyPacks.recommendedPackForIndustry(industrySelect?.value);
+      industryPreview.innerHTML = pack
+        ? `<strong>Ready to go:</strong> we’ll apply the <strong>${pack.label}</strong> pack — ${pack.description}`
+        : '';
+    }
+
+    industrySelect?.addEventListener('change', updateIndustryPreview);
+    renderIndustryOptions();
 
     document.getElementById('generate-passphrase').addEventListener('click', () => {
       document.getElementById('team-passphrase').value = app.generatePassphrase(24);
@@ -151,6 +183,7 @@
           adminEmail: document.getElementById('admin-email').value.trim(),
           teamPassphrase: document.getElementById('team-passphrase').value,
           allowedEmailDomain: document.getElementById('allowed-domain').value.trim(),
+          industry: industrySelect?.value || 'other',
         };
 
         const result = await app.apiPublic('/v1/orgs', {
@@ -162,6 +195,14 @@
         document.getElementById('out-display-name').textContent = result.displayName;
         document.getElementById('out-join-code').textContent = result.joinCode;
         document.getElementById('out-admin-token').textContent = result.adminToken;
+
+        const appliedPack = GoldspirePolicyPacks.recommendedPackForIndustry(industrySelect?.value);
+        const policyStep = document.getElementById('success-policy-step');
+        if (policyStep && appliedPack) {
+          policyStep.innerHTML = appliedPack.id === 'observational'
+            ? 'You’re starting in <strong>Observational</strong> mode — tighten rules in <strong>Admin → Access</strong> when ready.'
+            : `<strong>${appliedPack.label}</strong> policy is already active for your team. Review or change it in <strong>Admin → Access</strong> if needed.`;
+        }
 
         const joinUrl = `${app.portalOrigin() || location.origin}${location.pathname.replace(/[^/]+$/, '')}join.html`;
         const installUrl = `${app.portalOrigin() || location.origin}${location.pathname.replace(/[^/]+$/, '')}install.html`;

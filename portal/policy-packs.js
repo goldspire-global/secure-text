@@ -135,12 +135,64 @@
     },
   });
 
+  const INDUSTRIES = Object.freeze({
+    technology: {
+      id: 'technology',
+      label: 'Technology / SaaS',
+      hint: 'Software, IT, and product teams',
+      recommendedPackId: 'engineering',
+      packIds: ['engineering', 'observational'],
+    },
+    finance: {
+      id: 'finance',
+      label: 'Financial services',
+      hint: 'Banking, fintech, accounting, insurance',
+      recommendedPackId: 'finance',
+      packIds: ['finance', 'observational'],
+    },
+    healthcare: {
+      id: 'healthcare',
+      label: 'Healthcare',
+      hint: 'Hospitals, clinics, and health tech',
+      recommendedPackId: 'healthcare',
+      packIds: ['healthcare', 'observational'],
+    },
+    eu_privacy: {
+      id: 'eu_privacy',
+      label: 'EU / privacy-focused',
+      hint: 'GDPR-heavy workflows across Europe',
+      recommendedPackId: 'gdpr',
+      packIds: ['gdpr', 'observational'],
+    },
+    other: {
+      id: 'other',
+      label: 'Other / mixed',
+      hint: 'Start in observational mode — switch when ready',
+      recommendedPackId: 'observational',
+      packIds: ['observational', 'engineering', 'gdpr'],
+    },
+  });
+
   global.GoldspirePolicyPacks = {
     list() {
       return Object.values(PACKS);
     },
     get(id) {
       return PACKS[String(id || '').trim()] || null;
+    },
+    listIndustries() {
+      return Object.values(INDUSTRIES);
+    },
+    getIndustry(id) {
+      return INDUSTRIES[String(id || '').trim()] || INDUSTRIES.other;
+    },
+    packsForIndustry(industryId) {
+      const industry = INDUSTRIES[String(industryId || '').trim()] || INDUSTRIES.other;
+      return industry.packIds.map((packId) => PACKS[packId]).filter(Boolean);
+    },
+    recommendedPackForIndustry(industryId) {
+      const industry = INDUSTRIES[String(industryId || '').trim()] || INDUSTRIES.other;
+      return PACKS[industry.recommendedPackId] || PACKS.observational;
     },
   };
 })(typeof window !== 'undefined' ? window : globalThis);

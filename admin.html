@@ -76,7 +76,10 @@
             </div>
             <div class="field">
               <label for="settings-passphrase">New team passphrase</label>
-              <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
+              <div class="input-with-action">
+                <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
+                <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate passphrase</button>
+              </div>
               <div class="hint">Changing this updates every member’s extension within a few hours, or the next time they open it.</div>
             </div>
             <div class="field">
@@ -93,7 +96,6 @@
               <div class="hint">Separate multiple domains with commas. Required when joining is limited to company email.</div>
             </div>
             <div class="btn-row">
-              <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
               <button type="submit" class="btn btn--sm">Save changes</button>
             </div>
           </form>
@@ -179,8 +181,9 @@
 
             <div class="card" id="dlp-card">
               <h2>Data protection</h2>
+              <p class="hint" id="dlp-industry-note"></p>
               <div class="guide-callout guide-callout--compact">
-                <p class="hint" style="margin:0;">After you apply a pack, members receive it on their next extension open. Start with <strong>Observational</strong> for rollout, then switch to an enforced pack when ready.</p>
+                <p class="hint" style="margin:0;">Packs below match your team type. Members receive updates on their next extension open.</p>
               </div>
               <form id="dlp-form">
                 <div class="field">
@@ -342,13 +345,18 @@
       if (row) row.hidden = policy !== 'domain';
     }
 
-    function renderDlpPackOptions(selectedId) {
+    function renderDlpPackOptions(selectedId, industryId) {
       const select = document.getElementById('dlp-pack');
       const desc = document.getElementById('dlp-pack-desc');
+      const industryNote = document.getElementById('dlp-industry-note');
       if (!select || !window.GoldspirePolicyPacks) return;
-      const packs = GoldspirePolicyPacks.list();
+      const industry = GoldspirePolicyPacks.getIndustry(industryId);
+      const packs = GoldspirePolicyPacks.packsForIndustry(industryId);
+      if (industryNote) {
+        industryNote.textContent = `Team type: ${industry.label} — showing packs relevant to your industry.`;
+      }
       select.innerHTML = packs.map((pack) => `
-        <option value="${pack.id}"${pack.id === selectedId ? ' selected' : ''}>${pack.label}</option>
+        <option value="${pack.id}"${pack.id === selectedId ? ' selected' : ''}>${pack.label}${pack.id === industry.recommendedPackId ? ' (recommended)' : ''}</option>
       `).join('');
       const updateDesc = () => {
         const pack = GoldspirePolicyPacks.get(select.value);
@@ -402,7 +410,10 @@
         document.getElementById('settings-domains').value = (org.settings?.allowedEmailDomains || []).join(', ');
         document.getElementById('siem-url').value = org.settings?.analytics?.siemWebhookUrl || '';
         syncDomainsRow();
-        renderDlpPackOptions(org.settings?.policyPackId || (org.settings?.dlp?.enabled ? 'finance' : 'observational'));
+        renderDlpPackOptions(
+          org.settings?.policyPackId || 'observational',
+          org.settings?.industry || 'other',
+        );
         renderDlpStatus(org);
 
         const codesBody = document.getElementById('codes-body');
@@ -544,9 +555,11 @@
       document.getElementById('team-policy-lede').textContent =
         'Members assigned to this sub-team get these rules on top of the org policy. Save, then ask them to reopen the extension (or wait for sync).';
       if (packSelect && window.GoldspirePolicyPacks) {
+        const industryId = cachedOrg?.settings?.industry || 'other';
+        const packs = GoldspirePolicyPacks.packsForIndustry(industryId);
         packSelect.innerHTML = [
           '<option value="">— Use custom JSON below —</option>',
-          ...GoldspirePolicyPacks.list().map((pack) => `
+          ...packs.map((pack) => `
             <option value="${pack.id}"${pack.id === team.settings?.policyPackId ? ' selected' : ''}>${pack.label}</option>`),
         ].join('');
       }

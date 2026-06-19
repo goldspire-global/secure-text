@@ -133,6 +133,70 @@ export const POLICY_PACKS = Object.freeze({
   },
 });
 
+const INDUSTRIES = Object.freeze({
+  technology: {
+    id: 'technology',
+    label: 'Technology / SaaS',
+    hint: 'Software, IT, and product teams',
+    recommendedPackId: 'engineering',
+    packIds: ['engineering', 'observational'],
+  },
+  finance: {
+    id: 'finance',
+    label: 'Financial services',
+    hint: 'Banking, fintech, accounting, insurance',
+    recommendedPackId: 'finance',
+    packIds: ['finance', 'observational'],
+  },
+  healthcare: {
+    id: 'healthcare',
+    label: 'Healthcare',
+    hint: 'Hospitals, clinics, and health tech',
+    recommendedPackId: 'healthcare',
+    packIds: ['healthcare', 'observational'],
+  },
+  eu_privacy: {
+    id: 'eu_privacy',
+    label: 'EU / privacy-focused',
+    hint: 'GDPR-heavy workflows across Europe',
+    recommendedPackId: 'gdpr',
+    packIds: ['gdpr', 'observational'],
+  },
+  other: {
+    id: 'other',
+    label: 'Other / mixed',
+    hint: 'Start in observational mode — switch when ready',
+    recommendedPackId: 'observational',
+    packIds: ['observational', 'engineering', 'gdpr'],
+  },
+});
+
+export function listIndustries() {
+  return Object.values(INDUSTRIES);
+}
+
+export function getIndustry(id) {
+  return INDUSTRIES[String(id || '').trim()] || INDUSTRIES.other;
+}
+
+export function packsForIndustry(industryId) {
+  const industry = getIndustry(industryId);
+  return industry.packIds.map((packId) => getPolicyPack(packId)).filter(Boolean);
+}
+
+export function resolveIndustrySettings(industryId) {
+  const industry = getIndustry(industryId);
+  const pack = getPolicyPack(industry.recommendedPackId);
+  if (!pack) {
+    return { industry: industry.id, policyPackId: 'observational', dlp: POLICY_PACKS.observational.dlp };
+  }
+  return {
+    industry: industry.id,
+    policyPackId: pack.id,
+    dlp: pack.dlp,
+  };
+}
+
 export function listPolicyPacks() {
   return Object.values(POLICY_PACKS);
 }

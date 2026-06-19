@@ -4,17 +4,20 @@
 (function (global) {
   function checklistItems(overview = {}, org = {}) {
     const policyPack = overview.policy?.packId || org.settings?.policyPackId || '';
-    const hasPolicy = policyPack && policyPack !== 'observational';
+    const hasPolicy = Boolean(policyPack) && policyPack !== 'observational';
     const members = overview.members || {};
     const codes = overview.joinCodes || {};
+    const industry = GoldspirePolicyPacks?.getIndustry?.(org.settings?.industry);
 
     return [
       {
         id: 'policy',
-        label: 'Choose a policy pack (Access tab)',
+        label: hasPolicy ? 'Policy pack applied (Access tab)' : 'Choose a policy pack (Access tab)',
         tab: 'access',
         done: hasPolicy,
-        hint: 'Pick Finance, Healthcare, GDPR, or Engineering so copilot and DLP match your industry.',
+        hint: hasPolicy
+          ? `${overview.policy?.packLabel || policyPack} is active for ${industry?.label || 'your team'}.`
+          : `Pick a pack suited to ${industry?.label || 'your team'} — observational is fine for rollout.`,
       },
       {
         id: 'members',

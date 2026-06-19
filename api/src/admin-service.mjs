@@ -3,7 +3,7 @@ import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { MEMBERSHIP_POLICIES } from './membership.mjs';
-import { getPolicyPack } from './policy-packs.mjs';
+import { getPolicyPack, resolveIndustrySettings } from './policy-packs.mjs';
 
 const JOIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -81,6 +81,8 @@ function publicSettings(settings) {
     ...(parsed.dlp && typeof parsed.dlp === 'object'
       ? { dlp: parsed.dlp }
       : {}),
+    ...(parsed.policyPackId ? { policyPackId: String(parsed.policyPackId) } : {}),
+    ...(parsed.industry ? { industry: String(parsed.industry) } : {}),
     ...(parsed.analytics && typeof parsed.analytics === 'object'
       ? {
         analytics: {
@@ -135,7 +137,11 @@ export async function createOrganization(body = {}) {
   }
 
   const allowedEmailDomains = parseAllowedDomains(body);
+  const industry = String(body.industry || body.settings?.industry || '').trim();
   const settings = defaultSettings(body.settings);
+  if (industry) {
+    Object.assign(settings, resolveIndustrySettings(industry));
+  }
   if (allowedEmailDomains.length > 0) {
     settings.membershipPolicy = 'domain';
     settings.allowedEmailDomains = allowedEmailDomains;
