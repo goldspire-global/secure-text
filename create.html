@@ -54,31 +54,33 @@
       <h1>Your team is ready</h1>
       <p class="lede">Save these details now. Your admin sign-in key is shown once and cannot be recovered.</p>
 
-      <div class="credential">
-        <div class="credential__row">
-          <div>
-            <strong>Team name</strong>
-            <code id="out-display-name"></code>
+      <div class="grid-3" style="margin-bottom:1rem;">
+        <div class="credential" style="margin-top:0;">
+          <div class="credential__row">
+            <div>
+              <strong>Team name</strong>
+              <code id="out-display-name"></code>
+            </div>
+            <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-display-name">Copy</button>
           </div>
-          <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-display-name">Copy</button>
         </div>
-      </div>
-      <div class="credential">
-        <div class="credential__row">
-          <div>
-            <strong>Join code</strong>
-            <code id="out-join-code"></code>
+        <div class="credential" style="margin-top:0;">
+          <div class="credential__row">
+            <div>
+              <strong>Join code</strong>
+              <code id="out-join-code"></code>
+            </div>
+            <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-join-code">Copy</button>
           </div>
-          <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-join-code">Copy</button>
         </div>
-      </div>
-      <div class="credential">
-        <div class="credential__row">
-          <div>
-            <strong>Admin sign-in key</strong>
-            <code id="out-admin-token"></code>
+        <div class="credential" style="margin-top:0;">
+          <div class="credential__row">
+            <div>
+              <strong>Admin sign-in key</strong>
+              <code id="out-admin-token"></code>
+            </div>
+            <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-admin-token">Copy</button>
           </div>
-          <button type="button" class="btn btn--ghost btn-copy" data-copy-target="out-admin-token">Copy</button>
         </div>
       </div>
 
@@ -88,25 +90,25 @@
         <a class="btn btn--ghost" href="install.html">Install guide</a>
       </div>
 
-      <div class="card card--flat" style="margin-top:1rem;padding:1rem;">
-        <strong>Next: install Veil &amp; invite members</strong>
-        <ol class="steps">
+      <details class="card card--flat" style="margin-top:1rem;padding:1rem;">
+        <summary><strong>Next: install Veil &amp; invite members</strong></summary>
+        <ol class="steps" style="margin-top:0.75rem;">
           <li><a href="install.html">Install the extension</a> in Chrome or Edge (store links on the install page).</li>
-          <li>Open <strong>Admin → Policy pack</strong> and choose Finance, Healthcare, GDPR, or Engineering.</li>
-          <li>Add member emails in <strong>Admin → Members</strong> if you did not set a company domain.</li>
+          <li>Open <strong>Admin → Access</strong> and choose Finance, Healthcare, GDPR, or Engineering.</li>
+          <li>Add member emails in <strong>Admin → People</strong> if you did not set a company domain.</li>
           <li>Send the invite email below — members join with your code and work email.</li>
         </ol>
         <p class="hint">Team cloud is <strong>free during early access</strong>. No payment step required.</p>
-      </div>
+      </details>
 
-      <div class="invite-box">
-        <strong>Invite email for your team</strong>
-        <p class="hint">Copy and send to members. Replace placeholders as needed.</p>
+      <details class="invite-box" style="margin-top:1rem;">
+        <summary><strong>Invite email for your team</strong></summary>
+        <p class="hint" style="margin-top:0.75rem;">Copy and send to members. Replace placeholders as needed.</p>
         <textarea id="invite-template" readonly></textarea>
         <div class="btn-row">
           <button type="button" class="btn btn--sm" id="copy-invite">Copy invite email</button>
         </div>
-      </div>
+      </details>
 
       <div id="success-status" class="status" role="status"></div>
     </div>

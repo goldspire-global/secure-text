@@ -368,6 +368,7 @@ export async function listDevices(admin) {
   const pool = getPool();
   const result = await pool.query(
     `SELECT dp.device_id, dp.policy_version, dp.revoked_at, dp.created_at, dp.updated_at,
+            dp.extension_version, dp.browser, dp.platform,
             om.email AS member_email
      FROM device_provisions dp
      LEFT JOIN org_members om
@@ -381,11 +382,97 @@ export async function listDevices(admin) {
     devices: result.rows.map((row) => ({
       deviceId: row.device_id,
       memberEmail: row.member_email,
+      extensionVersion: row.extension_version || '',
+      browser: row.browser || '',
+      platform: row.platform || '',
       policyVersion: row.policy_version,
       revoked: Boolean(row.revoked_at),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     })),
+  };
+}
+
+export async function getOrgOverview(admin) {
+  const pool = getPool();
+  const orgId = admin.org.id;
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [membersRes, devicesRes, codesRes, teamsRes, securityRes] = await Promise.all([
+    pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE active)::int AS active,
+         COUNT(*) FILTER (WHERE active AND device_id IS NOT NULL)::int AS connected
+       FROM org_members WHERE org_id = $1`,
+      [orgId],
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE revoked_at IS NULL)::int AS active,
+         COUNT(*) FILTER (WHERE revoked_at IS NULL AND NOT EXISTS (
+           SELECT 1 FROM org_members om
+           WHERE om.org_id = device_provisions.org_id
+             AND om.device_id = device_provisions.device_id
+             AND om.active = true
+         ))::int AS unlinked
+       FROM device_provisions WHERE org_id = $1`,
+      [orgId],
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS active FROM join_codes WHERE org_id = $1 AND active = true`,
+      [orgId],
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS total FROM org_teams WHERE org_id = $1`,
+      [orgId],
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE event_type = 'detection')::int AS detections,
+         COUNT(*) FILTER (WHERE action IN ('block', 'policy_block'))::int AS blocks,
+         COUNT(*) FILTER (WHERE source = 'ai_prompt')::int AS ai_incidents
+       FROM security_events
+       WHERE org_id = $1 AND event_at >= $2`,
+      [orgId, since],
+    ),
+  ]);
+
+  const members = membersRes.rows[0] || {};
+  const devices = devicesRes.rows[0] || {};
+  const security = securityRes.rows[0] || {};
+  const packId = admin.org.settings?.policyPackId || null;
+  const pack = packId ? getPolicyPack(packId) : null;
+
+  return {
+    members: {
+      total: members.total || 0,
+      active: members.active || 0,
+      connected: members.connected || 0,
+      pending: Math.max(0, (members.active || 0) - (members.connected || 0)),
+    },
+    devices: {
+      total: devices.total || 0,
+      active: devices.active || 0,
+      unlinked: devices.unlinked || 0,
+    },
+    joinCodes: { active: codesRes.rows[0]?.active || 0 },
+    teams: { total: teamsRes.rows[0]?.total || 0 },
+    policy: {
+      version: admin.org.policyVersion,
+      packId,
+      packLabel: pack?.label || (packId ? packId : null),
+      dlpEnforced: admin.org.settings?.dlp?.enabled === true,
+    },
+    security: {
+      days: 30,
+      total: security.total || 0,
+      detections: security.detections || 0,
+      blocks: security.blocks || 0,
+      aiIncidents: security.ai_incidents || 0,
+    },
   };
 }
 

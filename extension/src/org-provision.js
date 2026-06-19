@@ -18,6 +18,26 @@
     return global.GoldspireConstants?.ORG_PORTAL_URL || '';
   }
 
+  function clientMetaHeaders(deviceId) {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    let clientBrowser = 'Unknown';
+    if (/Edg\//i.test(ua)) clientBrowser = 'Microsoft Edge';
+    else if (/Firefox\//i.test(ua)) clientBrowser = 'Firefox';
+    else if (/Chrome\//i.test(ua)) clientBrowser = 'Chrome';
+    else if (/Safari\//i.test(ua)) clientBrowser = 'Safari';
+    let clientPlatform = '';
+    if (/Windows/i.test(ua)) clientPlatform = 'Windows';
+    else if (/Macintosh|Mac OS X/i.test(ua)) clientPlatform = 'macOS';
+    else if (/Linux/i.test(ua)) clientPlatform = 'Linux';
+    else if (/CrOS/i.test(ua)) clientPlatform = 'ChromeOS';
+    return {
+      'X-Device-Id': deviceId,
+      'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
+      'X-Client-Browser': clientBrowser,
+      'X-Client-Platform': clientPlatform,
+    };
+  }
+
   async function storageGet(area, defaults) {
     const gst = browser();
     if (gst?.storageGet) return gst.storageGet(area, defaults);
@@ -185,8 +205,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Device-Id': deviceId,
-          'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
+          ...clientMetaHeaders(deviceId),
         },
         body: JSON.stringify({ joinCode: code, deviceId, email: memberEmail }),
       });
@@ -250,9 +269,8 @@
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-Device-Id': deviceId,
           'X-Policy-Version': String(settings.orgPolicyVersion || 0),
-          'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
+          ...clientMetaHeaders(deviceId),
         },
       });
     } catch (error) {

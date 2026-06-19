@@ -9,7 +9,7 @@
   <link rel="icon" href="portal/veil-mark.svg" type="image/svg+xml" />
 </head>
 <body>
-  <div class="layout">
+  <div class="layout layout--wide layout--console">
     <nav class="nav" data-portal-nav></nav>
 
     <div id="login-card" class="card">
@@ -29,185 +29,264 @@
       <div id="login-status" class="status" role="status"></div>
     </div>
 
-    <div id="dashboard" class="hidden">
-      <div class="card">
-        <h1 id="org-title">Your team</h1>
-        <p class="lede" id="org-meta"></p>
-        <div class="btn-row">
-          <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">Refresh</button>
-          <button type="button" class="btn btn--ghost btn--sm" id="sign-out-btn">Sign out</button>
+    <div id="dashboard" class="hidden admin-dashboard">
+      <div class="card admin-header card--flat">
+        <div class="admin-header__top">
+          <div>
+            <h1 id="org-title">Your team</h1>
+            <p class="lede" id="org-meta"></p>
+          </div>
+          <div class="btn-row admin-header__actions">
+            <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">Refresh</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="sign-out-btn">Sign out</button>
+          </div>
         </div>
         <div id="dash-status" class="status" role="status"></div>
-      </div>
-
-      <div class="card" id="billing-card">
-        <h2>Billing</h2>
-        <div id="billing-status"></div>
-      </div>
-
-      <div class="card">
-        <h2>Team settings</h2>
-        <form id="settings-form">
-          <div class="field">
-            <label for="settings-name">Team name</label>
-            <input id="settings-name" required minlength="2" maxlength="120" />
-          </div>
-          <div class="field">
-            <label for="settings-email">Your contact email</label>
-            <input id="settings-email" type="email" />
-          </div>
-          <div class="field">
-            <label for="settings-passphrase">New team passphrase</label>
-            <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
-            <div class="hint">Changing this updates every member’s extension within a few hours, or the next time they open it.</div>
-          </div>
-          <div class="field">
-            <label for="settings-membership-policy">Who can join</label>
-            <select id="settings-membership-policy">
-              <option value="invite">People I add below</option>
-              <option value="domain">Anyone with a company email</option>
-              <option value="open">Anyone with the join code</option>
-            </select>
-          </div>
-          <div class="field" id="domains-row">
-            <label for="settings-domains">Company email domains</label>
-            <input id="settings-domains" placeholder="company.com" />
-            <div class="hint">Separate multiple domains with commas. Required when joining is limited to company email.</div>
-          </div>
-          <div class="btn-row">
-            <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
-            <button type="submit" class="btn btn--sm">Save changes</button>
-          </div>
-        </form>
-      </div>
-
-      <div class="card" id="dlp-card">
-        <h2>Data protection</h2>
-        <p class="lede">Choose a policy pack for your org. Members receive updates on their next extension sync. Metadata-only security events appear below.</p>
-        <form id="dlp-form">
-          <div class="field">
-            <label for="dlp-pack">Policy pack</label>
-            <select id="dlp-pack"></select>
-            <div class="hint" id="dlp-pack-desc"></div>
-          </div>
-          <div class="btn-row">
-            <button type="submit" class="btn btn--sm">Apply policy pack</button>
-          </div>
-        </form>
-        <p class="hint" id="dlp-current"></p>
-      </div>
-
-      <div class="card">
-        <h2>Join codes</h2>
-        <p class="lede">Share a code so members can connect the browser extension.</p>
-        <div class="btn-row">
-          <button type="button" class="btn btn--sm" id="new-code-btn">Create join code</button>
-        </div>
-        <div style="overflow-x: auto; margin-top: 1rem;">
-          <table>
-            <thead>
-              <tr><th>Code</th><th>Status</th><th>Created</th><th></th></tr>
-            </thead>
-            <tbody id="codes-body"></tbody>
-          </table>
+        <div class="portal-tabs" id="admin-tablist" role="tablist" aria-label="Admin sections">
+          <button type="button" class="portal-tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+          <button type="button" class="portal-tab" role="tab" data-tab="settings">Settings</button>
+          <button type="button" class="portal-tab" role="tab" data-tab="people">People</button>
+          <button type="button" class="portal-tab" role="tab" data-tab="access">Access</button>
+          <button type="button" class="portal-tab" role="tab" data-tab="security">Security</button>
         </div>
       </div>
 
-      <div class="card">
-        <h2>Members</h2>
-        <p class="lede">Add work emails before people join. They still need a join code to connect the extension.</p>
-        <form id="add-member-form" class="btn-row" style="align-items: flex-end;">
-          <div class="field" style="flex:1; margin:0;">
-            <label for="member-email">Email</label>
-            <input id="member-email" type="email" required placeholder="colleague@company.com" />
+      <div id="admin-panels" class="admin-panels">
+        <section class="card portal-panel" role="tabpanel" data-panel="overview" id="panel-overview">
+          <h2>Team overview</h2>
+          <p class="lede">Key metrics for the last 30 days. Use the setup guide to finish onboarding.</p>
+          <div id="overview-stats"></div>
+          <div id="setup-checklist" style="margin-top:1rem;"></div>
+          <div class="panel-section" id="billing-card">
+            <h2>Billing</h2>
+            <div id="billing-status"></div>
           </div>
-          <div class="field" style="flex:1; margin:0;">
-            <label for="member-name">Name (optional)</label>
-            <input id="member-name" placeholder="Jane Doe" />
-          </div>
-          <button type="submit" class="btn btn--sm">Add member</button>
-        </form>
-        <table>
-          <thead>
-            <tr><th>Email</th><th>Name</th><th>Sub-team</th><th>Extension</th><th>Added</th><th></th></tr>
-          </thead>
-          <tbody id="members-body"></tbody>
-        </table>
-      </div>
+        </section>
 
-      <div class="card" id="security-card">
-        <h2>Veil security activity</h2>
-        <p class="lede">Aggregated detection and policy events (metadata only).</p>
-        <div class="btn-row">
-          <label class="field" style="margin:0;">
-            <span class="hint">Period</span>
-            <select id="security-days">
-              <option value="7">Last 7 days</option>
-              <option value="30" selected>Last 30 days</option>
-              <option value="90">Last 90 days</option>
-            </select>
-          </label>
-          <button type="button" class="btn btn--ghost btn--sm" id="security-refresh-btn">Refresh</button>
-          <button type="button" class="btn btn--ghost btn--sm" id="security-export-json-btn">Export JSON</button>
-          <button type="button" class="btn btn--ghost btn--sm" id="security-export-csv-btn">Export CSV</button>
-        </div>
-        <div id="security-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:1rem 0;"></div>
-        <table>
-          <thead><tr><th>Category</th><th>Events</th></tr></thead>
-          <tbody id="security-category-body"></tbody>
-        </table>
-      </div>
+        <section class="card portal-panel" role="tabpanel" data-panel="settings" id="panel-settings" hidden>
+          <h2>Team settings</h2>
+          <form id="settings-form">
+            <div class="field">
+              <label for="settings-name">Team name</label>
+              <input id="settings-name" required minlength="2" maxlength="120" />
+            </div>
+            <div class="field">
+              <label for="settings-email">Your contact email</label>
+              <input id="settings-email" type="email" />
+            </div>
+            <div class="field">
+              <label for="settings-passphrase">New team passphrase</label>
+              <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
+              <div class="hint">Changing this updates every member’s extension within a few hours, or the next time they open it.</div>
+            </div>
+            <div class="field">
+              <label for="settings-membership-policy">Who can join</label>
+              <select id="settings-membership-policy">
+                <option value="invite">People I add below</option>
+                <option value="domain">Anyone with a company email</option>
+                <option value="open">Anyone with the join code</option>
+              </select>
+            </div>
+            <div class="field" id="domains-row">
+              <label for="settings-domains">Company email domains</label>
+              <input id="settings-domains" placeholder="company.com" />
+              <div class="hint">Separate multiple domains with commas. Required when joining is limited to company email.</div>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
+              <button type="submit" class="btn btn--sm">Save changes</button>
+            </div>
+          </form>
 
-      <div class="card">
-        <h2>SIEM webhook</h2>
-        <p class="lede">Forward new security events to your SIEM (metadata only).</p>
-        <form id="siem-form">
-          <div class="field">
-            <label for="siem-url">Webhook URL</label>
-            <input id="siem-url" type="url" placeholder="https://siem.example.com/veil" />
+          <div class="panel-section">
+            <h2>Sub-teams</h2>
+            <div id="sub-team-guide"></div>
+            <form id="create-team-form" class="btn-row" style="align-items:flex-end;">
+              <div class="field" style="flex:1;margin:0;">
+                <label for="team-name">Team name</label>
+                <input id="team-name" required placeholder="Engineering" />
+              </div>
+              <button type="submit" class="btn btn--sm">Create team</button>
+            </form>
+            <div class="table-scroll table-scroll--short">
+              <table>
+                <thead><tr><th>Team</th><th>Members</th><th>Policy</th><th>Created</th><th></th></tr></thead>
+                <tbody id="teams-body"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="field">
-            <label for="siem-secret">Shared secret (optional)</label>
-            <input id="siem-secret" type="password" autocomplete="new-password" placeholder="Leave blank to keep current" />
-          </div>
-          <button type="submit" class="btn btn--sm">Save SIEM settings</button>
-        </form>
-      </div>
+        </section>
 
-      <div class="card">
-        <h2>Sub-teams</h2>
-        <p class="lede">Optional stricter rules for a group. Use a policy pack or custom JSON overlay.</p>
-        <form id="create-team-form" class="btn-row" style="align-items:flex-end;">
-          <div class="field" style="flex:1;margin:0;">
-            <label for="team-name">Team name</label>
-            <input id="team-name" required placeholder="Engineering" />
-          </div>
-          <button type="submit" class="btn btn--sm">Create team</button>
-        </form>
-        <table style="margin-top:1rem;">
-          <thead><tr><th>Team</th><th>Members</th><th>Created</th><th></th></tr></thead>
-          <tbody id="teams-body"></tbody>
-        </table>
-      </div>
+        <section class="portal-panel" role="tabpanel" data-panel="people" id="panel-people" hidden>
+          <div id="people-guide"></div>
+          <div class="admin-grid">
+            <div class="card">
+              <h2>Members</h2>
+              <p class="lede">Add work emails before people join. They still need a join code from the Access tab.</p>
+              <form id="add-member-form" class="btn-row" style="align-items: flex-end;">
+                <div class="field" style="flex:1; margin:0;">
+                  <label for="member-email">Email</label>
+                  <input id="member-email" type="email" required placeholder="colleague@company.com" />
+                </div>
+                <div class="field" style="flex:1; margin:0;">
+                  <label for="member-name">Name (optional)</label>
+                  <input id="member-name" placeholder="Jane Doe" />
+                </div>
+                <button type="submit" class="btn btn--sm">Add member</button>
+              </form>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Email</th><th>Name</th><th>Sub-team</th><th>Extension</th><th>Added</th><th></th></tr>
+                  </thead>
+                  <tbody id="members-body"></tbody>
+                </table>
+              </div>
+            </div>
 
-      <div class="card">
-        <h2>Connected browsers</h2>
-        <p class="lede">Browsers where a member has installed and connected the extension.</p>
-        <table>
-          <thead>
-            <tr><th>Member</th><th>Last active</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody id="devices-body"></tbody>
-        </table>
+            <div class="card">
+              <h2>Connected browsers</h2>
+              <div id="devices-guide"></div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Member</th><th>Browser</th><th>Last active</th><th>Status</th><th></th></tr>
+                  </thead>
+                  <tbody id="devices-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="portal-panel" role="tabpanel" data-panel="access" id="panel-access" hidden>
+          <div class="admin-grid">
+            <div class="card">
+              <h2>Join codes</h2>
+              <p class="lede">Share a code so members can connect the browser extension.</p>
+              <div class="btn-row">
+                <button type="button" class="btn btn--sm" id="new-code-btn">Create join code</button>
+              </div>
+              <div class="table-scroll table-scroll--short">
+                <table>
+                  <thead>
+                    <tr><th>Code</th><th>Status</th><th>Created</th><th></th></tr>
+                  </thead>
+                  <tbody id="codes-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card" id="dlp-card">
+              <h2>Data protection</h2>
+              <div class="guide-callout guide-callout--compact">
+                <p class="hint" style="margin:0;">After you apply a pack, members receive it on their next extension open. Start with <strong>Observational</strong> for rollout, then switch to an enforced pack when ready.</p>
+              </div>
+              <form id="dlp-form">
+                <div class="field">
+                  <label for="dlp-pack">Policy pack</label>
+                  <select id="dlp-pack"></select>
+                  <div class="hint" id="dlp-pack-desc"></div>
+                </div>
+                <div class="btn-row">
+                  <button type="submit" class="btn btn--sm">Apply policy pack</button>
+                </div>
+              </form>
+              <p class="hint" id="dlp-current"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="portal-panel" role="tabpanel" data-panel="security" id="panel-security" hidden>
+          <div class="admin-grid">
+            <div class="card" id="security-card">
+              <h2>Veil security activity</h2>
+              <p class="lede">Aggregated detection and policy events (metadata only).</p>
+              <div class="btn-row">
+                <label class="field" style="margin:0;">
+                  <span class="hint">Period</span>
+                  <select id="security-days">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                  </select>
+                </label>
+                <button type="button" class="btn btn--ghost btn--sm" id="security-refresh-btn">Refresh</button>
+                <button type="button" class="btn btn--ghost btn--sm" id="security-export-json-btn">Export JSON</button>
+                <button type="button" class="btn btn--ghost btn--sm" id="security-export-csv-btn">Export CSV</button>
+              </div>
+              <div id="security-stats" style="margin:1rem 0;"></div>
+              <h3 class="hint" style="margin:0 0 0.5rem;font-size:0.9rem;color:var(--text);">By category</h3>
+              <div class="table-scroll table-scroll--short">
+                <table>
+                  <thead><tr><th>Category</th><th>Events</th></tr></thead>
+                  <tbody id="security-category-body"></tbody>
+                </table>
+              </div>
+              <h3 class="hint" style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--text);">By source</h3>
+              <div class="table-scroll table-scroll--short">
+                <table>
+                  <thead><tr><th>Source</th><th>Events</th></tr></thead>
+                  <tbody id="security-source-body"></tbody>
+                </table>
+              </div>
+              <h3 class="hint" style="margin:1rem 0 0.5rem;font-size:0.9rem;color:var(--text);">Recent events</h3>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th>When</th><th>Type</th><th>Category</th><th>Action</th><th>Host</th></tr></thead>
+                  <tbody id="security-recent-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>SIEM webhook</h2>
+              <p class="lede">Forward new security events to your SIEM (metadata only).</p>
+              <form id="siem-form">
+                <div class="field">
+                  <label for="siem-url">Webhook URL</label>
+                  <input id="siem-url" type="url" placeholder="https://siem.example.com/veil" />
+                </div>
+                <div class="field">
+                  <label for="siem-secret">Shared secret (optional)</label>
+                  <input id="siem-secret" type="password" autocomplete="new-password" placeholder="Leave blank to keep current" />
+                </div>
+                <button type="submit" class="btn btn--sm">Save SIEM settings</button>
+              </form>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
     <footer class="site-footer" data-portal-footer></footer>
   </div>
 
+  <dialog id="team-policy-dialog" class="admin-dialog">
+    <form method="dialog" id="team-policy-form">
+      <h2 id="team-policy-title">Sub-team policy</h2>
+      <p class="hint" id="team-policy-lede"></p>
+      <div class="field">
+        <label for="team-policy-pack">Policy pack</label>
+        <select id="team-policy-pack"></select>
+        <div class="hint">Stricter than org default — applies only to members assigned to this sub-team.</div>
+      </div>
+      <details class="card card--flat" style="margin:0.75rem 0;padding:0.75rem;">
+        <summary>Advanced: custom JSON overlay</summary>
+        <textarea id="team-policy-json" rows="8" placeholder='{"enabled":true,"categories":{...}}' style="margin-top:0.5rem;font-family:ui-monospace,monospace;font-size:0.82rem;"></textarea>
+      </details>
+      <div class="btn-row">
+        <button type="submit" class="btn btn--sm">Save policy</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="team-policy-cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/tabs.js"></script>
+  <script src="portal/admin-guide.js"></script>
   <script src="portal/policy-packs.js"></script>
   <script src="portal/billing.js"></script>
   <script>
@@ -221,6 +300,32 @@
     const loginStatus = document.getElementById('login-status');
     const dashStatus = document.getElementById('dash-status');
     let cachedTeams = [];
+    let cachedOrg = null;
+    let adminTabs = null;
+    let editingTeamId = null;
+
+    const guide = GoldspireAdminGuide;
+
+    function goToTab(tabId) {
+      ensureAdminTabs()?.select(tabId);
+    }
+
+    function initStaticGuides() {
+      const subTeamGuide = document.getElementById('sub-team-guide');
+      const peopleGuide = document.getElementById('people-guide');
+      const devicesGuide = document.getElementById('devices-guide');
+      if (subTeamGuide) subTeamGuide.innerHTML = guide.subTeamGuideHtml();
+      if (peopleGuide) peopleGuide.innerHTML = guide.peopleGuideHtml();
+      if (devicesGuide) devicesGuide.innerHTML = guide.devicesGuideHtml();
+    }
+    initStaticGuides();
+
+    function ensureAdminTabs() {
+      if (!adminTabs && dashboard && !dashboard.classList.contains('hidden')) {
+        adminTabs = GoldspirePortalTabs.init(dashboard, { defaultTab: 'overview' });
+      }
+      return adminTabs;
+    }
 
     function teamOptionsHtml(selectedId) {
       const options = ['<option value="">— None —</option>'];
@@ -270,12 +375,18 @@
       loginCard.classList.toggle('hidden', show);
       dashboard.classList.toggle('hidden', !show);
       GoldspirePortalNav.renderPortalNav('admin');
+      if (show) ensureAdminTabs();
     }
 
     async function loadDashboard() {
       app.setStatus(dashStatus, 'Loading…');
       try {
         const org = await app.apiAdmin('/v1/orgs/me');
+        cachedOrg = org;
+        const overview = await app.apiAdmin('/v1/orgs/me/overview');
+        guide.renderOverviewStats(document.getElementById('overview-stats'), overview);
+        guide.renderChecklist(document.getElementById('setup-checklist'), overview, org, { onGoToTab: goToTab });
+
         const codes = await app.apiAdmin('/v1/orgs/me/join-codes');
         const teamsData = await app.apiAdmin('/v1/orgs/me/teams');
         cachedTeams = teamsData.teams || [];
@@ -333,10 +444,14 @@
         renderTeamsTable();
 
         const devicesBody = document.getElementById('devices-body');
+        const formatMember = (email) => email
+          ? email
+          : '<span class="hint">Unlinked</span>';
         devicesBody.innerHTML = devices.devices.length
           ? devices.devices.map((row) => `
             <tr>
-              <td>${row.memberEmail || '—'}</td>
+              <td>${formatMember(row.memberEmail)}</td>
+              <td>${guide.formatDeviceClient(row)}</td>
               <td>${app.formatWhen(row.updatedAt || row.createdAt)}</td>
               <td>${row.revoked ? '<span class="badge badge--off">Disconnected</span>' : '<span class="badge badge--ok">Active</span>'}</td>
               <td>
@@ -346,7 +461,7 @@
               </td>
             </tr>
           `).join('')
-          : '<tr><td colspan="4">No browsers connected yet.</td></tr>';
+          : '<tr><td colspan="5">No browsers connected yet. Add members, share a join code, and ask them to install Veil.</td></tr>';
 
         app.setStatus(dashStatus, '');
         await loadSecuritySummary();
@@ -363,6 +478,8 @@
       const days = document.getElementById('security-days')?.value || '30';
       const statsEl = document.getElementById('security-stats');
       const catBody = document.getElementById('security-category-body');
+      const srcBody = document.getElementById('security-source-body');
+      const recentBody = document.getElementById('security-recent-body');
       if (!statsEl || !catBody) return;
       try {
         const summary = await app.apiAdmin(`/v1/orgs/me/security-events/summary?days=${days}`);
@@ -378,15 +495,107 @@
           stat('Detections', t.detections || 0),
           stat('Blocks', t.blocks || 0),
           stat('AI incidents', t.aiIncidents || 0),
+          stat('Encrypted', t.encryptActions || 0),
+          stat('Masked', t.maskActions || 0),
         ].join('');
         catBody.innerHTML = (summary.byCategory || []).length
           ? summary.byCategory.map((row) => `<tr><td>${row.category.replace(/_/g, ' ')}</td><td>${row.count}</td></tr>`).join('')
-          : '<tr><td colspan="2">No events yet.</td></tr>';
+          : '<tr><td colspan="2">No events yet — activity appears when members use Veil copilot or DLP.</td></tr>';
+        if (srcBody) {
+          srcBody.innerHTML = (summary.bySource || []).length
+            ? summary.bySource.map((row) => `<tr><td>${row.source.replace(/_/g, ' ')}</td><td>${row.count}</td></tr>`).join('')
+            : '<tr><td colspan="2">No source breakdown yet.</td></tr>';
+        }
+        if (recentBody) {
+          recentBody.innerHTML = (summary.recent || []).length
+            ? summary.recent.map((row) => `
+              <tr>
+                <td>${app.formatWhen(row.at)}</td>
+                <td>${row.type || '—'}</td>
+                <td>${(row.category || '—').replace(/_/g, ' ')}</td>
+                <td>${row.action || '—'}</td>
+                <td>${row.host || '—'}</td>
+              </tr>`).join('')
+            : '<tr><td colspan="5">No recent events.</td></tr>';
+        }
       } catch {
         statsEl.innerHTML = '';
         catBody.innerHTML = '<tr><td colspan="2">Could not load summary.</td></tr>';
+        if (srcBody) srcBody.innerHTML = '';
+        if (recentBody) recentBody.innerHTML = '';
       }
     }
+
+    function teamPolicyLabel(team) {
+      const packId = team?.settings?.policyPackId;
+      if (packId) return guide.policyPackLabel(packId);
+      if (team?.settings?.dlp?.enabled) return 'Custom overlay';
+      return 'Org default';
+    }
+
+    function openTeamPolicyDialog(teamId) {
+      const team = cachedTeams.find((row) => row.teamId === teamId);
+      if (!team) return;
+      editingTeamId = teamId;
+      const dialog = document.getElementById('team-policy-dialog');
+      const packSelect = document.getElementById('team-policy-pack');
+      const jsonField = document.getElementById('team-policy-json');
+      document.getElementById('team-policy-title').textContent = `Policy for ${team.name}`;
+      document.getElementById('team-policy-lede').textContent =
+        'Members assigned to this sub-team get these rules on top of the org policy. Save, then ask them to reopen the extension (or wait for sync).';
+      if (packSelect && window.GoldspirePolicyPacks) {
+        packSelect.innerHTML = [
+          '<option value="">— Use custom JSON below —</option>',
+          ...GoldspirePolicyPacks.list().map((pack) => `
+            <option value="${pack.id}"${pack.id === team.settings?.policyPackId ? ' selected' : ''}>${pack.label}</option>`),
+        ].join('');
+      }
+      if (jsonField) {
+        jsonField.value = team.settings?.dlp
+          ? JSON.stringify(team.settings.dlp, null, 2)
+          : '';
+      }
+      dialog?.showModal?.();
+    }
+
+    async function saveTeamPolicy(event) {
+      event.preventDefault();
+      if (!editingTeamId) return;
+      const team = cachedTeams.find((row) => row.teamId === editingTeamId);
+      const packId = document.getElementById('team-policy-pack')?.value?.trim();
+      const jsonRaw = document.getElementById('team-policy-json')?.value?.trim();
+      try {
+        let body;
+        if (packId) {
+          const pack = GoldspirePolicyPacks?.get?.(packId);
+          if (!pack) throw new Error('Unknown policy pack.');
+          body = { settings: { dlp: pack.dlp, policyPackId: pack.id } };
+        } else if (jsonRaw) {
+          let dlp;
+          try { dlp = JSON.parse(jsonRaw); } catch { throw new Error('Invalid JSON in custom overlay.'); }
+          body = { settings: { dlp } };
+        } else {
+          throw new Error('Choose a policy pack or paste custom JSON.');
+        }
+        await app.apiAdmin(`/v1/orgs/me/teams/${encodeURIComponent(editingTeamId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        document.getElementById('team-policy-dialog')?.close?.();
+        app.setStatus(dashStatus, `${team?.name || 'Sub-team'} policy saved. Assign members under People if you have not already.`, 'ok');
+        editingTeamId = null;
+        await loadTeams();
+      } catch (error) {
+        app.setStatus(dashStatus, error.message, 'error');
+      }
+    }
+
+    document.getElementById('team-policy-form')?.addEventListener('submit', saveTeamPolicy);
+    document.getElementById('team-policy-cancel')?.addEventListener('click', () => {
+      document.getElementById('team-policy-dialog')?.close?.();
+      editingTeamId = null;
+    });
 
     function renderTeamsTable() {
       const body = document.getElementById('teams-body');
@@ -396,13 +605,14 @@
           <tr>
             <td>${team.name}</td>
             <td>${team.memberCount || 0}</td>
+            <td>${teamPolicyLabel(team)}</td>
             <td>${app.formatWhen(team.createdAt)}</td>
             <td>
-              <button type="button" class="btn btn--ghost btn--sm" data-edit-team-dlp="${team.teamId}">Policy overlay</button>
+              <button type="button" class="btn btn--ghost btn--sm" data-edit-team-dlp="${team.teamId}">Set policy</button>
             </td>
           </tr>
         `).join('')
-        : '<tr><td colspan="4">No teams yet.</td></tr>';
+        : '<tr><td colspan="5">No sub-teams yet. Create one above, then assign members under People.</td></tr>';
     }
 
     async function loadTeams() {
@@ -412,7 +622,7 @@
         renderTeamsTable();
       } catch {
         const body = document.getElementById('teams-body');
-        if (body) body.innerHTML = '<tr><td colspan="4">Could not load teams.</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="5">Could not load teams.</td></tr>';
       }
     }
 
@@ -446,8 +656,9 @@
           body: JSON.stringify({ name: document.getElementById('team-name').value.trim() }),
         });
         document.getElementById('team-name').value = '';
-        app.setStatus(dashStatus, 'Team created.', 'ok');
+        app.setStatus(dashStatus, 'Sub-team created. Next: open People → assign members using the Sub-team column.', 'ok');
         await loadTeams();
+        goToTab('people');
       } catch (error) {
         app.setStatus(dashStatus, error.message, 'error');
       }
@@ -614,52 +825,7 @@
 
       try {
         if (teamDlpId) {
-          const team = cachedTeams.find((row) => row.teamId === teamDlpId);
-          const packIds = GoldspirePolicyPacks?.list?.().map((p) => p.id).join(', ') || '';
-          const packChoice = window.prompt(
-            `Policy overlay for ${team?.name || 'team'}.\nEnter a pack id (${packIds}) or leave blank to edit JSON:`,
-            team?.settings?.policyPackId || '',
-          );
-          if (packChoice == null) return;
-          if (packChoice.trim()) {
-            const pack = GoldspirePolicyPacks?.get?.(packChoice.trim());
-            if (!pack) {
-              app.setStatus(dashStatus, 'Unknown policy pack.', 'error');
-              return;
-            }
-            await app.apiAdmin(`/v1/orgs/me/teams/${encodeURIComponent(teamDlpId)}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ settings: { dlp: pack.dlp, policyPackId: pack.id } }),
-            });
-            app.setStatus(dashStatus, `${pack.label} overlay applied to team.`, 'ok');
-            await loadTeams();
-            return;
-          }
-          const template = JSON.stringify({
-            enabled: true,
-            categories: {
-              api_key: { action: 'block', minSeverity: 'high' },
-              jwt: { action: 'block', minSeverity: 'high' },
-            },
-          }, null, 2);
-          const current = team?.settings?.dlp ? JSON.stringify(team.settings.dlp, null, 2) : template;
-          const input = window.prompt(`DLP overlay JSON for ${team?.name || 'team'}:`, current);
-          if (input == null) return;
-          let dlp;
-          try {
-            dlp = JSON.parse(input);
-          } catch {
-            app.setStatus(dashStatus, 'Invalid JSON.', 'error');
-            return;
-          }
-          await app.apiAdmin(`/v1/orgs/me/teams/${encodeURIComponent(teamDlpId)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: { dlp } }),
-          });
-          app.setStatus(dashStatus, 'Team DLP overlay saved.', 'ok');
-          await loadTeams();
+          openTeamPolicyDialog(teamDlpId);
           return;
         }
         if (code) {

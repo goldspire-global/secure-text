@@ -4,6 +4,25 @@ import { assertMemberEmailAllowed } from './membership.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { getMemberTeamPolicy } from './teams-service.mjs';
 
+async function touchDeviceClientInfo(pool, orgId, deviceId, clientInfo = {}) {
+  const device = String(deviceId || '').trim();
+  if (!device || !orgId) return;
+  const ext = String(clientInfo.extensionVersion || '').slice(0, 32);
+  const browser = String(clientInfo.browser || '').slice(0, 64);
+  const platform = String(clientInfo.platform || '').slice(0, 64);
+  if (!ext && !browser && !platform) return;
+
+  await pool.query(
+    `UPDATE device_provisions
+     SET extension_version = CASE WHEN $3 <> '' THEN $3 ELSE extension_version END,
+         browser = CASE WHEN $4 <> '' THEN $4 ELSE browser END,
+         platform = CASE WHEN $5 <> '' THEN $5 ELSE platform END,
+         updated_at = now()
+     WHERE org_id = $1 AND device_id = $2`,
+    [orgId, device, ext, browser, platform],
+  );
+}
+
 function newProvisionToken() {
   return randomBytes(32).toString('hex');
 }
@@ -60,7 +79,7 @@ function normalizeJoinCode(value) {
     .replace(/[\s-]+/g, '');
 }
 
-export async function joinWithCode(joinCode, deviceId, email) {
+export async function joinWithCode(joinCode, deviceId, email, clientInfo = {}) {
   const code = normalizeJoinCode(joinCode);
   const device = String(deviceId || '').trim();
   const memberEmail = normalizeEmail(email);
@@ -92,16 +111,23 @@ export async function joinWithCode(joinCode, deviceId, email) {
 
   const token = newProvisionToken();
 
+  const ext = String(clientInfo.extensionVersion || '').slice(0, 32);
+  const browser = String(clientInfo.browser || '').slice(0, 64);
+  const platform = String(clientInfo.platform || '').slice(0, 64);
+
   const provisionResult = await pool.query(
-    `INSERT INTO device_provisions (org_id, device_id, provision_token, policy_version)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO device_provisions (org_id, device_id, provision_token, policy_version, extension_version, browser, platform)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (org_id, device_id) DO UPDATE SET
        provision_token = EXCLUDED.provision_token,
        policy_version = EXCLUDED.policy_version,
+       extension_version = CASE WHEN EXCLUDED.extension_version <> '' THEN EXCLUDED.extension_version ELSE device_provisions.extension_version END,
+       browser = CASE WHEN EXCLUDED.browser <> '' THEN EXCLUDED.browser ELSE device_provisions.browser END,
+       platform = CASE WHEN EXCLUDED.platform <> '' THEN EXCLUDED.platform ELSE device_provisions.platform END,
        revoked_at = NULL,
        updated_at = now()
      RETURNING provision_token`,
-    [org.id, device, token, org.policy_version],
+    [org.id, device, token, org.policy_version, ext, browser, platform],
   );
 
   const provisionToken = provisionResult.rows[0].provision_token;
@@ -118,7 +144,7 @@ export async function joinWithCode(joinCode, deviceId, email) {
   return orgPayload(org, provisionToken, teamContext);
 }
 
-export async function syncPolicy(token, deviceId, clientPolicyVersion) {
+export async function syncPolicy(token, deviceId, clientPolicyVersion, clientInfo = {}) {
   const device = String(deviceId || '').trim();
   const bearer = String(token || '').trim();
   if (!bearer) throw httpError(401, 'Missing provision token.');
@@ -142,6 +168,8 @@ export async function syncPolicy(token, deviceId, clientPolicyVersion) {
   if (row.revoked_at) {
     throw httpError(401, 'Provision revoked.');
   }
+
+  await touchDeviceClientInfo(pool, row.id, device, clientInfo);
 
   const clientVersion = Number(clientPolicyVersion) || 0;
   if (clientVersion >= row.policy_version) {

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from '../../scripts/load-env.mjs';
 import { closePool } from './db.mjs';
 import { joinWithCode, syncPolicy, httpError } from './org-service.mjs';
+import { parseClientInfo } from './client-info.mjs';
 import {
   registerMember,
   listMembers,
@@ -24,6 +25,7 @@ import {
   setJoinCodeActive,
   listMembersAdmin,
   listDevices,
+  getOrgOverview,
   revokeDevice,
   deactivateMember,
   addOrgMember,
@@ -294,7 +296,8 @@ const server = createServer(async (req, res) => {
       }
       const body = await readBody(req);
       const deviceId = req.headers['x-device-id'] || body.deviceId;
-      const payload = await joinWithCode(body.joinCode, deviceId, body.email);
+      const clientInfo = parseClientInfo(req);
+      const payload = await joinWithCode(body.joinCode, deviceId, body.email, clientInfo);
       json(res, req, 200, payload);
       return;
     }
@@ -302,7 +305,8 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/v1/extension/org/sync') {
       const { token, deviceId } = parseAuthHeaders(req);
       const clientVersion = req.headers['x-policy-version'];
-      const result = await syncPolicy(token, deviceId, clientVersion);
+      const clientInfo = parseClientInfo(req);
+      const result = await syncPolicy(token, deviceId, clientVersion, clientInfo);
       if (result.unchanged) {
         res.writeHead(304, corsHeaders(req));
         res.end();
@@ -472,6 +476,11 @@ const server = createServer(async (req, res) => {
       if (req.method === 'POST' && pathname === '/v1/orgs/me/members/deactivate') {
         const body = await readBody(req);
         json(res, req, 200, await deactivateMember(admin, body.email));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me/overview') {
+        json(res, req, 200, await getOrgOverview(admin));
         return;
       }
 
