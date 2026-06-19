@@ -13,6 +13,7 @@
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: 'learning', label: 'Learning' },
     { id: 'support', label: 'Support' },
     { id: 'api', label: 'API' },
     { id: 'clients', label: 'Clients' },
@@ -164,6 +165,239 @@
       <td>${escapeHtml(ticket.orgName || '—')}</td>
       <td>${preview}</td>
     </tr>`;
+  }
+
+  let learningCache = null;
+
+  async function fetchLearningSummary(days = 30) {
+    return apiFetch(`/v1/ops/learning/summary?days=${days}`);
+  }
+
+  async function fetchLearningTrainStatus() {
+    return apiFetch('/v1/ops/learning/status');
+  }
+
+  async function fetchLearningBuckets(days = 30) {
+    return apiFetch(`/v1/ops/learning/buckets?days=${days}&limit=50&status=open`);
+  }
+
+  async function fetchLearningProposals(status = 'pending') {
+    return apiFetch(`/v1/ops/learning/proposals?status=${status}&limit=40`);
+  }
+
+  async function runLearningAnalyze(days = 30) {
+    return apiFetch('/v1/ops/learning/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days }),
+    });
+  }
+
+  async function runLearningTrain(days = 30) {
+    return apiFetch('/v1/ops/learning/train', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days }),
+    });
+  }
+
+  async function fetchLearningBundles() {
+    return apiFetch('/v1/ops/learning/bundles?limit=10');
+  }
+
+  async function patchLearningProposal(ref, patch) {
+    return apiFetch(`/v1/ops/learning/proposals/${encodeURIComponent(ref)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  }
+
+  function learningBucketRows(buckets = []) {
+    return buckets.map((b) => {
+      const pct = Number(b.overridePct) || 0;
+      const cls = pct >= 50 ? 'ops-stat--bad' : pct >= 30 ? 'ops-stat--warn' : '';
+      return `<tr>
+        <td>${escapeHtml(b.host || '—')}</td>
+        <td><code>${escapeHtml(b.category)}</code></td>
+        <td>${escapeHtml(b.intent || '—')}</td>
+        <td>${escapeHtml(b.fieldSemantic || '—')}</td>
+        <td>${b.prompts}</td>
+        <td>${b.overrides}</td>
+        <td class="${cls}">${pct}%</td>
+        <td>${b.ticketCount || 0}</td>
+        <td><span class="ops-pill ops-pill--${escapeHtml(b.priority)}">${escapeHtml(b.priority)}</span></td>
+      </tr>`;
+    });
+  }
+
+  function learningProposalRows(proposals = []) {
+    return proposals.map((p) => `<tr class="ops-proposal-row" data-proposal-ref="${escapeHtml(p.proposalRef)}">
+      <td><code>${escapeHtml(p.proposalRef)}</code></td>
+      <td>${escapeHtml(p.title)}</td>
+      <td><span class="ops-pill ops-pill--${escapeHtml(p.status)}">${escapeHtml(p.status)}</span></td>
+      <td>${escapeHtml(p.priority)}</td>
+      <td>${p.overridePct != null ? `${p.overridePct}%` : '—'}</td>
+      <td>${escapeHtml(new Date(p.createdAt).toLocaleDateString())}</td>
+    </tr>`);
+  }
+
+  function buildLearningPanelHtml(data) {
+    const summary = data.summary || {};
+    const train = data.trainStatus || {};
+    const buckets = data.buckets?.buckets || [];
+    const proposals = data.proposals?.proposals || [];
+    const lastRun = train.lastRun || null;
+    const autoLabel = train.autoTrainEnabled
+      ? `On — trains after ${train.minNewDecisions} new decisions (≥${train.cooldownHours}h cooldown)`
+      : 'Off — set LEARNING_AUTO_TRAIN=true on API';
+
+    return `
+      <p class="hint-inline">JARVIS loop — user choices vs Veil recommendations. Auto-train publishes signed bundles when enough signal arrives.</p>
+      <div class="ops-kpis" style="margin-bottom:0.85rem">
+        <div class="ops-stat ${train.readyForTrain ? 'ops-stat--warn' : ''}"><strong>${train.newDecisionsSinceLastTrain ?? 0}</strong><span>New decisions</span></div>
+        <div class="ops-stat"><strong>${lastRun?.bundleVersion || '—'}</strong><span>Active bundle</span></div>
+        <div class="ops-stat"><strong>${summary.openQueue ?? 0}</strong><span>Review queue</span></div>
+        <div class="ops-stat"><strong>${summary.pendingProposals ?? 0}</strong><span>Pending proposals</span></div>
+        <div class="ops-stat"><strong>${summary.activeHints ?? 0}</strong><span>Active hints</span></div>
+        <div class="ops-stat"><strong>${summary.orgDecisions ?? 0}</strong><span>Team decisions</span></div>
+        <div class="ops-stat"><strong>${summary.personalDecisions ?? 0}</strong><span>Personal signals</span></div>
+        <div class="ops-stat"><strong>${summary.falsePositiveTickets ?? 0}</strong><span>False-alert tickets</span></div>
+      </div>
+      <div class="ops-support-grid">
+        <div class="ops-card">
+          <h3>Automation</h3>
+          <p class="hint" style="margin:0 0 0.5rem"><strong>${escapeHtml(autoLabel)}</strong></p>
+          <p class="hint" style="margin:0">Last run: ${lastRun?.at ? escapeHtml(new Date(lastRun.at).toLocaleString()) : 'never'} · ${escapeHtml(lastRun?.status || '—')} · ${escapeHtml(lastRun?.triggerReason || '')}</p>
+          <div class="ops-action-list" style="margin-top:0.65rem">
+            <button type="button" class="btn btn--sm" id="ops-learning-analyze">Refresh buckets</button>
+            <button type="button" class="btn btn--sm" id="ops-learning-train">Train now (force)</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="ops-learning-refresh">Reload</button>
+          </div>
+          <p class="hint" id="ops-learning-status" style="margin:0.5rem 0 0;min-height:1.2em;"></p>
+        </div>
+        <div class="ops-card">
+          <h3>Override signal</h3>
+          <p class="hint" style="margin:0">Avg override: <strong>${summary.avgOverridePct ?? '—'}%</strong> · Max: <strong>${summary.maxOverridePct ?? '—'}%</strong></p>
+          <p class="hint">High override = users clicked Allow when Veil suggested Secure/Mask. Approve proposals for edge cases auto-train skips.</p>
+        </div>
+      </div>
+      <div class="ops-columns" style="margin-top:0.85rem">
+        ${tableCard('Override buckets (open)', ['Host', 'Category', 'Intent', 'Field rule', 'Prompts', 'Overrides', 'Override %', 'Tickets', 'Priority'], learningBucketRows(buckets), 9, true)}
+        ${tableCard('Rule proposals', ['Ref', 'Title', 'Status', 'Priority', 'Override', 'Created'], learningProposalRows(proposals), 6, true)}
+      </div>
+      <div class="ops-card ops-card--detail" id="ops-proposal-detail" hidden>
+        <h3>Proposal detail</h3>
+        <pre class="ops-message-block" id="ops-proposal-json"></pre>
+        <div class="btn-row">
+          <button type="button" class="btn btn--sm" id="ops-proposal-approve">Approve → ship hint</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="ops-proposal-reject">Reject</button>
+        </div>
+        <p class="hint" id="ops-proposal-action-status"></p>
+      </div>`;
+  }
+
+  async function loadLearningPanel(panelsEl, days = 30) {
+    const panel = panelsEl.querySelector('#panel-learning');
+    if (!panel) return;
+    const statusEl = panel.querySelector('#ops-learning-status');
+    if (statusEl) statusEl.textContent = 'Loading learning signals…';
+    try {
+      const [summary, buckets, proposals, trainStatus] = await Promise.all([
+        fetchLearningSummary(days),
+        fetchLearningBuckets(days),
+        fetchLearningProposals('pending'),
+        fetchLearningTrainStatus(),
+      ]);
+      learningCache = { summary, buckets, proposals, trainStatus };
+      panel.innerHTML = buildLearningPanelHtml(learningCache);
+      bindLearningActions(panelsEl);
+      if (statusEl) statusEl.textContent = `Updated ${new Date().toLocaleTimeString()}.`;
+    } catch (error) {
+      panel.innerHTML = `<p class="ops-empty">${escapeHtml(error.message || 'Could not load learning data.')}</p>`;
+    }
+  }
+
+  function bindLearningActions(panelsEl) {
+    const panel = panelsEl.querySelector('#panel-learning');
+    if (!panel) return;
+
+    panel.querySelector('#ops-learning-analyze')?.addEventListener('click', async () => {
+      const statusEl = panel.querySelector('#ops-learning-status');
+      if (statusEl) statusEl.textContent = 'Refreshing buckets…';
+      try {
+        const result = await runLearningAnalyze(30);
+        if (statusEl) {
+          statusEl.textContent = `Buckets ${result.bucketCount} · proposals ${result.created || 0}.`;
+        }
+        await loadLearningPanel(panelsEl, 30);
+      } catch (error) {
+        if (statusEl) statusEl.textContent = error.message || 'Analysis failed.';
+      }
+    });
+
+    panel.querySelector('#ops-learning-train')?.addEventListener('click', async () => {
+      const statusEl = panel.querySelector('#ops-learning-status');
+      if (statusEl) statusEl.textContent = 'Training + publishing signed bundle…';
+      try {
+        const result = await runLearningTrain(30);
+        if (statusEl) {
+          if (result.skipped) {
+            statusEl.textContent = `Skipped: ${result.reason}${result.samples != null ? ` (${result.samples} samples)` : ''}.`;
+          } else {
+            const ver = result.globalBundle?.bundleVersion || '—';
+            statusEl.textContent = `Published ${ver} · auto-approved ${result.autoApproved || 0} · hints ${result.artifact?.hints || 0}.`;
+          }
+        }
+        await loadLearningPanel(panelsEl, 30);
+      } catch (error) {
+        if (statusEl) statusEl.textContent = error.message || 'Train failed.';
+      }
+    });
+
+    panel.querySelector('#ops-learning-refresh')?.addEventListener('click', () => loadLearningPanel(panelsEl, 30));
+
+    let selectedProposal = '';
+
+    panel.querySelectorAll('.ops-proposal-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        selectedProposal = row.dataset.proposalRef || '';
+        const proposal = (learningCache?.proposals?.proposals || []).find((p) => p.proposalRef === selectedProposal);
+        const detail = panel.querySelector('#ops-proposal-detail');
+        const jsonEl = panel.querySelector('#ops-proposal-json');
+        if (detail && jsonEl && proposal) {
+          detail.hidden = false;
+          jsonEl.textContent = JSON.stringify(proposal, null, 2);
+        }
+        panel.querySelectorAll('.ops-proposal-row').forEach((r) => {
+          r.classList.toggle('ops-ticket-row--active', r.dataset.proposalRef === selectedProposal);
+        });
+      });
+    });
+
+    panel.querySelector('#ops-proposal-approve')?.addEventListener('click', async () => {
+      if (!selectedProposal) return;
+      const actionStatus = panel.querySelector('#ops-proposal-action-status');
+      try {
+        await patchLearningProposal(selectedProposal, { status: 'approved', reviewer: 'ops' });
+        if (actionStatus) actionStatus.textContent = 'Approved — hint active on next org sync.';
+        await loadLearningPanel(panelsEl, 30);
+      } catch (error) {
+        if (actionStatus) actionStatus.textContent = error.message || 'Approve failed.';
+      }
+    });
+
+    panel.querySelector('#ops-proposal-reject')?.addEventListener('click', async () => {
+      if (!selectedProposal) return;
+      const actionStatus = panel.querySelector('#ops-proposal-action-status');
+      try {
+        await patchLearningProposal(selectedProposal, { status: 'rejected', reviewer: 'ops' });
+        if (actionStatus) actionStatus.textContent = 'Rejected.';
+        await loadLearningPanel(panelsEl, 30);
+      } catch (error) {
+        if (actionStatus) actionStatus.textContent = error.message || 'Reject failed.';
+      }
+    });
   }
 
   function buildSupportPanelHtml(data) {
@@ -405,7 +639,7 @@
 
     return {
       overview: `
-        <p class="hint-inline">Last ${data.windowDays} days · ${data.support?.openCount || 0} open ticket(s) · Support tab for full workflow</p>
+        <p class="hint-inline">Last ${data.windowDays} days · ${data.support?.openCount || 0} open ticket(s) · <strong>Learning</strong> tab for override analysis</p>
         <div class="ops-columns">
           ${tableCard('Synthetic checks', ['Target', 'Status', 'HTTP', 'Latency', 'Checked'], synthetic, 5)}
           ${tableCard('Recent support tickets', ['Ref', 'Created', 'Type', 'Org'], recentTickets, 4)}
@@ -414,6 +648,7 @@
           ${tableCard('Recent alerts', ['Time', 'Severity', 'Title', 'Sent'], alerts, 4)}
         </div>`,
       support: buildSupportPanelHtml(data),
+      learning: `<p class="hint">Loading learning brain…</p>`,
       api: `
         <div class="ops-columns">
           ${tableCard('Health samples', ['Checked', 'Status', 'Version', 'Process age'], health, 4, true)}
@@ -460,11 +695,19 @@
         });
         bindPanelActions(panelsEl);
         if (activeTab === 'support') refreshTicketList(panelsEl);
+        if (activeTab === 'learning') {
+          const days = Number(document.getElementById('ops-days')?.value) || 30;
+          loadLearningPanel(panelsEl, days);
+        }
       });
     });
 
     bindPanelActions(panelsEl);
     if (activeTab === 'support') refreshTicketList(panelsEl);
+    if (activeTab === 'learning') {
+      const days = Number(document.getElementById('ops-days')?.value) || 30;
+      loadLearningPanel(panelsEl, days);
+    }
   }
 
   function bindPanelActions(panelsEl) {

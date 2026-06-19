@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
+importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/decisions.js', 'events/ingest.js', 'events/platform-ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -40,6 +40,11 @@ const CONTENT_FILES = [
   'src/detection/intent.js',
   'src/detection/context-resolve.js',
   'src/detection/gating.js',
+  'src/detection/ambiguity.js',
+  'src/learning/feature-schema.js',
+  'src/learning/safety.js',
+  'src/learning/scorer.js',
+  'src/learning/bundle-client.js',
   'src/detection/compliance.js',
   'src/detection/scoring.js',
   'src/detection/engine.js',
@@ -54,6 +59,8 @@ const CONTENT_FILES = [
   'src/detection/bootstrap.js',
   'src/policy/engine.js',
   'src/events/bus.js',
+  'src/events/decisions.js',
+  'src/events/platform-ingest.js',
   'src/tokens/format.js',
   'src/tokens/api.js',
   'src/tokens/client.js',
@@ -178,10 +185,20 @@ async function uploadVeilSecurityEvents() {
         source: 'background',
       });
     }
+    await GoldspireVeilLearning?.uploadPlatformDecisions?.();
     return result;
   } catch (error) {
     console.warn(`${MENU_LOG}: veil event upload failed`, error);
     return { ok: false, reason: 'error' };
+  }
+}
+
+async function syncLearningBundle() {
+  try {
+    return await GoldspireVeilLearning?.syncLearningBundle?.();
+  } catch (error) {
+    console.warn(`${MENU_LOG}: learning bundle sync failed`, error);
+    return { ok: false };
   }
 }
 
@@ -191,12 +208,14 @@ function scheduleOrgSyncAlarm() {
   api.alarms.create('goldspire-org-sync', { periodInMinutes: minutes });
   api.alarms.create('goldspire-veil-events', { periodInMinutes: 15 });
   api.alarms.create('goldspire-ops-telemetry', { periodInMinutes: 15 });
+  api.alarms.create('goldspire-learning-hints', { periodInMinutes: 360 });
 }
 
 async function bootstrapPolicies() {
   await applyEnterprisePolicy();
   await syncCloudOrgPolicy();
   await syncCloudOrgShares();
+  await syncLearningBundle();
   await uploadVeilSecurityEvents();
   await flushOpsTelemetry();
 }
@@ -474,6 +493,9 @@ if (api.alarms?.onAlarm) {
     }
     if (alarm.name === 'goldspire-ops-telemetry') {
       flushOpsTelemetry();
+    }
+    if (alarm.name === 'goldspire-learning-hints') {
+      syncLearningBundle();
     }
   });
 }

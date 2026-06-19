@@ -10,6 +10,7 @@ Self-serve guides for customers and runbooks for Goldspire ops.
 | **Team member** | [MEMBER_GUIDE.md](MEMBER_GUIDE.md) | Install, join, secure/unlock, tokenize |
 | **Personal user** | [PERSONAL_GUIDE.md](PERSONAL_GUIDE.md) | No org — passphrase-only setup |
 | **Everyone** | [GETTING_STARTED.md](GETTING_STARTED.md) | Which guide to read first |
+| **Visual walkthrough** | [screenshots/README.md](screenshots/README.md) | Guide images (popup, copilot, email) |
 
 **Portal pages** (production): `https://join-veil.goldspireventures.com` — install, create, join, admin, pricing, feedback.
 

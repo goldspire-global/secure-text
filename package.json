@@ -16,12 +16,17 @@
     "api:dev": "node api/src/server.mjs",
     "dev": "npm run env:apply && npm run api:dev",
     "stripe:listen": "stripe listen --forward-to localhost:3015/v1/webhooks/stripe",
-    "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs tests/share-recipients.test.mjs tests/feedback.test.mjs tests/billing.test.mjs tests/support.test.mjs",
+    "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs tests/share-recipients.test.mjs tests/feedback.test.mjs tests/billing.test.mjs tests/support.test.mjs tests/learning.test.mjs",
+    "learning:analyze": "node api/scripts/run-learning-analysis.mjs",
+    "learning:train": "node api/scripts/run-learning-train.mjs",
+    "learning:export": "python analysis/export_signals.py --days 30 --out analysis/exports/decisions.jsonl",
     "test:daily-use": "node --test tests/scenarios/daily-use.test.mjs tests/scenarios/snooze.test.mjs tests/scenarios/copilot-settings-refresh.test.mjs",
     "test:detection": "node --test tests/detection/*.test.mjs",
     "test:scenarios": "node --test tests/scenarios/*.test.mjs",
     "e2e": "node scripts/e2e-smoke.mjs",
     "capture:store": "node scripts/capture-store-screenshots.mjs",
+    "docs:screenshots": "node scripts/sync-doc-screenshots.mjs",
+    "capture:docs": "npm run capture:store && npm run docs:screenshots",
     "stripe:setup": "node scripts/setup-stripe-veil.mjs"
   },
   "devDependencies": {

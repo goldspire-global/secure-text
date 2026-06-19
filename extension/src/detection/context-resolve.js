@@ -128,6 +128,16 @@
       }
     }
 
+    const hintSettings = context.learningBundle || context.learningHints
+      ? global.GoldspireDetectionAmbiguity?.mergedSettings?.({
+        learningHints: context.learningHints,
+        learningBundle: context.learningBundle,
+        ...(context.settings || {}),
+      }) || context.settings || {}
+      : context.settings || {};
+    out = global.GoldspireDetectionAmbiguity?.applyLearningHints?.(input, out, context, hintSettings)
+      || out;
+
     return global.GoldspireDetectionLib?.sortDetections?.(out) || out;
   }
 

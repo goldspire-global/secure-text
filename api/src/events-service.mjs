@@ -5,6 +5,7 @@ import { httpError } from './org-service.mjs';
 const ALLOWED_TYPES = new Set([
   'detection',
   'action',
+  'decision',
   'policy_block',
   'lifecycle',
   'unknown',
@@ -12,6 +13,24 @@ const ALLOWED_TYPES = new Set([
 
 const MAX_BATCH = 100;
 const MAX_HOST_LEN = 253;
+
+function sanitizeFeatures(raw = {}) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(raw).slice(0, 12)) {
+    const k = String(key).slice(0, 32);
+    if (Array.isArray(value)) {
+      out[k] = value.slice(0, 8).map((item) => String(item).slice(0, 64));
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      out[k] = value;
+    } else if (typeof value === 'boolean') {
+      out[k] = value;
+    } else {
+      out[k] = String(value ?? '').slice(0, 128);
+    }
+  }
+  return out;
+}
 
 function sanitizeEvent(raw = {}) {
   const atMs = Number(raw.at);
@@ -29,6 +48,7 @@ function sanitizeEvent(raw = {}) {
     action: String(raw.action || '').slice(0, 32),
     confidence: Math.min(100, Math.max(0, Math.round(Number(raw.confidence) || 0))),
     outcome: String(raw.outcome || '').slice(0, 24),
+    features: sanitizeFeatures(raw.features),
   };
 }
 
@@ -119,8 +139,8 @@ export async function ingestExtensionEvents(token, deviceId, body = {}) {
       await client.query(
         `INSERT INTO security_events (
            org_id, device_id, member_email, event_at, event_type,
-           category, severity, host, source, action, confidence
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+           category, severity, host, source, action, confidence, outcome, features
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           auth.org_id,
           auth.device_id,
@@ -131,8 +151,12 @@ export async function ingestExtensionEvents(token, deviceId, body = {}) {
           row.severity,
           row.host,
           row.source,
-          formatActionWithOutcome(row.action, row.outcome),
+          row.eventType === 'decision'
+            ? row.action
+            : formatActionWithOutcome(row.action, row.outcome),
           row.confidence,
+          row.outcome || '',
+          JSON.stringify(row.features || {}),
         ],
       );
     }

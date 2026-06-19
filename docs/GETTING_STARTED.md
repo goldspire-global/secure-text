@@ -15,12 +15,12 @@ Pick the path that matches your role. Each guide is short and step-by-step so yo
 ## I’m a team member
 
 1. **[Install](https://join-veil.goldspireventures.com/install.html)** Veil from Chrome or Edge
-2. Follow **[MEMBER_GUIDE.md](MEMBER_GUIDE.md)** — join code + work email from your admin
+2. Follow **[MEMBER_GUIDE.md](MEMBER_GUIDE.md)** — join code + work email from your admin (includes screenshots)
 3. Refresh Outlook or Gmail after joining
 
 ## I’m using Veil just for myself (no company)
 
-1. Install from the store → **[PERSONAL_GUIDE.md](PERSONAL_GUIDE.md)**
+1. Install from the store → **[PERSONAL_GUIDE.md](PERSONAL_GUIDE.md)** (with screenshots)
 2. No join code or admin portal needed
 
 ## Tech company with a Finance team?

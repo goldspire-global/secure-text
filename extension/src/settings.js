@@ -38,6 +38,12 @@
     dlpMode: 'off',
     /** Org-synced DLP policy (organizations.settings.dlp) */
     dlpPolicy: null,
+    /** Anonymous decision telemetry — on by default; opt out in Settings. */
+    learningTelemetry: true,
+    /** Signed learning bundle from platform. */
+    learningBundle: null,
+    learningBundleVersion: '',
+    learningHints: [],
   };
 
   const DLP_MODES = new Set(['off', 'observe', 'enforce']);

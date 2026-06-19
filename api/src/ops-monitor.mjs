@@ -1,7 +1,7 @@
 import { getPool } from './db.mjs';
 import { pingDatabase, maybeRecordHealthCheck } from './ops-service.mjs';
 import { raiseOpsAlert } from './ops-alerts.mjs';
-
+import { runDailyLearningBackstop, parseLearningTrainConfig } from './learning-scheduler.mjs';
 function portalOrigin(env) {
   const raw = env.ORG_PORTAL_URL || '';
   try {
@@ -116,6 +116,26 @@ export async function runInternalHealthSample(env, { version, uptimeSec }) {
 
 export function startOpsMonitor(env, { version, uptimeSec }) {
   const intervalMs = 5 * 60 * 1000;
+  let lastLearningTrainDay = '';
+
+  const maybeRunLearningTrain = async () => {
+    const config = parseLearningTrainConfig(env);
+    if (!config.enabled) return;
+    const day = new Date().toISOString().slice(0, 10);
+    if (lastLearningTrainDay === day) return;
+    lastLearningTrainDay = day;
+    try {
+      const result = await runDailyLearningBackstop(env);
+      if (result.skipped) {
+        console.log(`[veil/learning] daily backstop skipped: ${result.reason}`);
+      } else {
+        console.log('[veil/learning] daily backstop completed');
+      }
+    } catch (error) {
+      console.error('[veil/learning] daily backstop failed', error);
+    }
+  };
+
   const tick = async () => {
     const uptime = typeof uptimeSec === 'function' ? uptimeSec() : uptimeSec;
     await runInternalHealthSample(env, { version, uptimeSec: uptime }).catch((error) => {
@@ -124,6 +144,7 @@ export function startOpsMonitor(env, { version, uptimeSec }) {
     await runSyntheticChecks(env).catch((error) => {
       console.error('synthetic checks failed', error);
     });
+    await maybeRunLearningTrain();
   };
   setTimeout(tick, 10_000).unref?.();
   setInterval(tick, intervalMs).unref?.();

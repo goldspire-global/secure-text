@@ -42,6 +42,8 @@
       isAiSurface: true,
       host: location.hostname || '',
     };
+    if (settings?.learningHints) context.learningHints = settings.learningHints;
+    if (settings?.learningBundle) context.learningBundle = settings.learningBundle;
 
     const detections = (global.GoldspireDetection?.analyze?.(text, context) || [])
       .filter((hit) => hit.confidence >= (global.GoldspireVeilCopilot?.MIN_CONFIDENCE || 50));
@@ -91,6 +93,9 @@
       return { observed: true };
     }
 
+    const recommended = global.GoldspireVeilCopilot?.recommendAction?.(context, settings, detections) || '';
+    void global.GoldspireVeilDecisions?.logPrompt?.({ context, detections, recommended });
+
     return new Promise((resolve) => {
       global.GoldspireVeilCopilot?.showCopilotPrompt?.({
         title: 'Sensitive data in AI prompt',
@@ -99,8 +104,17 @@
         context,
         settings,
         variant: 'ai',
-        onDismiss: () => resolve({ dismissed: true }),
+        onDismiss: () => {
+          void global.GoldspireVeilDecisions?.logDismiss?.({ context, detections, recommended });
+          resolve({ dismissed: true });
+        },
         onAction: async (actionId) => {
+          void global.GoldspireVeilDecisions?.logChoice?.({
+            context,
+            detections,
+            recommended,
+            choice: actionId,
+          });
           if (actionId === 'ignore') {
             await global.GoldspireVeilCopilot?.runAction?.('ignore', { text, context, detections, settings });
             resolve({ continued: true });

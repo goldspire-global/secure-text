@@ -100,6 +100,11 @@
       teamId: String(settings.teamId || '').trim(),
       teamName: String(settings.teamName || '').trim(),
       teamDlp: settings.teamDlp && typeof settings.teamDlp === 'object' ? settings.teamDlp : null,
+      learningHints: Array.isArray(settings.learningHints) ? settings.learningHints : [],
+      learningBundle: settings.learningBundle && typeof settings.learningBundle === 'object'
+        ? settings.learningBundle
+        : null,
+      learningBundleVersion: String(settings.learningBundleVersion || '').slice(0, 64),
     };
   }
 
@@ -159,6 +164,13 @@
     }
     if (payload.teamDlp) {
       patch.teamDlpPolicy = global.GoldspireDlpSchema?.normalizePolicy?.(payload.teamDlp) || payload.teamDlp;
+    }
+    if (Array.isArray(payload.learningHints)) {
+      patch.learningHints = payload.learningHints;
+    }
+    if (payload.learningBundle && typeof payload.learningBundle === 'object') {
+      patch.learningBundle = payload.learningBundle;
+      patch.learningBundleVersion = payload.learningBundleVersion || payload.learningBundle.bundleVersion || '';
     }
 
     if (payload.provisionToken) {

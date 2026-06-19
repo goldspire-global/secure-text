@@ -71,6 +71,25 @@ test('VeilEvents.emit stores metadata without matched content', async () => {
   assert.equal(stored.matchedText, undefined);
 });
 
+test('VeilEvents.sanitizeEntry keeps safe decision features', () => {
+  const { bus } = loadBus();
+  const entry = bus.sanitizeEntry({
+    type: 'decision',
+    action: 'ignore',
+    outcome: 'overrode',
+    features: {
+      intent: 'form_data_entry',
+      fieldSemantics: ['person_name'],
+      categories: ['swift_bic'],
+      labelText: 'must-not-appear',
+    },
+  });
+  assert.equal(entry.type, 'decision');
+  assert.equal(entry.outcome, 'overrode');
+  assert.deepEqual(entry.features.fieldSemantics, ['person_name']);
+  assert.equal(entry.features.labelText, 'must-not-appear');
+});
+
 test('ObserveContext builds password field context', () => {
   const observe = loadObserveContext();
   const meta = observe.fieldMeta({ tagName: 'INPUT', type: 'password' });

@@ -8,7 +8,7 @@ See also: [docs/README.md](README.md) · [GETTING_STARTED.md](GETTING_STARTED.md
 
 ```bash
 npm run test:daily-use   # copilot toggle, paste, type, Allow, Stripe keys
-npm test                 # full suite (~97 tests)
+npm test                 # full suite (~122 tests)
 ```
 
 `test:daily-use` covers behaviours that are painful to catch manually: stale settings after toggling copilot, `sk_live` / `whsec` detection, Allow target insertion, field snooze reset, and paste dedupe.
@@ -121,6 +121,26 @@ Intent-aware gating (`tests/scenarios/intent-gating.test.mjs`) covers signup for
 2. Member extension syncs → paste API key again
 
 **Expected:** Block or auto-mask per org policy.
+
+---
+
+## Test 6 — Learning telemetry (day-one capture)
+
+Personal and team users contribute **metadata-only** decision signals (host, category, intent, field type — never matched text).
+
+1. **Personal:** Settings → Help → **Help improve Veil** should be **checked** (default on). Uncheck to opt out.
+2. Paste or type a secret, get a copilot prompt, choose **Allow** (override).
+3. Repeat on a signup form name field with a false-positive SWIFT-like string if you have one.
+
+**Expected:** No UI change — signals buffer locally and upload in background.
+
+**Ops verification (admin):**
+
+1. Open `/ops.html` → **Learning** tab — confirm **Automation: On** and decision counts
+2. Auto-train runs when enough signals arrive; use **Train now (force)** to test immediately
+3. Confirm override buckets appear; approve edge-case proposals manually if needed
+
+See [LEARNING_LOOP.md](LEARNING_LOOP.md) for architecture and Railway env vars.
 
 ---
 

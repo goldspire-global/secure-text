@@ -201,6 +201,12 @@ body {
   line-height: 1.45;
 }
 
+.profile-card__badge {
+  font-size: 11px;
+  margin-top: 2px;
+  color: #7dd3a8;
+}
+
 .setup-step__title {
   margin: 8px 0 10px;
   font-size: 15px;

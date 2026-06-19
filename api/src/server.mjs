@@ -54,6 +54,28 @@ import {
   getSupportTicket,
   updateSupportTicket,
 } from './support-service.mjs';
+import {
+  ingestPlatformDecisions,
+  getActiveLearningHints,
+  getLearningSummary,
+  listLearningBuckets,
+  listLearningProposals,
+  runLearningAnalysis,
+  generateLearningProposals,
+  updateLearningProposal,
+} from './learning-service.mjs';
+import {
+  getActiveBundle,
+  listLearningBundles,
+  publishLearningBundle,
+  verifyBundleSignature,
+} from './learning-bundle.mjs';
+import {
+  scheduleLearningTrain,
+  recordDecisionIngest,
+  triggerLearningTrain,
+  getLearningTrainStatus,
+} from './learning-scheduler.mjs';
 import { checkRateLimit } from './rate-limit.mjs';
 import { normalizeRoute, recordRequestMetric, flushRequestMetrics } from './request-metrics.mjs';
 import { raiseOpsAlert, sendOpsAlertTest } from './ops-alerts.mjs';
@@ -65,6 +87,17 @@ const publicDir = join(apiRoot, 'public');
 const env = loadEnv();
 // Railway (and most PaaS) expose the listening port via PORT.
 const port = Number(process.env.PORT || env.PORT || env.API_PORT) || 3015;
+
+async function attachLearningSettings(settings = {}, orgId = '', env = {}) {
+  const bundleResult = await getActiveBundle(orgId, env);
+  if (!bundleResult?.bundle) return settings;
+  return {
+    ...settings,
+    learningBundle: bundleResult.bundle,
+    learningBundleVersion: bundleResult.bundle.bundleVersion || '',
+    learningHints: bundleResult.bundle.hints || [],
+  };
+}
 
 function parseAllowedOrigins() {
   const raw = String(env.CORS_ALLOW_ORIGINS || '').trim();
@@ -239,6 +272,42 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && pathname === '/v1/platform/decisions') {
+      const rl = checkRateLimit(req, 'platform-decisions', { limit: 40, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const body = await readBody(req);
+      const result = await ingestPlatformDecisions(env, req, body);
+      if (result.ingested > 0) {
+        recordDecisionIngest(result.ingested);
+        scheduleLearningTrain(env, 'personal_ingest');
+      }
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/platform/learning-hints') {
+      const hints = await getActiveLearningHints();
+      json(res, req, 200, { hints, version: hints.length });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/platform/learning-bundle') {
+      const orgId = url.searchParams.get('orgId') || '';
+      const result = await getActiveBundle(orgId, env);
+      if (!result?.bundle) {
+        json(res, req, 200, { bundle: null, signature: '' });
+        return;
+      }
+      json(res, req, 200, { bundle: result.bundle, signature: result.signature });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/v1/ops/summary') {
       const rl = checkRateLimit(req, 'ops-summary', { limit: 30, windowMs: 60_000 });
       if (!rl.allowed) {
@@ -347,6 +416,125 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    function requireOpsAuth(req) {
+      const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
+      if (!expected) throw httpError(503, 'Platform ops is not configured.');
+      const auth = String(req.headers.authorization || '');
+      const match = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = match ? match[1].trim() : '';
+      if (!verifyOpsToken(expected, provided)) throw httpError(401, 'Invalid ops token.');
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/learning/summary') {
+      const rl = checkRateLimit(req, 'ops-learning', { limit: 40, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const result = await getLearningSummary(url.searchParams.get('days') || 30);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/learning/buckets') {
+      const rl = checkRateLimit(req, 'ops-learning', { limit: 40, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const result = await listLearningBuckets({
+        days: url.searchParams.get('days') || 30,
+        limit: url.searchParams.get('limit') || 40,
+        status: url.searchParams.get('status') || 'open',
+      });
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/learning/proposals') {
+      const rl = checkRateLimit(req, 'ops-learning', { limit: 40, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const result = await listLearningProposals({
+        status: url.searchParams.get('status') || '',
+        limit: url.searchParams.get('limit') || 50,
+      });
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/ops/learning/analyze') {
+      const rl = checkRateLimit(req, 'ops-learning-analyze', { limit: 6, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const body = req.headers['content-type']?.includes('application/json') ? await readBody(req) : {};
+      const result = await runLearningAnalysis(body.days || url.searchParams.get('days') || 30);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/ops/learning/proposals/generate') {
+      const rl = checkRateLimit(req, 'ops-learning-analyze', { limit: 6, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const body = req.headers['content-type']?.includes('application/json') ? await readBody(req) : {};
+      const result = await generateLearningProposals(body);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/learning/status') {
+      requireOpsAuth(req);
+      const result = await getLearningTrainStatus(env);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/ops/learning/train') {
+      const rl = checkRateLimit(req, 'ops-learning-train', { limit: 4, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const body = req.headers['content-type']?.includes('application/json') ? await readBody(req) : {};
+      const result = await triggerLearningTrain(env, 'ops_manual', { force: true });
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/ops/learning/bundles') {
+      requireOpsAuth(req);
+      const result = await listLearningBundles({ limit: url.searchParams.get('limit') || 20 });
+      json(res, req, 200, result);
+      return;
+    }
+
+    const learningProposalMatch = pathname.match(/^\/v1\/ops\/learning\/proposals\/(LRN-[0-9A-F]{8})$/i);
+    if (learningProposalMatch && req.method === 'PATCH') {
+      const rl = checkRateLimit(req, 'ops-learning-patch', { limit: 30, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      requireOpsAuth(req);
+      const body = await readBody(req);
+      const result = await updateLearningProposal(learningProposalMatch[1], body);
+      json(res, req, 200, result);
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/v1/platform/config') {
       json(res, req, 200, platformConfig(env));
       return;
@@ -376,6 +564,7 @@ const server = createServer(async (req, res) => {
       const deviceId = req.headers['x-device-id'] || body.deviceId;
       const clientInfo = parseClientInfo(req);
       const payload = await joinWithCode(body.joinCode, deviceId, body.email, clientInfo);
+      payload.settings = await attachLearningSettings(payload.settings || {}, payload.orgId, env);
       json(res, req, 200, payload);
       return;
     }
@@ -390,6 +579,11 @@ const server = createServer(async (req, res) => {
         res.end();
         return;
       }
+      result.payload.settings = await attachLearningSettings(
+        result.payload.settings || {},
+        result.payload.orgId,
+        env,
+      );
       json(res, req, 200, result.payload);
       return;
     }
@@ -453,7 +647,14 @@ const server = createServer(async (req, res) => {
       }
       const { token, deviceId } = parseAuthHeaders(req);
       const body = await readBody(req);
+      const decisionCount = Array.isArray(body.events)
+        ? body.events.filter((e) => String(e?.type || '').toLowerCase() === 'decision').length
+        : 0;
       const result = await ingestExtensionEvents(token, deviceId, body);
+      if (decisionCount > 0) {
+        recordDecisionIngest(decisionCount);
+        scheduleLearningTrain(env, 'team_ingest');
+      }
       json(res, req, 200, result);
       return;
     }

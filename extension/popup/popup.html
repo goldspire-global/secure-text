@@ -27,16 +27,19 @@
 
         <div id="setup-step-pick" class="setup-step">
           <p class="setup-label">How will you use this?</p>
+          <p class="hint" id="setup-returning-hint" hidden></p>
           <div class="profile-pick">
             <button type="button" class="profile-card" data-profile="personal">
               <span class="profile-card__mark" aria-hidden="true">P</span>
               <strong>Personal</strong>
               <span class="profile-card__desc">Just me — secure passwords and secrets in email, forms, and notes.</span>
+              <span class="profile-card__badge hint" id="setup-personal-badge" hidden>Passphrase saved here</span>
             </button>
             <button type="button" class="profile-card" data-profile="organization">
               <span class="profile-card__mark" aria-hidden="true">T</span>
               <strong>Team</strong>
               <span class="profile-card__desc">Join your company — settings and passphrase stay in sync.</span>
+              <span class="profile-card__badge hint" id="setup-team-badge" hidden>Already connected</span>
             </button>
           </div>
         </div>
@@ -44,18 +47,32 @@
         <!-- Step 2a: personal config -->
         <div id="setup-step-personal" class="setup-step" hidden>
           <button type="button" class="setup-back" data-back>← Back</button>
-          <h2 class="setup-step__title">Personal setup</h2>
-          <p class="card__text">Your passphrase is encrypted and stored only in this browser. One-click secure after setup.</p>
-          <label class="field">
-            <span>Your passphrase</span>
-            <input id="setup-personal-passphrase" type="password" autocomplete="new-password" placeholder="Choose a strong passphrase (16+ chars)" />
-            <small id="setup-personal-strength" class="hint"></small>
-          </label>
-          <label class="checkbox">
-            <input id="setup-personal-oneclick" type="checkbox" checked />
-            <span>One-click secure with saved passphrase</span>
-          </label>
-          <button type="button" id="setup-finish-personal" class="btn btn--full">Get started</button>
+
+          <div id="setup-personal-returning" hidden>
+            <h2 class="setup-step__title">Welcome back</h2>
+            <p class="card__text">Your passphrase is already saved on this browser. Continue to Veil — no need to enter it again.</p>
+            <label class="checkbox">
+              <input id="setup-personal-returning-oneclick" type="checkbox" checked />
+              <span>One-click secure with saved passphrase</span>
+            </label>
+            <button type="button" id="setup-continue-personal" class="btn btn--full">Continue</button>
+            <button type="button" id="setup-personal-new-passphrase" class="btn btn--ghost btn--full">Set a new passphrase instead</button>
+          </div>
+
+          <div id="setup-personal-new">
+            <h2 class="setup-step__title">Personal setup</h2>
+            <p class="card__text">Your passphrase is encrypted and stored only in this browser. One-click secure after setup.</p>
+            <label class="field">
+              <span>Your passphrase</span>
+              <input id="setup-personal-passphrase" type="password" autocomplete="new-password" placeholder="Choose a strong passphrase (16+ chars)" />
+              <small id="setup-personal-strength" class="hint"></small>
+            </label>
+            <label class="checkbox">
+              <input id="setup-personal-oneclick" type="checkbox" checked />
+              <span>One-click secure with saved passphrase</span>
+            </label>
+            <button type="button" id="setup-finish-personal" class="btn btn--full">Get started</button>
+          </div>
         </div>
 
         <!-- Step 2b: org join -->
@@ -341,7 +358,12 @@
           </div>
           <div class="card">
             <h2>Privacy &amp; analytics</h2>
-            <p class="card__text">Encryption runs in your browser. Veil stores metadata-only security events for teams (never matched secrets). <a href="#" id="help-portal-link" target="_blank" rel="noopener" hidden>Team portal</a><a href="#" id="help-install-link" target="_blank" rel="noopener">Install guide</a> · <a href="#" id="help-privacy-link" target="_blank" rel="noopener">Privacy</a></p>
+            <p class="card__text">Encryption runs in your browser. Team users send metadata-only security events (never matched secrets). Personal users can opt in below. <a href="#" id="help-install-link" target="_blank" rel="noopener">Install guide</a> · <a href="#" id="help-privacy-link" target="_blank" rel="noopener">Privacy</a></p>
+            <label class="checkbox" id="learning-telemetry-row">
+              <input id="learningTelemetry" name="learningTelemetry" type="checkbox" checked />
+              <span>Share anonymous copilot signals to improve Veil</span>
+            </label>
+            <p class="hint">Host, detector category, and your Allow/Secure choice — never the text you typed. Turn off anytime.</p>
           </div>
           <div class="card">
             <h2>Feedback</h2>

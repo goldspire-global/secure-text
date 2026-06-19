@@ -20,6 +20,14 @@
     if (next.dlpPolicy != null && typeof next.dlpPolicy === 'object') {
       next.dlpPolicy = global.GoldspireDlpSchema?.normalizePolicy?.(next.dlpPolicy) || next.dlpPolicy;
     }
+    if (next.learningTelemetry === undefined) {
+      next.learningTelemetry = true;
+    } else {
+      next.learningTelemetry = next.learningTelemetry === true;
+    }
+    if (next.learningHints != null && !Array.isArray(next.learningHints)) {
+      next.learningHints = [];
+    }
 
     return next;
   }

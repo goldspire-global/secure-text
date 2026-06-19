@@ -36,6 +36,7 @@ export function getPool() {
     pool = new Pool({
       connectionString: databaseUrl(),
       ssl: sslConfig(),
+      max: Number(process.env.PG_POOL_MAX || 8),
     });
   }
   return pool;

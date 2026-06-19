@@ -65,6 +65,8 @@
     if (!global.GoldspireVeilCopilot?.shouldIntercept?.(settings)) return null;
 
     const context = buildContext(target, source);
+    if (settings?.learningHints) context.learningHints = settings.learningHints;
+    if (settings?.learningBundle) context.learningBundle = settings.learningBundle;
     if (global.GoldspireVeilSnooze?.isSnoozed?.(context.host)) return null;
 
     const analyzed = analyzeSensitive(text, context);
@@ -117,6 +119,9 @@
     fieldState,
     match,
   }) {
+    const recommended = global.GoldspireVeilCopilot?.recommendAction?.(context, settings, detections) || '';
+    void global.GoldspireVeilDecisions?.logPrompt?.({ context, detections, recommended });
+
     return new Promise((resolve) => {
       global.GoldspireVeilCopilot?.showCopilotPrompt?.({
         title: title || global.GoldspireVeilExplain?.buildTriggerLabel?.(context, alreadyInserted),
@@ -125,8 +130,17 @@
         context,
         settings,
         alreadyInserted,
-        onDismiss: () => resolve({ dismissed: true }),
+        onDismiss: () => {
+          void global.GoldspireVeilDecisions?.logDismiss?.({ context, detections, recommended });
+          resolve({ dismissed: true });
+        },
         onAction: async (actionId) => {
+          void global.GoldspireVeilDecisions?.logChoice?.({
+            context,
+            detections,
+            recommended,
+            choice: actionId,
+          });
           const needsSelection = actionId !== 'ignore' && alreadyInserted && match;
           const selectionContext = needsSelection
             ? global.GoldspirePasteInsert?.buildSelectionForMatch?.(fieldState, match)

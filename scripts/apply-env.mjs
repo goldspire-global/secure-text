@@ -71,6 +71,7 @@ const privacyEmail = contactEmail(env, 'PRIVACY_EMAIL', 'privacy@goldspireventur
 const salesEmail = contactEmail(env, 'SALES_EMAIL', 'sales@goldspireventures.com');
 const legalEmail = contactEmail(env, 'LEGAL_EMAIL', 'legal@goldspireventures.com');
 const opsClientIngestKey = env.OPS_CLIENT_INGEST_KEY || '';
+const learningBundleSecret = env.LEARNING_BUNDLE_SECRET || '';
 const portalUnlockUrl = unlockUrl;
 const earlyAccess = String(env.VEIL_EARLY_ACCESS ?? 'true').toLowerCase() !== 'false';
 const earlyAccessEnd = String(env.VEIL_EARLY_ACCESS_END ?? '').trim();
@@ -114,6 +115,8 @@ const constantsContents = `/**
     SECURITY_EMAIL: ${jsString(securityEmail)},
     /** Client ops telemetry ingest key (metadata events only). */
     OPS_CLIENT_INGEST_KEY: ${jsString(opsClientIngestKey)},
+    /** HMAC secret for signed learning bundles (extension verifies). */
+    LEARNING_BUNDLE_SECRET: ${jsString(learningBundleSecret)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;

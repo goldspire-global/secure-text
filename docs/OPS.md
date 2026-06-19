@@ -69,6 +69,33 @@ API (ops token required):
 
 Migration: `012_support_tickets.sql` — run `npm run db:migrate` on deploy.
 
+## Learning brain (JARVIS)
+
+**`/ops.html` → Learning tab** — override analysis, automation status, review queue, rule proposals.
+
+| Step | Action |
+|------|--------|
+| Capture | Extension logs copilot prompt vs user choice (`decision` events) |
+| Auto-train | **On by default** — after enough new decisions or daily backstop |
+| Review | Buckets sorted by override %; false-positive tickets boost priority |
+| Ship | Auto-approve safe proposals + publish signed bundle; manual **Approve** for edge cases |
+
+Migrations: `013`–`016` (`learning_train_runs` logs automation).
+
+Deep analysis: [LEARNING_LOOP.md](LEARNING_LOOP.md), [analysis/README.md](../analysis/README.md).
+
+### Learning env (Railway)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `LEARNING_AUTO_TRAIN` | `true` | Master switch |
+| `LEARNING_BUNDLE_SECRET` | — | HMAC sign bundles (`npm run env:apply`) |
+| `LEARNING_TRAIN_COOLDOWN_HOURS` | `4` | Min hours between ingest-triggered trains |
+| `LEARNING_TRAIN_MIN_DECISIONS` | `20` | New decisions before auto-train |
+| `LEARNING_TRAIN_MIN_SAMPLES` | `10` | Labeled samples before publishing bundle |
+
+API: `GET /v1/ops/learning/status` — last run, bundle version, readiness.
+
 ## Alerts
 
 Set `OPS_ALERT_WEBHOOK_URL` to a **Microsoft Teams** incoming webhook (recommended) or Slack URL.

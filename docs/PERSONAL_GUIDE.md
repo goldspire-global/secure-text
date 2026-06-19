@@ -2,10 +2,14 @@
 
 Quick start for **Personal** profile users (no team, no join code).
 
+> Screenshots: [docs/screenshots/](screenshots/README.md)
+
 ## Install
 
 1. Install from [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/search/Veil%20Goldspire) or [Chrome Web Store](https://chromewebstore.google.com/search/Veil%20Goldspire) (search **Veil by Goldspire**).
 2. Open the Veil popup → **Personal** → choose a passphrase (**16+ characters**).
+
+![Veil popup — personal setup complete](screenshots/popup-home-checklist.png)
 
 ## Daily use
 
@@ -15,6 +19,8 @@ Quick start for **Personal** profile users (no team, no join code).
 | **Highlight** text | Veil bar appears with Quick / Options |
 | **Ctrl+Shift+S** (⌘+Shift+S on Mac) | Secure selection with saved passphrase |
 | **Ctrl+Shift+O** | Secure with options (one-time code, etc.) |
+
+![Copilot when you paste sensitive text](screenshots/copilot-paste-modal.png)
 
 Smart copilot stays quiet while you type name, email, or DOB on signup forms — but still catches API keys.
 
@@ -26,6 +32,7 @@ Share the passphrase out of band. If you use one-time mode, share the unlock cod
 
 - **Veil copilot** — on by default; turn off in Settings if you prefer shortcut-only
 - **On-page hints** — Smart / Always / Off
+- **Share anonymous copilot signals** — on by default under Help; improves Veil for everyone (metadata only, never your text). Uncheck to opt out.
 - **Feedback** — Help tab → Report a problem
 
 ## Upgrade to a team

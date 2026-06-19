@@ -13,6 +13,8 @@ A **fixed rule pipeline** shipped with the extension:
 
 There is **no machine learning**, no hidden model, and no org-editable detection rules today.
 
+**Learning loop:** user choices and tickets feed **offline** analysis to improve rules — see [LEARNING_LOOP.md](LEARNING_LOOP.md). Runtime does not self-train.
+
 ## Single source of truth for product rules
 
 **`extension/src/detection/intent-config.js`** — edit here for:

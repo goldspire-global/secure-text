@@ -15,6 +15,22 @@
   }
 
   function sanitizeEntry(event = {}) {
+    const features = event.features && typeof event.features === 'object' && !Array.isArray(event.features)
+      ? Object.fromEntries(
+        Object.entries(event.features)
+          .slice(0, 12)
+          .map(([key, value]) => {
+            const k = String(key).slice(0, 32);
+            if (Array.isArray(value)) {
+              return [k, value.slice(0, 8).map((item) => String(item).slice(0, 32))];
+            }
+            if (typeof value === 'number') return [k, value];
+            if (typeof value === 'boolean') return [k, value];
+            return [k, String(value ?? '').slice(0, 64)];
+          }),
+      )
+      : undefined;
+
     return {
       at: Date.now(),
       type: String(event.type || 'unknown'),
@@ -25,6 +41,7 @@
       action: String(event.action || ''),
       confidence: Number(event.confidence) || 0,
       outcome: String(event.outcome || '').slice(0, 32),
+      ...(features && Object.keys(features).length ? { features } : {}),
     };
   }
 

@@ -324,6 +324,41 @@ function showSetup() {
   void viewSetup.offsetWidth;
   viewSetup.classList.add('view--enter');
   showSetupStep('pick');
+  refreshSetupReturningHints().catch(() => {});
+}
+
+function showPersonalSetupMode(mode) {
+  const returning = document.getElementById('setup-personal-returning');
+  const newBlock = document.getElementById('setup-personal-new');
+  if (returning) returning.hidden = mode !== 'returning';
+  if (newBlock) newBlock.hidden = mode !== 'new';
+}
+
+async function refreshSetupReturningHints() {
+  const storedPersonal = await GoldspireSecrets.loadPassphrase('personal');
+  const hasPersonal = Boolean(storedPersonal?.trim());
+  const settings = await readSyncSettings();
+  const hasTeam = isOrgConnected(settings);
+
+  const personalBadge = document.getElementById('setup-personal-badge');
+  const teamBadge = document.getElementById('setup-team-badge');
+  const hint = document.getElementById('setup-returning-hint');
+
+  if (personalBadge) personalBadge.hidden = !hasPersonal;
+  if (teamBadge) teamBadge.hidden = !hasTeam;
+
+  if (hint) {
+    if (hasPersonal || hasTeam) {
+      hint.hidden = false;
+      hint.textContent = hasPersonal && hasTeam
+        ? 'Welcome back — pick Personal or Team to continue. Your passphrase stays saved on this browser.'
+        : hasPersonal
+          ? 'Welcome back — Personal already has a passphrase saved here.'
+          : 'Welcome back — your team connection is still active.';
+    } else {
+      hint.hidden = true;
+    }
+  }
 }
 
 function showMain(profile) {
@@ -549,13 +584,30 @@ function getResecureChecked() {
 
 // ── Setup flow ──────────────────────────────────────────────────────────────
 document.querySelectorAll('.profile-card').forEach((card) => {
-  card.addEventListener('click', () => {
+  card.addEventListener('click', async () => {
+    if (card.dataset.profile === 'personal') {
+      const stored = await GoldspireSecrets.loadPassphrase('personal');
+      showSetupStep('personal');
+      showPersonalSetupMode(stored?.trim() ? 'returning' : 'new');
+      return;
+    }
+    if (card.dataset.profile === 'organization') {
+      const settings = await readSyncSettings();
+      if (settings.orgId && settings.orgProvisionSource === 'cloud') {
+        showPendingOrgSetup(settings);
+        return;
+      }
+      resetOrgSetupStep();
+    }
     showSetupStep(card.dataset.profile);
   });
 });
 
 document.querySelectorAll('[data-back]').forEach((btn) => {
-  btn.addEventListener('click', () => showSetupStep('pick'));
+  btn.addEventListener('click', () => {
+    resetOrgSetupStep();
+    showSetupStep('pick');
+  });
 });
 
 document.getElementById('setup-personal-passphrase')?.addEventListener('input', () => {
@@ -630,6 +682,41 @@ document.getElementById('setup-finish-personal')?.addEventListener('click', asyn
       finishBtn.textContent = prevLabel || 'Get started';
     }
   }
+});
+
+document.getElementById('setup-continue-personal')?.addEventListener('click', async () => {
+  const stored = await GoldspireSecrets.loadPassphrase('personal');
+  if (!stored?.trim()) {
+    showPersonalSetupMode('new');
+    showStatus('No saved passphrase — set one to continue.');
+    document.getElementById('setup-personal-passphrase')?.focus();
+    return;
+  }
+
+  const oneClick = document.getElementById('setup-personal-returning-oneclick')?.checked !== false;
+  const continueBtn = document.getElementById('setup-continue-personal');
+  const prevLabel = continueBtn?.textContent;
+
+  if (continueBtn) {
+    continueBtn.disabled = true;
+    continueBtn.textContent = 'Continuing…';
+  }
+
+  try {
+    await finishSetup('personal', { useSavedPassphrase: oneClick });
+  } catch (e) {
+    showStatus(e?.message || 'Setup failed.');
+  } finally {
+    if (continueBtn) {
+      continueBtn.disabled = false;
+      continueBtn.textContent = prevLabel || 'Continue';
+    }
+  }
+});
+
+document.getElementById('setup-personal-new-passphrase')?.addEventListener('click', () => {
+  showPersonalSetupMode('new');
+  document.getElementById('setup-personal-passphrase')?.focus();
 });
 
 document.getElementById('setup-org-connect')?.addEventListener('click', async () => {
@@ -709,12 +796,25 @@ function showPendingOrgSetup(settings = {}) {
   const emailEl = document.getElementById('setup-org-email');
   if (emailEl && settings.orgMemberEmail) emailEl.value = settings.orgMemberEmail;
   const title = document.querySelector('#setup-step-organization .setup-step__title');
-  if (title) title.textContent = 'Confirm your work email';
+  if (title) title.textContent = 'Welcome back';
   const blurb = document.querySelector('#setup-step-organization .card__text');
   if (blurb) {
     blurb.textContent = settings.orgDisplayName
-      ? `Connected to ${settings.orgDisplayName}. Enter your work email to finish.`
-      : 'Enter your work email to finish joining your team.';
+      ? `Still connected to ${settings.orgDisplayName}. Confirm your work email to continue.`
+      : 'Still connected to your team. Confirm your work email to continue.';
+  }
+}
+
+function resetOrgSetupStep() {
+  const joinField = document.getElementById('setup-org-join-code')?.closest('.field');
+  if (joinField) joinField.hidden = false;
+  const connectBtn = document.getElementById('setup-org-connect');
+  if (connectBtn) connectBtn.textContent = 'Connect';
+  const title = document.querySelector('#setup-step-organization .setup-step__title');
+  if (title) title.textContent = 'Join your team';
+  const blurb = document.querySelector('#setup-step-organization .card__text');
+  if (blurb) {
+    blurb.textContent = 'Enter the join code from your admin and the work email they registered for you.';
   }
 }
 
@@ -791,6 +891,12 @@ function applySettingsToForm(settings) {
 
   const copilotEl = document.getElementById('copilotEnabled');
   if (copilotEl) copilotEl.checked = settings.copilotEnabled === true;
+
+  const learningRow = document.getElementById('learning-telemetry-row');
+  const learningEl = document.getElementById('learningTelemetry');
+  const isOrgCloud = profile === 'organization' && settings.orgProvisionSource === 'cloud';
+  if (learningRow) learningRow.hidden = isOrgCloud;
+  if (learningEl) learningEl.checked = settings.learningTelemetry !== false;
 
   const dlpModeEl = document.getElementById('dlpMode');
   if (dlpModeEl) {
@@ -916,6 +1022,7 @@ form?.addEventListener('submit', async (event) => {
     passwordDigits: passwordDigitsInput?.checked !== false,
     passwordSymbols: passwordSymbolsInput?.checked !== false,
     copilotEnabled: document.getElementById('copilotEnabled')?.checked === true,
+    learningTelemetry: document.getElementById('learningTelemetry')?.checked !== false,
     dlpMode: document.getElementById('dlpMode')?.value || 'off',
   });
 
