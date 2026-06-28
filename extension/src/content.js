@@ -1462,6 +1462,7 @@
       return;
     }
 
+    try {
     const settings = await getSettings();
     const profile = getProfile(settings);
 
@@ -1562,6 +1563,10 @@
       },
     });
     return { handled: true };
+    } catch (error) {
+      if (error?.message === 'Cancelled') return { handled: true, cancelled: true };
+      throw error;
+    }
   }
 
   async function unlockSelection(message = {}) {
@@ -1754,6 +1759,9 @@
       if (isInvalidatedError(error)) {
         warnStaleContext();
         return { ok: false };
+      }
+      if (error?.message === 'Cancelled') {
+        return { ok: false, cancelled: true };
       }
       console.warn('[Veil]', error);
       safeToast('Something went wrong — refresh the page and try again.', 'error');

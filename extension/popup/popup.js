@@ -369,6 +369,7 @@ function showMain(profile) {
   viewMain.classList.add('view--enter');
   applyProfileChrome(profile);
   refreshReadinessChecklist().catch(() => {});
+  refreshContextualHelp().catch(() => {});
 }
 
 function isOrgConnected(settings) {
@@ -392,7 +393,138 @@ function switchTab(tabName) {
   if (tabName === 'settings') {
     loadSnoozedSites();
     refreshPassphraseField().catch(() => {});
+    refreshContextualHelp().catch(() => {});
   }
+  if (tabName === 'help') {
+    refreshContextualHelp().catch(() => {});
+  }
+}
+
+function escapePopupHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function readSnoozedHosts() {
+  return new Promise((resolve) => {
+    api.storage.local.get({ gstSnoozedHosts: [] }, (result) => {
+      if (api.runtime.lastError) {
+        resolve([]);
+        return;
+      }
+      resolve(result?.gstSnoozedHosts || []);
+    });
+  });
+}
+
+async function readActiveTabHost() {
+  return new Promise((resolve) => {
+    if (!api.tabs?.query) {
+      resolve('');
+      return;
+    }
+    api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (api.runtime.lastError) {
+        resolve('');
+        return;
+      }
+      try {
+        resolve(new URL(tabs[0]?.url || '').hostname);
+      } catch {
+        resolve('');
+      }
+    });
+  });
+}
+
+async function isPassphraseReady(settings) {
+  const profile = settings.securityProfile || 'personal';
+  const isOrg = profile === 'organization';
+  if (isOrg) {
+    return Boolean(
+      settings.passphraseFromVault
+      || managedState.hasTeamPassphrase
+      || hasStoredOrgPassphrase
+      || (await GoldspireSecrets.loadPassphrase?.('organization'))?.trim(),
+    );
+  }
+  return Boolean(
+    hasStoredPassphrase
+    || (await GoldspireSecrets.loadPassphrase?.('personal'))?.trim(),
+  );
+}
+
+async function refreshContextualHelp() {
+  if (typeof GoldspireHelpContext === 'undefined') return;
+
+  const settings = await readSyncSettings();
+  const passphraseReady = await isPassphraseReady(settings);
+  const snoozedHosts = await readSnoozedHosts();
+  const activeHost = await readActiveTabHost();
+  const ctx = GoldspireHelpContext.build(settings, {
+    snoozedHosts,
+    activeHost,
+    passphraseReady,
+    managedState,
+  });
+
+  const summaryEl = document.getElementById('help-context-summary');
+  if (summaryEl) summaryEl.textContent = ctx.summary;
+
+  const behaviorsEl = document.getElementById('help-context-behaviors');
+  if (behaviorsEl) {
+    behaviorsEl.innerHTML = ctx.behaviors.map((item) => `
+      <li class="help-context__item">
+        <strong>${escapePopupHtml(item.title)}</strong>
+        <span>${escapePopupHtml(item.body)}</span>
+      </li>`).join('');
+  }
+
+  const troubleshootEl = document.getElementById('help-troubleshoot-list');
+  const troubleshootDetails = document.getElementById('help-troubleshoot-details');
+  if (troubleshootEl) {
+    if (!ctx.troubleshooting.length) {
+      troubleshootDetails?.setAttribute('hidden', '');
+      troubleshootEl.innerHTML = '';
+    } else {
+      troubleshootDetails?.removeAttribute('hidden');
+      troubleshootEl.innerHTML = ctx.troubleshooting.map((item) => {
+        const actionBtn = item.action
+          ? `<button type="button" class="help-context__action btn btn--ghost btn--sm" data-help-action="${item.action}">Change setting</button>`
+          : '';
+        return `<li class="help-context__item help-context__item--trouble">
+          <strong>${escapePopupHtml(item.question)}</strong>
+          <span>${escapePopupHtml(item.answer)}</span>
+          ${actionBtn}
+        </li>`;
+      }).join('');
+
+      troubleshootEl.querySelectorAll('[data-help-action]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.helpAction;
+          if (action === 'settings-copilot') switchTab('settings');
+          if (action === 'settings-hints') {
+            switchTab('settings');
+            document.querySelector('.settings-advanced')?.setAttribute('open', '');
+            document.getElementById('selectionUiMode')?.focus();
+          }
+          if (action === 'settings-passphrase') switchTab('settings');
+          if (action === 'settings-snooze') switchTab('settings');
+        });
+      });
+    }
+  }
+
+  const refreshHint = document.getElementById('help-context-refresh-hint');
+  if (refreshHint) refreshHint.textContent = ctx.refreshHint || '';
+
+  const copilotHint = document.getElementById('copilot-settings-hint');
+  const hintsHint = document.getElementById('hints-settings-hint');
+  if (copilotHint) copilotHint.textContent = ctx.settingsHints.copilot;
+  if (hintsHint) hintsHint.textContent = ctx.settingsHints.hints;
 }
 
 async function refreshPassphraseField() {
@@ -923,6 +1055,7 @@ async function loadSettings() {
   applyProvisionChrome(settings);
   applyManagedChrome(settings);
     await refreshReadinessChecklist();
+    await refreshContextualHelp();
     return;
   }
 
@@ -976,6 +1109,7 @@ async function loadSettings() {
   applyProvisionChrome(settings);
   applyManagedChrome(settings);
   await refreshReadinessChecklist();
+  await refreshContextualHelp();
 }
 
 form?.addEventListener('submit', async (event) => {
@@ -1063,6 +1197,7 @@ form?.addEventListener('submit', async (event) => {
     refreshPassphraseStrength();
     showStatus('Settings saved.');
     await refreshReadinessChecklist();
+    await refreshContextualHelp();
   } catch (error) {
     showStatus(error?.message || 'Could not save settings.');
   } finally {
@@ -1086,6 +1221,7 @@ document.getElementById('copilotEnabled')?.addEventListener('change', async (eve
     const settings = await readSyncSettings();
     showStatus(enabled ? `Copilot enabled — ${GoldspireCopy?.refreshTabHint?.(settings) || 'refresh the page.'}` : 'Copilot off.');
     await refreshReadinessChecklist();
+    await refreshContextualHelp();
   } catch (error) {
     showStatus(error?.message || 'Could not save copilot setting.');
     event.target.checked = !enabled;
@@ -1100,6 +1236,8 @@ document.getElementById('org-passphrase')?.addEventListener('input', () => {
 document.querySelectorAll('.tabs__btn').forEach((button) => {
   button.addEventListener('click', () => switchTab(button.dataset.tab));
 });
+
+document.getElementById('home-help-context-link')?.addEventListener('click', () => switchTab('help'));
 
 // ── Home actions ──────────────────────────────────────────────────────────
 function generateLocalPassword(options = {}) {
@@ -1313,7 +1451,10 @@ function loadSnoozedSites() {
       btn.addEventListener('click', () => {
         api.storage.local.get({ gstSnoozedHosts: [] }, (r) => {
           const updated = (r.gstSnoozedHosts || []).filter((x) => x !== btn.dataset.unsnooze);
-          api.storage.local.set({ gstSnoozedHosts: updated }, loadSnoozedSites);
+          api.storage.local.set({ gstSnoozedHosts: updated }, () => {
+            loadSnoozedSites();
+            refreshContextualHelp().catch(() => {});
+          });
         });
       });
     });
@@ -1321,7 +1462,10 @@ function loadSnoozedSites() {
 }
 
 document.getElementById('clear-snoozed')?.addEventListener('click', () => {
-  api.storage.local.set({ gstSnoozedHosts: [] }, loadSnoozedSites);
+  api.storage.local.set({ gstSnoozedHosts: [] }, () => {
+    loadSnoozedSites();
+    refreshContextualHelp().catch(() => {});
+  });
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────

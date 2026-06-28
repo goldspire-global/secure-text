@@ -397,10 +397,30 @@
       if (compactOnly !== input) pushPrefixHits(compactOnly);
     }
 
+    function countAlphanumWordsInCompactSpan(original, compactStart, compactLen) {
+      const input = String(original || '');
+      let compactIdx = 0;
+      let spanStart = -1;
+      let spanEnd = -1;
+      for (let i = 0; i < input.length && compactIdx < compactStart + compactLen; i += 1) {
+        const ch = input[i];
+        if (!/[A-Za-z0-9]/.test(ch)) continue;
+        if (compactIdx === compactStart) spanStart = i;
+        compactIdx += 1;
+        if (compactIdx === compactStart + compactLen) {
+          spanEnd = i + 1;
+          break;
+        }
+      }
+      if (spanStart < 0 || spanEnd < 0) return 99;
+      return input.slice(spanStart, spanEnd).split(/[^A-Za-z0-9]+/).filter(Boolean).length;
+    }
+
     function tryPushCompact(compact, index) {
       const value = String(compact || '').toUpperCase();
       if (value.length < 15 || value.length > 34) return;
       if (!ibanMod97(value)) return;
+      if (/\s/.test(input) && countAlphanumWordsInCompactSpan(input, index, value.length) > 6) return;
       if (seen.has(value)) return;
       seen.add(value);
       results.push({
@@ -421,10 +441,10 @@
       const chunk = match[0].toUpperCase();
       for (let end = Math.min(34, chunk.length); end >= 15; end -= 1) {
         const candidate = chunk.slice(0, end);
-        if (ibanMod97(candidate)) {
-          tryPushCompact(candidate, match.index);
-          break;
-        }
+        if (!ibanMod97(candidate)) continue;
+        if (/\s/.test(input) && countAlphanumWordsInCompactSpan(input, match.index, candidate.length) > 6) continue;
+        tryPushCompact(candidate, match.index);
+        break;
       }
     }
 

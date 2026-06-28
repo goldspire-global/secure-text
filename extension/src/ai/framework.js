@@ -37,12 +37,14 @@
     return global.GoldspireDetectionContext?.createContext?.({
       host: location.hostname || '',
       source: 'ai_prompt',
+      intent: 'ai_prompt',
       isAiSurface: true,
       aiSite: adapter?.id || '',
       ...partial,
     }) || {
       host: location.hostname || '',
       source: 'ai_prompt',
+      intent: 'ai_prompt',
       isAiSurface: true,
       aiSite: adapter?.id || '',
       ...partial,

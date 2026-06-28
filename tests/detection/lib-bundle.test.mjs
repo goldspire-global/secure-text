@@ -114,3 +114,9 @@ test('name field context suppresses stafford false positives', () => {
   const hits = lib.analyzeAll('stafford', { isNameField: true, intent: 'form_data_entry', inForm: true });
   assert.equal(hits.length, 0);
 });
+
+test('prose with page counts does not false-positive as IBAN', () => {
+  const text = 'be careful...we seem to have generated Phase III — NERVA Constitutional Engine Specifications twice - one from earlier had 66 pgs and this one a bit less but file is the same...too late now anyway but be careful going forward to avoid this. g';
+  const hits = lib.findIbans(text);
+  assert.equal(hits.length, 0);
+});

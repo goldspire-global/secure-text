@@ -35,6 +35,12 @@ Share the passphrase out of band. If you use one-time mode, share the unlock cod
 - **Share anonymous copilot signals** — on by default under Help; improves Veil for everyone (metadata only, never your text). Uncheck to opt out.
 - **Feedback** — Help tab → Report a problem
 
+## Help tab matches your settings
+
+Open the extension popup → **Help** → **Your setup**. Veil explains how your current settings behave — for example why the Quick/Options pill does not appear when you highlight plain text in **Smart** mode, or why copilot stays quiet on signup forms. The **Why isn't something showing?** section only lists issues that apply to your configuration (copilot off, hints off, snoozed sites, missing passphrase, etc.).
+
+From **Home**, use **How Veil behaves with your settings →** for the same guide.
+
 ## Upgrade to a team
 
 Ask your admin for a join code, or [create a team](https://join-veil.goldspireventures.com/create.html) for your organization.

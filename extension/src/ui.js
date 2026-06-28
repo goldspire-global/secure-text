@@ -2,6 +2,7 @@
   const PROMPT_ID = 'goldspire-veil-prompt';
   const TOAST_ID = 'goldspire-veil-toast';
   let activePromptKeyHandler = null;
+  let activeOutsideDismiss = null;
 
   function escapeHtml(value) {
     return String(value)
@@ -32,10 +33,38 @@
       document.removeEventListener('keydown', activePromptKeyHandler);
       activePromptKeyHandler = null;
     }
+    if (activeOutsideDismiss) {
+      document.removeEventListener('mousedown', activeOutsideDismiss, true);
+      activeOutsideDismiss = null;
+    }
     const el = document.getElementById(PROMPT_ID);
     if (!el) return;
     el.classList.add('gst-ui--exit');
     window.setTimeout(() => el.remove(), 200);
+  }
+
+  function attachOutsideDismiss(rootEl, onCancel) {
+    if (activeOutsideDismiss) {
+      document.removeEventListener('mousedown', activeOutsideDismiss, true);
+      activeOutsideDismiss = null;
+    }
+    activeOutsideDismiss = (event) => {
+      if (!rootEl.isConnected) {
+        document.removeEventListener('mousedown', activeOutsideDismiss, true);
+        activeOutsideDismiss = null;
+        return;
+      }
+      if (rootEl.contains(event.target)) return;
+      document.removeEventListener('mousedown', activeOutsideDismiss, true);
+      activeOutsideDismiss = null;
+      removePrompt();
+      onCancel?.();
+    };
+    window.setTimeout(() => {
+      if (activeOutsideDismiss) {
+        document.addEventListener('mousedown', activeOutsideDismiss, true);
+      }
+    }, 0);
   }
 
   function dismissToast(toast) {
@@ -397,6 +426,7 @@
 
     document.documentElement.appendChild(pop);
     attachPromptKeyboard(onCancel);
+    attachOutsideDismiss(pop, onCancel);
     setMode(initialMode);
   }
 

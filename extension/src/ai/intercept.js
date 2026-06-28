@@ -40,13 +40,30 @@
     const context = global.GoldspireAiFramework?.buildAiContext?.({ id: adapterId }) || {
       source: 'ai_prompt',
       isAiSurface: true,
+      intent: 'ai_prompt',
       host: location.hostname || '',
     };
     if (settings?.learningHints) context.learningHints = settings.learningHints;
     if (settings?.learningBundle) context.learningBundle = settings.learningBundle;
 
-    const detections = (global.GoldspireDetection?.analyze?.(text, context) || [])
+    const host = context.host || location.hostname || '';
+    const promptRoot = getPromptRoot?.();
+    const fieldState = promptRoot ? { element: promptRoot, text } : { text };
+
+    if (global.GoldspireVeilSnooze?.isCompositionAllowed?.(host, text, { raw: text }, fieldState)) {
+      return { continued: true };
+    }
+
+    const rawDetections = (global.GoldspireDetection?.analyze?.(text, context) || [])
       .filter((hit) => hit.confidence >= (global.GoldspireVeilCopilot?.MIN_CONFIDENCE || 50));
+
+    const detections = (global.GoldspireDetectionGating?.filterForPrompt?.(
+      rawDetections,
+      { ...context, intent: 'ai_prompt' },
+      'paste',
+    ) || rawDetections).filter(
+      (hit) => !global.GoldspireVeilSnooze?.isCategorySnoozed?.(host, hit.category),
+    );
 
     if (detections.length === 0) return;
 
@@ -116,6 +133,13 @@
             choice: actionId,
           });
           if (actionId === 'ignore') {
+            global.GoldspireVeilSnooze?.allowComposition?.(
+              host,
+              text,
+              { raw: text, category: detections[0]?.category },
+              fieldState,
+              detections,
+            );
             await global.GoldspireVeilCopilot?.runAction?.('ignore', { text, context, detections, settings });
             resolve({ continued: true });
             return;

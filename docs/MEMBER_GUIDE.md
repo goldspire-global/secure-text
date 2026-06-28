@@ -53,6 +53,7 @@ Edge and Chrome are separate installs — join your team in **each browser** you
 
 ## Get help
 
+- Extension popup → **Help** tab → **Your setup** (tailored to your current settings — explains pill/copilot behavior and common “why isn't it showing?” cases)
 - Extension popup → **Help** tab → quick start, shortcuts, feedback
 - [False copilot alert](https://join-veil.goldspireventures.com/feedback.html) — helps us tune detection (no secrets in the form)
 - Ask your admin for join code or passphrase reset

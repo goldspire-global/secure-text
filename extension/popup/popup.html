@@ -131,6 +131,9 @@
               <button type="button" id="action-unlock" class="btn btn--ghost">Unlock [redacted]</button>
             </div>
             <p class="selection-tip" id="selection-tip-shortcuts">Quick secure shortcut shown in Help tab</p>
+            <p class="hint hint--link-row">
+              <button type="button" id="home-help-context-link" class="btn btn--text">How Veil behaves with your settings →</button>
+            </p>
           </div>
         </div>
 
@@ -266,7 +269,7 @@
                 <input id="copilotEnabled" name="copilotEnabled" type="checkbox" />
                 <span>Veil copilot</span>
               </label>
-              <p class="hint">Smart protection: catches secrets in email and chat, stays quiet on signup forms and admin pages.</p>
+              <p class="hint" id="copilot-settings-hint">Smart protection: catches secrets in email and chat, stays quiet on signup forms and admin pages.</p>
             </div>
 
             <details class="settings-advanced">
@@ -279,6 +282,7 @@
                     <option value="always">Always</option>
                     <option value="quiet">Off — shortcut only</option>
                   </select>
+                  <small class="hint" id="hints-settings-hint">Smart — pill only for sensitive-shaped highlights.</small>
                 </label>
                 <label class="field">
                   <span>Re-lock delay (seconds)</span>
@@ -314,6 +318,20 @@
 
         <!-- Help -->
         <div id="tab-help" class="tab" role="tabpanel" aria-labelledby="tab-btn-help">
+          <details class="card card--help-context" id="help-context-card">
+            <summary class="help-context__head">
+              <span class="help-context__title">Your setup</span>
+              <span class="help-context__summary" id="help-context-summary"></span>
+            </summary>
+            <div class="help-context__body">
+              <ul class="help-context__list" id="help-context-behaviors"></ul>
+              <details class="help-context__details" id="help-troubleshoot-details">
+                <summary>Why isn't something showing?</summary>
+                <ul class="help-context__list help-context__list--trouble" id="help-troubleshoot-list"></ul>
+              </details>
+              <p class="hint" id="help-context-refresh-hint"></p>
+            </div>
+          </details>
           <div id="help-personal" class="help-content">
             <div class="card">
               <h2>How it works</h2>
@@ -388,6 +406,7 @@
     <script src="../src/constants.js"></script>
     <script src="../src/org-capability.js"></script>
     <script src="../src/copy.js"></script>
+    <script src="../src/help-context.js"></script>
     <script src="../src/feedback.js"></script>
     <script src="../src/passphrase-policy.js"></script>
     <script src="../src/browser.js"></script>
