@@ -1,7 +1,8 @@
 import Stripe from 'stripe';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
-import { activateOrgBilling } from './billing.mjs';
+import { activateOrgBilling, billingEnv } from './billing.mjs';
+import { activatePersonalPlus, findPersonalAccountBySubscription, syncPersonalContactSlotsFromStripe } from './personal-service.mjs';
 
 function getStripe(env) {
   const key = String(env.STRIPE_SECRET_KEY || '').trim();
@@ -58,7 +59,34 @@ async function resolveOrgForCheckout(session) {
   return orgId;
 }
 
+async function resolvePersonalForCheckout(session) {
+  const accountId = String(session.metadata?.personal_account_id || '').trim();
+  if (!accountId) return null;
+  const pool = getPool();
+  const result = await pool.query(`SELECT id FROM personal_accounts WHERE id = $1`, [accountId]);
+  return result.rowCount > 0 ? accountId : null;
+}
+
 async function handleCheckoutCompleted(session) {
+  const personalId = await resolvePersonalForCheckout(session);
+  if (personalId) {
+    await activatePersonalPlus(personalId, {
+      status: 'active',
+      stripeCustomerId: session.customer ? String(session.customer) : '',
+      stripeSubscriptionId: session.subscription ? String(session.subscription) : '',
+    });
+    if (session.subscription) {
+      try {
+        const stripe = getStripe(billingEnv());
+        const sub = await stripe?.subscriptions?.retrieve(String(session.subscription));
+        if (sub) await syncPersonalContactSlotsFromStripe(personalId, sub);
+      } catch {
+        // Non-fatal — webhook will sync on subscription.updated.
+      }
+    }
+    return;
+  }
+
   const orgId = await resolveOrgForCheckout(session);
   if (!orgId) return;
 
@@ -70,6 +98,20 @@ async function handleCheckoutCompleted(session) {
 }
 
 async function handleSubscription(subscription) {
+  let personalId = String(subscription.metadata?.personal_account_id || '').trim();
+  if (!personalId) {
+    personalId = await findPersonalAccountBySubscription(subscription.id);
+  }
+  if (personalId) {
+    await activatePersonalPlus(personalId, {
+      status: mapSubscriptionStatus(subscription.status),
+      stripeCustomerId: subscription.customer ? String(subscription.customer) : '',
+      stripeSubscriptionId: String(subscription.id),
+    });
+    await syncPersonalContactSlotsFromStripe(personalId, subscription);
+    return;
+  }
+
   let orgId = String(subscription.metadata?.org_id || '').trim();
   if (!orgId) {
     orgId = await findOrgIdBySubscription(subscription.id);
@@ -89,6 +131,15 @@ async function handleSubscription(subscription) {
 async function handleInvoicePaid(invoice) {
   const subscriptionId = invoice.subscription ? String(invoice.subscription) : '';
   if (!subscriptionId) return;
+  const personalId = await findPersonalAccountBySubscription(subscriptionId);
+  if (personalId) {
+    await activatePersonalPlus(personalId, {
+      status: 'active',
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: invoice.customer ? String(invoice.customer) : '',
+    });
+    return;
+  }
   const orgId = await findOrgIdBySubscription(subscriptionId);
   if (!orgId) return;
   await activateOrgBilling(orgId, {
@@ -101,6 +152,15 @@ async function handleInvoicePaid(invoice) {
 async function handleInvoiceFailed(invoice) {
   const subscriptionId = invoice.subscription ? String(invoice.subscription) : '';
   if (!subscriptionId) return;
+  const personalId = await findPersonalAccountBySubscription(subscriptionId);
+  if (personalId) {
+    await activatePersonalPlus(personalId, {
+      status: 'past_due',
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: invoice.customer ? String(invoice.customer) : '',
+    });
+    return;
+  }
   const orgId = await findOrgIdBySubscription(subscriptionId);
   if (!orgId) return;
   await activateOrgBilling(orgId, {

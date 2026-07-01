@@ -18,5 +18,7 @@
     PRIVACY_EMAIL: "privacy@goldspireventures.com",
     SALES_EMAIL: "sales@goldspireventures.com",
     LEGAL_EMAIL: "legal@goldspireventures.com",
+    EXTENSION_VERSION: "1.5.0",
+    PORTAL_VERSION: "1.0.0",
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

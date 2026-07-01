@@ -1,37 +1,45 @@
-# Outlook add-in (enterprise roadmap)
+# Outlook add-in (v1.4)
 
-Native Outlook desktop and mobile apps cannot run Chrome extension content scripts. Today those users tap the **hosted unlock link** in `[redacted]` mail.
+Native **Outlook desktop** cannot run Chrome extension content scripts. The Veil Outlook add-in brings in-thread unlock to thick-client Outlook.
 
-## Goal
+## What it does
 
-An **Outlook Add-in** (Office.js) that:
+1. Adds an **Unlock with Veil** button on the message read ribbon
+2. Scans the open message for `[redacted]` markers
+3. Decrypts locally in the task pane after passphrase entry
+4. Replaces secured text inline in the message body
 
-1. Detects `[redacted]` tokens in the reading pane
-2. Opens a task pane modal for passphrase entry (same UX as web extension)
-3. Replaces `[redacted]` inline after decrypt
-4. Uses the same crypto/marker modules (shared bundle)
+Plaintext never leaves the device. Same AES-GCM + PBKDF2 stack as the browser extension.
 
-## Deployment
+## Files
 
-- IT distributes via **Microsoft 365 Admin Center** → Integrated apps
-- Manifest points to hosted `taskpane.html` on org CDN or Goldspire Pages
-- SSO optional; passphrase still client-side only
+| File | Purpose |
+|------|---------|
+| `manifest.xml` | Office add-in manifest for M365 Admin Center |
+| `taskpane.html` | Task pane UI |
+| `taskpane.js` | Office.js body read + decrypt |
+| `taskpane.css` | Pane styling |
 
-## Scope estimate
+Hosted at `https://veil.goldspireventures.com/outlook-addin/` after portal deploy.
 
-| Piece | Effort |
-|-------|--------|
-| Office.js task pane + shared crypto bundle | Medium |
-| Read item body / replace text API quirks | Medium |
-| Admin manifest + documentation | Small |
-| Store submission (optional public listing) | Medium |
+## IT deployment
 
-## Interim
+1. Open **Microsoft 365 Admin Center** → **Settings** → **Integrated apps**
+2. **Upload custom apps** → provide `manifest.xml`
+3. Assign to users or groups who use Outlook desktop
+4. Users open a message with `[redacted]` → **Unlock with Veil**
 
-Until the add-in ships:
+## Requirements
 
-- **Outlook web** + extension → in-page modal ✓
-- **Outlook desktop / mobile** → unlock link → `unlock.html` ✓
-- Password manager autofill on hosted unlock page ✓
+- Outlook on Windows/Mac (Microsoft 365)
+- Mailbox 1.5+ API set
+- Recipients still need the passphrase from the sender
 
-Contact your Goldspire admin to prioritize add-in work for your tenant.
+## Compose / send
+
+Outlook desktop **compose** still requires the Veil browser extension (Outlook on the web) or manual secure flow. This add-in targets **read/unlock** — the largest desktop gap.
+
+## Interim (no add-in)
+
+- **Outlook web** + extension → full copilot ✓
+- **Desktop/mobile read** → hosted `unlock.html` link ✓

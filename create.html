@@ -16,6 +16,8 @@
       <header class="page-hero">
         <h1>Set up your team</h1>
         <p class="lede">Create your organization, choose how members join, and get a join code to share.</p>
+        <p class="hint" data-billing-phase="paid">Team cloud is billed per seat after your trial. Add a card in <strong>Admin → Billing</strong> once your org is created.</p>
+        <p class="hint" data-billing-phase="early" hidden>Team cloud is free during early access. Billing applies at general availability.</p>
       </header>
       <div data-early-access-banner hidden></div>
 
@@ -141,10 +143,12 @@
 
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
+  <script src="portal/team-gate.js"></script>
   <script src="portal/nav.js"></script>
   <script src="portal/policy-packs.js"></script>
   <script src="portal/billing.js"></script>
   <script>
+    GoldspireTeamGate.gateCreatePage();
     GoldspirePortalNav.renderPortalNav('create');
     GoldspirePortalNav.renderPortalFooter?.();
     GoldspireBilling.initBillingPage();

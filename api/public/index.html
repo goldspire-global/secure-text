@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Veil by Goldspire — browser-native protection for sensitive text in email and web apps. Encrypt before send, unlock in place." />
+  <meta name="description" content="Veil — keyboard-edge protection for email and AI. Encrypt secrets before they hit mail or LLM pipelines. Zero-knowledge, browser-native." />
   <title>Veil — protect sensitive text before you send</title>
   <link rel="stylesheet" href="portal/common.css" />
+  <link rel="stylesheet" href="portal/premium.css" />
   <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
@@ -22,26 +23,59 @@
     </header>
 
     <div class="trust-strip">
-      <span class="trust-strip__badge">✓ Live on Microsoft Edge &amp; Chrome</span>
-      <span>Available worldwide · Browser-native · Local encryption</span>
+      <span class="trust-strip__badge">✓ Keyboard-edge protection</span>
+      <span>Encrypt before send · Chrome &amp; Edge · Zero-knowledge cloud</span>
     </div>
 
-    <section class="hero card hero--premium">
-      <p class="eyebrow">Browser-native security for email &amp; web</p>
-      <h1>Protect sensitive text before it leaves the browser</h1>
+    <section class="hero card hero--premium" data-reveal>
+      <p class="eyebrow">Keyboard-edge protection</p>
+      <h1>Secrets never leave your keyboard in plaintext</h1>
       <p class="lede hero__lede">
-        Veil is a browser extension and team platform for securing secrets in Outlook, Gmail, and everyday web apps.
-        Replace API keys, credentials, and PII with <code>[redacted]</code> or team tokens — encrypted locally, sent as normal mail.
+        Veil sits where you type — encrypting API keys, credentials, and PII in Gmail, Outlook, and AI chat
+        <strong>before</strong> they reach mail servers or LLM pipelines. Send as normal with
+        <code>[redacted]</code>. Unlock in-thread or via a hosted link.
       </p>
+      <div class="veil-showcase">
+        <div class="veil-showcase__item">
+          <strong>Encrypt locally</strong>
+          <span>Zero-knowledge — plaintext stays in your browser.</span>
+        </div>
+        <div class="veil-showcase__item">
+          <strong>Copilot guides you</strong>
+          <span>See what matched before you secure or mask.</span>
+        </div>
+        <div class="veil-showcase__item">
+          <strong>Share on your terms</strong>
+          <span>Free one-time codes, Plus direct share, or Team policy.</span>
+        </div>
+      </div>
       <div class="btn-row hero__actions">
-        <a class="btn" href="install.html">Install free (personal)</a>
-        <a class="btn btn--ghost" href="create.html" data-nav-create>Set up a team</a>
-        <a class="btn btn--ghost" href="join.html">Join a team</a>
-        <a class="btn btn--ghost" href="pricing.html">Pricing</a>
+        <a class="btn" href="install.html">Install free</a>
+        <a class="btn btn--ghost" href="practice.html">Try practice page</a>
+        <a class="btn btn--ghost" href="plus.html">Veil Plus</a>
+        <a class="btn btn--ghost" href="pricing.html#team" data-nav-create>Team</a>
       </div>
     </section>
 
-    <section class="card card--flat">
+    <section class="card card--flat" data-reveal>
+      <h2>Why keyboard-edge beats downstream DLP</h2>
+      <div class="grid-3">
+        <div>
+          <h3>Before the pipeline</h3>
+          <p class="hint">Purview, Nightfall, and Strac need your data in flight. Veil encrypts at the keyboard — secrets never reach mail servers or LLM APIs in plaintext.</p>
+        </div>
+        <div>
+          <h3>Send as normal</h3>
+          <p class="hint"><code>[redacted]</code> and <code>[veil:vt_…]</code> look like ordinary email. Recipients click to unlock in-thread — or use the hosted unlock page with no install.</p>
+        </div>
+        <div>
+          <h3>Proof, not policy theater</h3>
+          <p class="hint">Copilot shows <em>what</em> matched (e.g. sk-…x4K9) before you act. Weekly stats, SIEM metadata, and admin dashboards — without reading message content.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card card--flat" data-reveal>
       <h2>How Veil fits your day</h2>
       <div class="flow-steps">
         <div class="flow-step">
@@ -74,34 +108,16 @@
         </div>
         <div>
           <h3>Healthcare &amp; identity</h3>
-          <p class="hint">Labeled MRNs, UK NHS (Mod-11), US SSNs, Irish PPS, UK NINO, Canadian SIN, Australian TFN/Medicare, Singapore NRIC, Indian Aadhaar, French INSEE, passports, licences.</p>
+          <p class="hint">Labeled MRNs, UK NHS (Mod-11), US SSN/ITIN, Irish PPS, UK NINO, Canadian SIN, Australian TFN/Medicare, Singapore NRIC, Indian Aadhaar, French INSEE, Dutch BSN, Brazilian CPF, Hong Kong HKID, NZ IRD, Nordic personnummer/CPR, Mexican CURP, Japanese My Number, Korean RRN, Belgian/Taiwan/SA IDs, passports, licences.</p>
         </div>
         <div>
           <h3>Secrets &amp; contact</h3>
-          <p class="hint">API keys, JWTs, passwords, emails, phone numbers, internal ticket refs — across mail, forms, and AI chat surfaces.</p>
+          <p class="hint">API keys (OpenAI, Anthropic, Stripe, AWS, GitHub, Slack, SendGrid, Supabase, Twilio, Shopify, and more), JWTs, PEM private keys, database connection strings, passwords, emails, phone numbers, internal ticket refs — across mail, forms, and AI chat surfaces.</p>
         </div>
       </div>
       <div class="btn-row">
-        <a class="btn btn--ghost btn--sm" href="create.html">Set up team + policy pack</a>
+        <a class="btn btn--ghost btn--sm" href="pricing.html#team">Set up team + policy pack</a>
         <a class="btn btn--ghost btn--sm" href="pricing.html">See pricing</a>
-      </div>
-    </section>
-
-    <section class="grid-3">
-      <div class="card card--flat feature-card">
-        <span class="feature-card__icon" aria-hidden="true">✉</span>
-        <h2>Secure in the compose window</h2>
-        <p>Highlight or paste a secret. Veil replaces it with <code>[redacted]</code> inline. Teammates with the extension click to unlock in the thread.</p>
-      </div>
-      <div class="card card--flat feature-card">
-        <span class="feature-card__icon" aria-hidden="true">🔗</span>
-        <h2>Team tokens for email</h2>
-        <p>Share <code>[veil:vt_…]</code> placeholders across Outlook and Gmail. Org members reveal with one click — ciphertext stays in your Veil cloud, never plaintext.</p>
-      </div>
-      <div class="card card--flat feature-card">
-        <span class="feature-card__icon" aria-hidden="true">🛡</span>
-        <h2>Veil copilot</h2>
-        <p>On paste and while typing, Veil flags sensitive data and offers Secure, Mask, or Tokenize — with clear reasons before you send.</p>
       </div>
     </section>
 
@@ -115,13 +131,7 @@
       <p class="hint">Team tokens and in-thread unlock require the Veil extension for org members.</p>
     </section>
 
-    <section class="card card--flat">
-      <h2>Just for you?</h2>
-      <p>Install Veil for personal email and forms. Your passphrase stays in this browser; no admin or join code needed.</p>
-      <a class="btn btn--ghost" href="install.html">Use Veil personally</a>
-    </section>
-
-    <section class="card">
+    <section class="card" data-reveal>
       <h2>How teams get started</h2>
       <ol class="steps">
         <li><strong>Admin</strong> creates a team and receives a join code and admin sign-in key.</li>
@@ -151,6 +161,8 @@
   <script src="portal/app.js"></script>
   <script src="portal/billing.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/pricing.js"></script>
+  <script src="portal/motion.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('index');
     GoldspirePortalNav.renderPortalFooter?.();

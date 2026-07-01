@@ -3,21 +3,37 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Install Veil — Goldspire</title>
+  <meta name="description" content="Install Veil for Chrome or Edge — free for personal use; team members join with a code from their admin." />
+  <title>Install Veil — keyboard-edge protection</title>
   <link rel="stylesheet" href="portal/common.css" />
+  <link rel="stylesheet" href="portal/premium.css" />
   <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
-  <div class="layout">
-    <nav class="nav" data-portal-nav></nav>
-
-    <header class="page-hero">
-      <h1>Install Veil</h1>
-      <p class="lede">Free for personal use. Teams add join codes, tokens, and policy sync.</p>
+  <div class="layout layout--wide">
+    <header class="site-header">
+      <div class="brand">
+        <img class="brand__mark" src="icons/icon-48.png" alt="" width="42" height="42" />
+        <div>
+          <strong class="brand__name">Veil</strong>
+          <span class="brand__byline">by Goldspire</span>
+        </div>
+      </div>
+      <nav class="nav nav--header" data-portal-nav></nav>
     </header>
 
-    <div class="card">
-      <h2>Get the extension</h2>
+    <section class="hero card hero--premium" data-reveal>
+      <p class="eyebrow">Install</p>
+      <h1>Get Veil at the keyboard edge</h1>
+      <p class="lede hero__lede">Personal use is free. After install, try the <a href="practice.html">practice page</a> — secure a fake API key in 30 seconds. Teams need a join code from their admin.</p>
+      <div class="btn-row hero__actions">
+        <a class="btn" href="practice.html">Try practice page</a>
+        <a class="btn btn--ghost" href="pricing.html#team">Set up a team</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>1. Install from the store</h2>
       <div class="store-badges" id="store-links">
         <a class="store-badge" id="store-edge" href="https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd" target="_blank" rel="noopener">
           <span class="store-badge__icon store-badge__icon--edge">E</span>
@@ -34,73 +50,65 @@
           </span>
         </a>
       </div>
-      <p class="hint">Use <strong>Microsoft Edge</strong> for the Edge Add-ons link. Chrome cannot install Edge extensions.</p>
+      <p class="hint">Use the Edge Add-ons link in Microsoft Edge. Chrome cannot install Edge extensions.</p>
+      <p class="hint">Chrome 128+, Edge 128+, Firefox 128+ (Gecko extension ID required). Each browser profile keeps its own Veil setup.</p>
+    </section>
 
-      <h2>Personal use</h2>
-      <ol class="steps">
-        <li>Install from the store button above.</li>
-        <li>Open Veil → <strong>Personal</strong> → <strong>Quick setup</strong> (or choose your own passphrase).</li>
-        <li>Paste or highlight secrets in Gmail, Outlook, or forms — use <strong>Secure</strong> or the Veil copilot.</li>
-      </ol>
-
-      <h2>Team members</h2>
-      <ol class="steps">
-        <li>Install Veil from the store or your IT catalog.</li>
-        <li>Open the popup → <strong>Team</strong> → enter join code and work email → <strong>Connect</strong>.</li>
-        <li>Cloud teams: passphrase syncs on join — refresh Outlook or Gmail. Self-hosted: use the passphrase your admin shares.</li>
-        <li>Veil copilot catches secrets on paste; stays quiet on signup forms.</li>
-      </ol>
-      <div class="btn-row">
-        <a class="btn" href="join.html">Join with a code</a>
-        <a class="btn btn--ghost" href="feedback.html">Feedback</a>
+    <section class="install-paths">
+      <div class="card card--flat install-path">
+        <h2>Personal</h2>
+        <ol class="steps">
+          <li>Install from the store above.</li>
+          <li>Open Veil → <strong>Personal</strong> → <strong>Quick setup</strong> — then try the <a href="practice.html">practice page</a>.</li>
+          <li>Secure or mask secrets in Gmail, Outlook on the web, or forms — copilot catches paste.</li>
+        </ol>
       </div>
+      <div class="card card--flat install-path">
+        <h2>Team member</h2>
+        <ol class="steps">
+          <li>Install Veil (store or IT catalog).</li>
+          <li>Open the popup → <strong>Team</strong> → join code and work email → <strong>Connect</strong>.</li>
+          <li>Refresh Outlook or Gmail after connecting.</li>
+        </ol>
+        <div class="btn-row">
+          <a class="btn" href="join.html">Join with a code</a>
+        </div>
+      </div>
+    </section>
 
-      <h2>Recipients without Veil</h2>
-      <p>
-        When you secure a message for someone outside your org, Veil can embed a link to the
-        <a href="unlock.html" id="unlock-page-link">hosted unlock page</a>.
-        They enter the passphrase you shared out of band — decryption runs in their browser; nothing is uploaded.
-      </p>
+    <section class="card card--flat">
+      <h2>Outlook desktop</h2>
+      <p class="lede">Outlook on the web works with the browser extension. For <strong>Outlook desktop</strong> (Windows/Mac), IT can deploy the Veil Outlook add-in — unlock <code>[redacted]</code> in the reading pane without leaving mail.</p>
+      <p class="hint">Manifest: <code>outlook-addin/manifest.xml</code> · See <a href="https://github.com/goldspire-global/veil/blob/main/extension/docs/OUTLOOK_ADDIN.md" target="_blank" rel="noopener">Outlook add-in guide</a></p>
+    </section>
 
+    <section class="card card--flat">
       <h2>For IT administrators</h2>
-      <p class="lede">Full step-by-step guide: <a href="https://github.com/goldspire-global/veil/blob/main/docs/ADMIN_GUIDE.md" target="_blank" rel="noopener">Admin guide (GitHub)</a> · <a href="https://github.com/goldspire-global/veil/blob/main/docs/GETTING_STARTED.md" target="_blank" rel="noopener">Getting started</a></p>
-      <ol class="steps">
-        <li><a href="create.html">Create your team</a> — pick company type; default policy pack is applied automatically.</li>
-        <li>Sign in at <a href="admin.html">Admin</a> — follow the <strong>Setup guide</strong> on the Overview tab.</li>
-        <li><strong>Access</strong> — join codes, company default pack, pack library (enable Finance etc. for sub-teams).</li>
-        <li><strong>Settings → Sub-teams</strong> — assign stricter packs to departments (e.g. Finance at a tech company).</li>
-        <li><strong>People</strong> — add emails, assign sub-teams, view connected browsers.</li>
-        <li>Optional: <strong>Security</strong> — SIEM webhook, export events (metadata only).</li>
-      </ol>
-      <p class="hint">Enterprise MDM deploy: <a href="https://github.com/goldspire-global/veil/blob/main/extension/docs/ENTERPRISE.md" target="_blank" rel="noopener">ENTERPRISE.md</a></p>
+      <p class="lede">Review <a href="pricing.html#team">team pricing</a>, then create your organization. Full rollout guide: <a href="https://github.com/goldspire-global/veil/blob/main/docs/ADMIN_GUIDE.md" target="_blank" rel="noopener">Admin guide</a> · <a href="https://github.com/goldspire-global/veil/blob/main/extension/docs/ENTERPRISE.md" target="_blank" rel="noopener">MDM deploy</a></p>
       <div class="btn-row">
+        <a class="btn" href="pricing.html#team">Set up a team</a>
         <a class="btn btn--ghost" href="admin.html">Admin sign-in</a>
-        <a class="btn btn--ghost" href="create.html">Create a team</a>
       </div>
+    </section>
 
-      <h2>Developer / pilot install</h2>
+    <details class="card card--flat">
+      <summary>Developer / pilot install</summary>
       <ol class="steps">
         <li>Run <code>npm run package</code> in the Veil repository.</li>
         <li>Chrome or Edge → Extensions → Developer mode → <strong>Load unpacked</strong> → <code>extension/dist</code>.</li>
         <li>Reload after each update.</li>
       </ol>
-
-      <h2>Supported browsers</h2>
-      <p>Chrome 128+, Microsoft Edge 128+, Firefox 128+ (Gecko extension ID required).</p>
-      <p class="hint">Each browser profile keeps its own Veil setup. Join your team separately in Edge and Chrome if you use both.</p>
-    </div>
+    </details>
 
     <footer class="site-footer" data-portal-footer></footer>
   </div>
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/motion.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('install');
     GoldspirePortalNav.renderPortalFooter?.();
-    const unlockLink = document.getElementById('unlock-page-link');
-    const configured = window.GoldspirePortal?.UNLOCK_URL;
-    if (unlockLink && configured) unlockLink.href = configured;
     const edge = document.getElementById('store-edge');
     const chrome = document.getElementById('store-chrome');
     if (window.GoldspirePortal?.STORE_URL_EDGE && edge) edge.href = window.GoldspirePortal.STORE_URL_EDGE;

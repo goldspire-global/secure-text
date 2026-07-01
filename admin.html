@@ -24,7 +24,7 @@
         </div>
         <div class="btn-row">
           <button type="submit" class="btn">Sign in</button>
-          <a class="btn btn--ghost" href="create.html">Set up a new team</a>
+          <a class="btn btn--ghost" href="pricing.html#team">Set up a new team</a>
         </div>
       </form>
       <div id="login-status" class="status" role="status"></div>
@@ -271,6 +271,13 @@
                   <tbody id="security-recent-body"></tbody>
                 </table>
               </div>
+            </div>
+
+            <div class="card" id="learning-insights-card">
+              <h2>Copilot learning</h2>
+              <p class="lede">How members respond to Veil prompts — metadata only, never message content.</p>
+              <div id="learning-insights-stats" class="stat-grid" style="margin:1rem 0;"></div>
+              <div class="admin-grid admin-grid--2" id="learning-insights-tables"></div>
             </div>
 
             <div class="card">
@@ -583,6 +590,47 @@
       }
     }
 
+    async function loadLearningInsights() {
+      const days = document.getElementById('security-days')?.value || '30';
+      const statsEl = document.getElementById('learning-insights-stats');
+      const tablesEl = document.getElementById('learning-insights-tables');
+      if (!statsEl || !tablesEl) return;
+      try {
+        const data = await app.apiAdmin(`/v1/orgs/me/learning/insights?days=${days}`);
+        const d = data.decisions || {};
+        const stat = (label, value, sub) => `
+          <div class="stat-tile">
+            <div class="stat-tile__value">${value}</div>
+            <div class="hint">${label}</div>
+            ${sub ? `<div class="hint" style="margin-top:0.2rem;font-size:0.78rem;">${sub}</div>` : ''}
+          </div>`;
+        statsEl.innerHTML = [
+          stat('Copilot prompts', d.total || 0, `${days}d window`),
+          stat('Agreed', d.agreed || 0, d.agreementRate != null ? `${d.agreementRate}% acceptance` : ''),
+          stat('Overrode', d.overrode || 0, 'Chose different action'),
+          stat('Dismissed', d.ignored || 0, 'Closed without action'),
+          stat('Learning bundle', data.bundleVersion ? `v${data.bundleVersion}` : '—', 'Platform hints'),
+        ].join('');
+
+        const table = (title, headers, rows, empty) => {
+          const head = headers.map((h) => `<th>${h}</th>`).join('');
+          const body = rows.length
+            ? rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')
+            : `<tr><td colspan="${headers.length}">${empty}</td></tr>`;
+          return `<div class="card card--flat"><h3 class="hint" style="margin:0 0 0.5rem;color:var(--text);font-size:0.95rem;">${title}</h3><div class="table-scroll table-scroll--short"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
+        };
+
+        tablesEl.innerHTML = [
+          table('Member choices', ['Action', 'Count'], (data.byAction || []).map((r) => [r.action, r.count]), 'No copilot decisions yet.'),
+          table('Override hotspots', ['Category', 'Count'], (data.overrideCategories || []).map((r) => [(r.category || '').replace(/_/g, ' '), r.count]), 'No overrides — copilot alignment is strong.'),
+          table('Top surfaces', ['Host', 'Prompts'], (data.topHosts || []).map((r) => [r.host, r.count]), 'Hosts appear when members use copilot.'),
+        ].join('');
+      } catch {
+        statsEl.innerHTML = '';
+        tablesEl.innerHTML = '<p class="hint">Could not load learning insights.</p>';
+      }
+    }
+
     async function loadSecuritySummary() {
       const days = document.getElementById('security-days')?.value || '30';
       const statsEl = document.getElementById('security-stats');
@@ -627,6 +675,7 @@
               </tr>`).join('')
             : '<tr><td colspan="5">No recent events.</td></tr>';
         }
+        await loadLearningInsights();
       } catch {
         statsEl.innerHTML = '';
         catBody.innerHTML = '<tr><td colspan="2">Could not load summary.</td></tr>';

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Veil Plus — 6 trusted contacts included, direct unlock delivery, magic links. Receiving is always free." />
+  <title>Veil Plus — personal sharing</title>
+  <link rel="stylesheet" href="portal/common.css" />
+  <link rel="stylesheet" href="portal/premium.css" />
+  <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
+</head>
+<body>
+  <div class="layout layout--wide">
+    <header class="site-header">
+      <div class="brand">
+        <img class="brand__mark" src="icons/icon-48.png" alt="" width="42" height="42" />
+        <div>
+          <strong class="brand__name">Veil</strong>
+          <span class="brand__byline">by Goldspire</span>
+        </div>
+      </div>
+      <nav class="nav nav--header" data-portal-nav></nav>
+    </header>
+
+    <section class="hero card hero--premium" data-reveal id="plus-hero">
+      <p class="eyebrow">Veil Plus</p>
+      <h1>Send protected — without the side-channel dance</h1>
+      <p class="lede hero__lede">
+        Plus is for <strong>how you send</strong>. Receiving stays free. Get
+        <strong>6 trusted contacts</strong> included — direct unlock delivery and one-time magic links.
+        Need more? Add slots monthly, or graduate to Team when you share as a group.
+      </p>
+      <p class="hint" data-price-plus>$4.99 / month · 6 contacts included</p>
+      <p class="hint">Extra contacts: <span data-local-price="plus-contact-addon"></span> / month each</p>
+      <div id="plus-banner" class="slot-callout" hidden></div>
+      <div class="btn-row hero__actions">
+        <a class="btn" href="install.html">Install Veil</a>
+        <a class="btn btn--ghost" href="pricing.html">Compare plans</a>
+      </div>
+    </section>
+
+    <section class="card card--flat" data-reveal>
+      <h2>The Plus ladder</h2>
+      <div class="plan-ladder">
+        <div class="plan-ladder__step">
+          <span class="plan-ladder__num">1</span>
+          <div>
+            <h3>Free — secure everything</h3>
+            <p>Copilot, encrypt, one-time codes with email/SMS share helpers. No account.</p>
+          </div>
+        </div>
+        <div class="plan-ladder__step">
+          <span class="plan-ladder__num">2</span>
+          <div>
+            <h3>Plus — 6 trusted contacts</h3>
+            <p>Unlock keys delivered directly to people you trust. Magic links for anyone without Veil.</p>
+          </div>
+        </div>
+        <div class="plan-ladder__step">
+          <span class="plan-ladder__num">+</span>
+          <div>
+            <h3>Extra slots</h3>
+            <p>Seventh contact and beyond — <span data-local-price="plus-contact-addon"></span> per slot / month.</p>
+          </div>
+        </div>
+        <div class="plan-ladder__step">
+          <span class="plan-ladder__num">→</span>
+          <div>
+            <h3>Team — shared workflow</h3>
+            <p>Org directory, policy packs, admin console. When it’s not your list — it’s your organization.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-3" data-reveal>
+      <div class="card card--flat">
+        <h2>Trusted contacts</h2>
+        <p class="hint">Your outbound allowlist — not a shared family plan. Veil delivers unlock keys only to people you name.</p>
+      </div>
+      <div class="card card--flat">
+        <h2>No code in the thread</h2>
+        <p class="hint">Recipients with Veil unlock in-page. You stop juggling SMS passphrases for the same few people.</p>
+      </div>
+      <div class="card card--flat">
+        <h2>Magic links</h2>
+        <p class="hint">One-time claim links for people without Veil. Opens, copies code, burns after use.</p>
+      </div>
+    </section>
+
+    <section class="card" data-reveal>
+      <h2>Upgrade in three steps</h2>
+      <ol class="steps">
+        <li><a href="install.html">Install Veil</a> and finish personal setup.</li>
+        <li>Extension → <strong>Settings</strong> → <strong>Veil Plus</strong> — save email, verify your inbox, then tap Upgrade.</li>
+        <li>Add contacts, then secure with <strong>Trusted contacts</strong> or <strong>Magic link</strong>.</li>
+      </ol>
+      <p class="hint">Encryption stays in your browser. Plus only coordinates who receives unlock keys.</p>
+      <div class="btn-row">
+        <a class="btn btn--ghost" href="pricing.html#team">Need a team instead?</a>
+      </div>
+    </section>
+
+    <footer class="site-footer" data-portal-footer></footer>
+  </div>
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
+  <script src="portal/contacts.js"></script>
+  <script src="portal/pricing.js"></script>
+  <script src="portal/motion.js"></script>
+  <script src="plus.js"></script>
+  <script>
+    GoldspirePortalNav.renderPortalNav('plus');
+    GoldspirePortalNav.renderPortalFooter?.();
+    GoldspirePortalContacts?.applyContactEmails?.();
+    GoldspirePlusPage?.init?.();
+  </script>
+</body>
+</html>

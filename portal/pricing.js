@@ -3,18 +3,18 @@
  */
 (function (global) {
   const LIST_PRICES = {
-    USD: { team: 7, enterpriseFrom: 12, locale: 'en-US' },
-    EUR: { team: 6, enterpriseFrom: 11, locale: 'de-DE' },
-    GBP: { team: 5.5, enterpriseFrom: 10, locale: 'en-GB' },
-    AUD: { team: 11, enterpriseFrom: 18, locale: 'en-AU' },
-    CAD: { team: 10, enterpriseFrom: 16, locale: 'en-CA' },
-    CHF: { team: 6, enterpriseFrom: 11, locale: 'de-CH' },
-    SEK: { team: 75, enterpriseFrom: 125, locale: 'sv-SE' },
-    NOK: { team: 75, enterpriseFrom: 125, locale: 'nb-NO' },
-    DKK: { team: 49, enterpriseFrom: 85, locale: 'da-DK' },
-    INR: { team: 599, enterpriseFrom: 999, locale: 'en-IN' },
-    SGD: { team: 9, enterpriseFrom: 16, locale: 'en-SG' },
-    JPY: { team: 980, enterpriseFrom: 1680, locale: 'ja-JP' },
+    USD: { plus: 4.99, plusContact: 1.49, team: 7, enterpriseFrom: 12, locale: 'en-US' },
+    EUR: { plus: 4.49, plusContact: 1.29, team: 6, enterpriseFrom: 11, locale: 'de-DE' },
+    GBP: { plus: 3.99, plusContact: 1.19, team: 5.5, enterpriseFrom: 10, locale: 'en-GB' },
+    AUD: { plus: 7.99, plusContact: 2.29, team: 11, enterpriseFrom: 18, locale: 'en-AU' },
+    CAD: { plus: 6.99, plusContact: 1.99, team: 10, enterpriseFrom: 16, locale: 'en-CA' },
+    CHF: { plus: 4.49, plusContact: 1.29, team: 6, enterpriseFrom: 11, locale: 'de-CH' },
+    SEK: { plus: 49, plusContact: 15, team: 75, enterpriseFrom: 125, locale: 'sv-SE' },
+    NOK: { plus: 49, plusContact: 15, team: 75, enterpriseFrom: 125, locale: 'nb-NO' },
+    DKK: { plus: 35, plusContact: 11, team: 49, enterpriseFrom: 85, locale: 'da-DK' },
+    INR: { plus: 399, plusContact: 119, team: 599, enterpriseFrom: 999, locale: 'en-IN' },
+    SGD: { plus: 6.99, plusContact: 1.99, team: 9, enterpriseFrom: 16, locale: 'en-SG' },
+    JPY: { plus: 680, plusContact: 198, team: 980, enterpriseFrom: 1680, locale: 'ja-JP' },
   };
 
   const REGION_CURRENCY = {
@@ -76,8 +76,19 @@
     const usd = LIST_PRICES.USD;
 
     const teamEl = document.querySelector('[data-price-team]');
+    const plusEl = document.querySelector('[data-price-plus]');
     const enterpriseEl = document.querySelector('[data-price-enterprise]');
     const noteEl = document.querySelector('[data-price-currency-note]');
+
+    if (plusEl) {
+      plusEl.innerHTML = `${formatMoney(row.plus, currency, locale)} <span class="price-card__unit">/ mo</span>`;
+    }
+    document.querySelectorAll('[data-local-price="plus-monthly"]').forEach((el) => {
+      el.textContent = formatMoney(row.plus, currency, locale);
+    });
+    document.querySelectorAll('[data-local-price="plus-contact-addon"]').forEach((el) => {
+      el.textContent = formatMoney(row.plusContact, currency, locale);
+    });
 
     if (teamEl) {
       teamEl.innerHTML = `${formatMoney(teamMonthly, currency, locale)} <span class="price-card__unit">/ user / mo</span>`;

@@ -457,7 +457,9 @@ export async function getOrgOverview(admin) {
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE event_type = 'detection')::int AS detections,
          COUNT(*) FILTER (WHERE action IN ('block', 'policy_block'))::int AS blocks,
-         COUNT(*) FILTER (WHERE source = 'ai_prompt')::int AS ai_incidents
+         COUNT(*) FILTER (WHERE source = 'ai_prompt')::int AS ai_incidents,
+         COUNT(*) FILTER (WHERE action = 'encrypt')::int AS encrypt_actions,
+         COUNT(*) FILTER (WHERE action = 'mask')::int AS mask_actions
        FROM security_events
        WHERE org_id = $1 AND event_at >= $2`,
       [orgId, since],
@@ -496,6 +498,8 @@ export async function getOrgOverview(admin) {
       detections: security.detections || 0,
       blocks: security.blocks || 0,
       aiIncidents: security.ai_incidents || 0,
+      encryptActions: security.encrypt_actions || 0,
+      maskActions: security.mask_actions || 0,
     },
   };
 }

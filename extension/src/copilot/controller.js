@@ -194,6 +194,7 @@
       variant,
       alreadyInserted,
     });
+    void global.GoldspireWeeklyDigest?.record?.('copilot');
   }
 
   async function handlePolicyEnforcement({

@@ -291,3 +291,70 @@ export async function exportSecurityEvents(admin, query = {}) {
 
   return { format: 'json', days, events: rows };
 }
+
+export async function getOrgLearningInsights(admin, query = {}) {
+  const days = Math.min(90, Math.max(1, Number(query.days) || 30));
+  const pool = getPool();
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const totals = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE outcome = 'agreed')::int AS agreed,
+       COUNT(*) FILTER (WHERE outcome = 'overrode')::int AS overrode,
+       COUNT(*) FILTER (WHERE outcome = 'ignored')::int AS ignored
+     FROM security_events
+     WHERE org_id = $1 AND event_at >= $2 AND event_type = 'decision'`,
+    [admin.org.id, since],
+  );
+
+  const byAction = await pool.query(
+    `SELECT action, COUNT(*)::int AS count
+     FROM security_events
+     WHERE org_id = $1 AND event_at >= $2 AND event_type = 'decision' AND action <> ''
+     GROUP BY action
+     ORDER BY count DESC
+     LIMIT 8`,
+    [admin.org.id, since],
+  );
+
+  const overrideCategories = await pool.query(
+    `SELECT category, COUNT(*)::int AS count
+     FROM security_events
+     WHERE org_id = $1 AND event_at >= $2 AND event_type = 'decision' AND outcome = 'overrode' AND category <> ''
+     GROUP BY category
+     ORDER BY count DESC
+     LIMIT 8`,
+    [admin.org.id, since],
+  );
+
+  const topHosts = await pool.query(
+    `SELECT host, COUNT(*)::int AS count
+     FROM security_events
+     WHERE org_id = $1 AND event_at >= $2 AND event_type = 'decision' AND host <> ''
+     GROUP BY host
+     ORDER BY count DESC
+     LIMIT 8`,
+    [admin.org.id, since],
+  );
+
+  const row = totals.rows[0] || {};
+  const decisions = row.total || 0;
+  const agreed = row.agreed || 0;
+  const agreementRate = decisions > 0 ? Math.round((1000 * agreed) / decisions) / 10 : null;
+
+  return {
+    days,
+    bundleVersion: String(admin.org.settings?.learningBundleVersion || '').slice(0, 64) || null,
+    decisions: {
+      total: decisions,
+      agreed,
+      overrode: row.overrode || 0,
+      ignored: row.ignored || 0,
+      agreementRate,
+    },
+    byAction: byAction.rows.map((r) => ({ action: r.action, count: r.count })),
+    overrideCategories: overrideCategories.rows.map((r) => ({ category: r.category, count: r.count })),
+    topHosts: topHosts.rows.map((r) => ({ host: r.host, count: r.count })),
+  };
+}

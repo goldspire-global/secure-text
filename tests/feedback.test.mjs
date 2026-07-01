@@ -42,6 +42,28 @@ test('feedback sanitizes page URLs to origin and path only', () => {
   assert.equal(fb.sanitizePageUrl('chrome-extension://abc/popup.html'), '');
 });
 
+test('portal feedback fills diagnostics when query params are missing', () => {
+  const g = {
+    window: {
+      location: { search: '', pathname: '/feedback.html', origin: 'https://veil.example.com' },
+      GoldspirePortal: { EXTENSION_VERSION: '1.3.3', SUPPORT_EMAIL: 'support@example.com' },
+      GoldspirePortalApp: { loadAdminSession: () => null },
+    },
+    navigator: { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0' },
+    document: { referrer: '' },
+    URLSearchParams,
+  };
+  g.globalThis = g.window;
+  vm.runInNewContext(readFileSync(join(repoRoot, 'portal/feedback.js'), 'utf8'), g);
+  const fb = g.window.GoldspirePortalFeedback;
+  const resolved = fb.resolveParams(fb.readParams());
+  const diag = fb.buildDiagnostics(resolved);
+  assert.match(diag, /1\.3\.3/);
+  assert.match(diag, /Chrome/);
+  assert.match(diag, /Portal visitor/);
+  assert.doesNotMatch(diag, /unknown/);
+});
+
 test('feedback page URL carries extension metadata', () => {
   const fb = loadFeedback();
   const url = fb.feedbackPageUrl(

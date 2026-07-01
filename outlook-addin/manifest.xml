@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/mailappversionoverrides"
+  xsi:type="MailApp">
+  <Id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Id>
+  <Version>1.4.0.0</Version>
+  <ProviderName>Goldspire Ventures</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Veil" />
+  <Description DefaultValue="Unlock [redacted] secrets in Outlook desktop — client-side decryption, zero-knowledge." />
+  <IconUrl DefaultValue="https://veil.goldspireventures.com/icons/icon-128.png" />
+  <HighResolutionIconUrl DefaultValue="https://veil.goldspireventures.com/icons/icon-128.png" />
+  <SupportUrl DefaultValue="https://veil.goldspireventures.com/install.html" />
+  <AppDomains>
+    <AppDomain>https://veil.goldspireventures.com</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://veil.goldspireventures.com/outlook-addin/taskpane.html" />
+        <RequestedHeight>420</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.5">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="VeilGroup" label="Veil">
+                  <Control xsi:type="Button" id="VeilUnlockButton">
+                    <Label resid="Veil.Button.Label" />
+                    <Supertip>
+                      <Title resid="Veil.Button.Label" />
+                      <Description resid="Veil.Button.Tooltip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Veil.Icon.16" />
+                      <bt:Image size="32" resid="Veil.Icon.32" />
+                      <bt:Image size="80" resid="Veil.Icon.80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Veil.Taskpane.Url" />
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Veil.Icon.16" DefaultValue="https://veil.goldspireventures.com/icons/icon-16.png" />
+          <bt:Image id="Veil.Icon.32" DefaultValue="https://veil.goldspireventures.com/icons/icon-48.png" />
+          <bt:Image id="Veil.Icon.80" DefaultValue="https://veil.goldspireventures.com/icons/icon-128.png" />
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Veil.Taskpane.Url" DefaultValue="https://veil.goldspireventures.com/outlook-addin/taskpane.html" />
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="Veil.Button.Label" DefaultValue="Unlock with Veil" />
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="Veil.Button.Tooltip" DefaultValue="Decrypt [redacted] text in this message — entirely in your browser." />
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

@@ -45,6 +45,15 @@
     learningBundle: null,
     learningBundleVersion: '',
     learningHints: [],
+    personalAccountId: '',
+    personalEmail: '',
+    personalEmailVerified: false,
+    personalPlusActive: false,
+    personalContactLimit: 6,
+    personalIncludedContacts: 6,
+    personalExtraContactSlots: 0,
+    personalContactCount: 0,
+    personalPendingShareCount: 0,
   };
 
   const DLP_MODES = new Set(['off', 'observe', 'enforce']);

@@ -1,4 +1,5 @@
 const api = typeof browser !== 'undefined' ? browser : chrome;
+const global = globalThis;
 
 const builtInUnlockUrl = GoldspireConstants.BUILT_IN_PUBLIC_UNLOCK_URL;
 const extensionVersion = api.runtime.getManifest().version;
@@ -49,6 +50,7 @@ const defaults = {
   passphraseFromVault: false,
   enforceStrongPassphrase: true,
   setupComplete: false,
+  firstSecurePractice: false,
   orgId: '',
   orgDisplayName: '',
   orgProvisionSource: '',
@@ -79,6 +81,7 @@ const SETTINGS_KEYS = [
   'passwordSymbols',
   'enforceStrongPassphrase',
   'setupComplete',
+  'firstSecurePractice',
   'tourComplete',
   'orgId',
   'orgDisplayName',
@@ -87,6 +90,7 @@ const SETTINGS_KEYS = [
   'orgMemberEmail',
   'copilotEnabled',
   'dlpMode',
+  'learningTelemetry',
 ];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
@@ -371,6 +375,8 @@ function showMain(profile) {
   applyProfileChrome(profile);
   refreshReadinessChecklist().catch(() => {});
   refreshContextualHelp().catch(() => {});
+  refreshFirstSecureCard().catch(() => {});
+  if (profile === 'personal') refreshPlusPanel().catch(() => {});
 }
 
 function isOrgConnected(settings) {
@@ -396,9 +402,11 @@ function switchTab(tabName) {
     loadSiteAllowRules();
     refreshPassphraseField().catch(() => {});
     refreshContextualHelp().catch(() => {});
+    refreshPlusPanel().catch(() => {});
   }
   if (tabName === 'help') {
     refreshContextualHelp().catch(() => {});
+    refreshSecurityProof().catch(() => {});
   }
   if (tabName === 'home') {
     refreshHomeShortcuts().catch(() => {});
@@ -536,14 +544,103 @@ function isMailComposeHost(host = '') {
   return /mail\.google|googlemail|outlook\.(live|office)|office365|hotmail/i.test(host);
 }
 
+function portalBaseUrl() {
+  return GoldspireConstants.PORTAL_ORIGIN
+    ? `${GoldspireConstants.PORTAL_ORIGIN.replace(/\/$/, '')}/`
+    : '';
+}
+
+async function openPracticePage({ startTour = true } = {}) {
+  const base = portalBaseUrl();
+  if (!base) {
+    showStatus('Practice page URL not configured.');
+    return;
+  }
+  const url = `${base}practice.html`;
+  const tab = await new Promise((resolve) => {
+    api.tabs.create({ url, active: true }, (created) => {
+      void api.runtime?.lastError;
+      resolve(created);
+    });
+  });
+  await writeSyncSettings({ firstSecurePractice: true });
+  refreshFirstSecureCard().catch(() => {});
+
+  if (startTour && tab?.id) {
+    const tabId = tab.id;
+    const tryStart = (attempts = 0) => {
+      api.tabs.sendMessage(tabId, { type: 'START_PAGE_TOUR', force: true }, () => {
+        if (api.runtime?.lastError && attempts < 10) {
+          window.setTimeout(() => tryStart(attempts + 1), 450);
+        }
+      });
+    };
+    window.setTimeout(() => tryStart(), 700);
+  }
+  window.close();
+}
+
+async function refreshFirstSecureCard() {
+  const card = document.getElementById('first-secure-card');
+  if (!card) return;
+  const settings = await readSyncSettings();
+  if (!settings.setupComplete || settings.firstSecurePractice) {
+    card.hidden = true;
+    return;
+  }
+  let hasActivity = false;
+  if (global.GoldspireWeeklyDigest) {
+    const stats = await GoldspireWeeklyDigest.buildHeroStats();
+    hasActivity = Boolean(stats?.total);
+  }
+  card.hidden = hasActivity;
+}
+
+async function refreshSecurityProof() {
+  const detail = document.getElementById('security-proof-detail');
+  const badge = document.getElementById('security-proof-badge');
+  const attestationEl = document.getElementById('security-proof-attestation');
+  if (!detail) return;
+  const settings = await readSyncSettings();
+  const parts = [
+    `Veil v${extensionVersion} · AES-GCM + PBKDF2 in your browser.`,
+    'Secure and Tokenize never upload plaintext.',
+  ];
+  if (settings.securityProfile === 'organization' && settings.orgDisplayName) {
+    parts.push(`Team: ${settings.orgDisplayName}.`);
+    if (settings.orgPolicyVersion) {
+      parts.push(`Policy pack v${settings.orgPolicyVersion}.`);
+    }
+    if (badge) badge.textContent = 'Team · zero-knowledge';
+  } else if (badge) {
+    badge.textContent = 'Zero-knowledge';
+  }
+  detail.textContent = parts.join(' ');
+
+  if (attestationEl && global.GoldspireAttestation) {
+    const att = await global.GoldspireAttestation.load();
+    const line = global.GoldspireAttestation.summaryLine(att);
+    attestationEl.textContent = line || 'Secure an item to generate a client-side encryption proof.';
+    attestationEl.hidden = false;
+  }
+}
+
 async function refreshHomeShortcuts() {
   const selectionTip = document.getElementById('selection-tip-shortcuts');
   const shortcutHint = document.getElementById('shortcut-hint');
   const digestLine = document.getElementById('weekly-digest-line');
-  if (!selectionTip && !shortcutHint && !digestLine) return;
+  const hero = document.getElementById('protection-hero');
+  const heroTotal = document.getElementById('protection-hero-total');
+  const heroGrid = document.getElementById('protection-hero-grid');
+  const statusBar = document.getElementById('protection-status');
+  if (!selectionTip && !shortcutHint && !digestLine && !hero) return;
 
   const activeHost = await readActiveTabHost();
   const mailCompose = isMailComposeHost(activeHost);
+
+  if (statusBar) {
+    statusBar.hidden = !activeHost;
+  }
 
   if (selectionTip && GoldspireCopy?.homeShortcutsLine) {
     selectionTip.textContent = GoldspireCopy.homeShortcutsLine({ mailCompose });
@@ -551,17 +648,31 @@ async function refreshHomeShortcuts() {
   if (shortcutHint && GoldspireCopy?.helpShortcutsLine) {
     shortcutHint.textContent = GoldspireCopy.helpShortcutsLine();
   }
-  if (digestLine && global.GoldspireWeeklyDigest) {
-    const show = await GoldspireWeeklyDigest.shouldShowInPopup();
-    const line = await GoldspireWeeklyDigest.buildSummaryLine();
-    if (show && line) {
-      digestLine.hidden = false;
-      digestLine.textContent = line;
-      await GoldspireWeeklyDigest.markShown();
-    } else {
-      digestLine.hidden = true;
+  if (global.GoldspireWeeklyDigest) {
+    const stats = await GoldspireWeeklyDigest.buildHeroStats();
+    if (hero && heroTotal && heroGrid && stats?.total) {
+      hero.hidden = false;
+      heroTotal.textContent = String(stats.total);
+      const tiles = [];
+      if (stats.secured) tiles.push(['Secured', stats.secured]);
+      if (stats.masked) tiles.push(['Masked', stats.masked]);
+      if (stats.tokenized) tiles.push(['Tokenized', stats.tokenized]);
+      if (stats.copilot) tiles.push(['Copilot', stats.copilot]);
+      if (stats.aiSanitized) tiles.push(['AI safe', stats.aiSanitized]);
+      heroGrid.innerHTML = tiles.map(([label, n]) => `
+        <div class="protection-hero__stat"><span>${n}</span><small>${label}</small></div>
+      `).join('');
+      if (digestLine) digestLine.hidden = true;
+    } else if (hero) {
+      hero.hidden = true;
+      if (digestLine) {
+        const line = await GoldspireWeeklyDigest.buildSummaryLine();
+        digestLine.hidden = !line;
+        if (line) digestLine.textContent = line;
+      }
     }
   }
+  await refreshFirstSecureCard();
 }
 
 async function refreshPassphraseField() {
@@ -870,6 +981,10 @@ async function completePersonalSetup(passphrase, { oneClick = true, triggerEl = 
   }
 }
 
+document.getElementById('open-practice-page')?.addEventListener('click', () => {
+  openPracticePage({ startTour: true }).catch(() => showStatus('Could not open practice page.'));
+});
+
 document.getElementById('setup-quick-personal')?.addEventListener('click', async () => {
   const btn = document.getElementById('setup-quick-personal');
   const oneClick = document.getElementById('setup-personal-oneclick')?.checked !== false;
@@ -1110,6 +1225,9 @@ function applySettingsToForm(settings) {
   const orgEmailEl = document.getElementById('orgMemberEmail');
   if (orgEmailEl) orgEmailEl.value = settings.orgMemberEmail || '';
 
+  const personalEmailEl = document.getElementById('personalEmail');
+  if (personalEmailEl) personalEmailEl.value = settings.personalEmail || '';
+
   const copilotEl = document.getElementById('copilotEnabled');
   if (copilotEl) copilotEl.checked = settings.copilotEnabled === true;
 
@@ -1157,6 +1275,18 @@ async function loadSettings() {
     settings = await readSyncSettings();
   }
 
+  if (settings.securityProfile !== 'organization') {
+    await GoldspirePersonalProvision?.syncStatus?.();
+    if (settings.personalAccountId && settings.personalEmail && settings.personalEmailVerified) {
+      try {
+        await GoldspirePersonalShare?.syncPendingShares?.();
+      } catch {
+        // Non-fatal — receiver may not have pending shares yet.
+      }
+    }
+    settings = await readSyncSettings();
+  }
+
   if (!settings.setupComplete) {
     if (settings.orgId && settings.orgProvisionSource === 'cloud') {
       showPendingOrgSetup(settings);
@@ -1201,7 +1331,211 @@ async function loadSettings() {
   await refreshReadinessChecklist();
   await refreshContextualHelp();
   await refreshHomeShortcuts();
+  await refreshFirstSecureCard();
+  await refreshSecurityProof();
+  if (profile === 'personal') await refreshPlusPanel();
 }
+
+async function refreshPlusPanel() {
+  const panel = document.getElementById('plus-settings-panel');
+  if (!panel) return;
+
+  let settings = await readSyncSettings();
+  if (settings.personalAccountId) {
+    await GoldspirePersonalProvision?.syncStatus?.();
+    settings = await readSyncSettings();
+  }
+  if (settings.securityProfile === 'organization') {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const registerBlock = document.getElementById('plus-register-block');
+  const activeBlock = document.getElementById('plus-active-block');
+  const upgradeBtn = document.getElementById('plus-upgrade-btn');
+  const statusHint = document.getElementById('plus-status-hint');
+  const contactsSummary = document.getElementById('plus-contacts-summary');
+  const contactsList = document.getElementById('plus-contacts-list');
+  const manageLink = document.getElementById('plus-manage-link');
+  const emailEl = document.getElementById('personalEmail');
+
+  if (emailEl && settings.personalEmail) emailEl.value = settings.personalEmail;
+
+  const hasAccount = Boolean(settings.personalAccountId);
+  const emailVerified = settings.personalEmailVerified === true;
+  const plusActive = settings.personalPlusActive === true;
+  const resendVerifyBtn = document.getElementById('plus-resend-verify-btn');
+  const verifyBanner = document.getElementById('plus-verify-banner');
+
+  if (statusHint) {
+    if (!hasAccount) {
+      statusHint.textContent = 'Save and verify your email to receive Plus direct unlocks (free). Upgrade only if you want to send.';
+    } else if (!emailVerified) {
+      statusHint.textContent = 'Check your inbox for a verification link — receiving unlocks starts after you confirm.';
+    } else if (plusActive) {
+      statusHint.textContent = 'Plus active — 6 contacts included to send direct unlocks or magic links.';
+    } else {
+      statusHint.textContent = 'Receiving enabled. Upgrade to send to your own trusted contacts.';
+    }
+  }
+
+  if (resendVerifyBtn) {
+    resendVerifyBtn.hidden = !hasAccount || emailVerified;
+  }
+
+  if (verifyBanner) {
+    if (hasAccount && !emailVerified) {
+      verifyBanner.hidden = false;
+      verifyBanner.textContent = 'Verify your email before trusted-contact unlocks can reach this device.';
+    } else {
+      verifyBanner.hidden = true;
+      verifyBanner.textContent = '';
+    }
+  }
+
+  const receiverBanner = document.getElementById('plus-receiver-banner');
+  const pendingShares = settings.personalPendingShareCount || 0;
+  if (receiverBanner && hasAccount && emailVerified && !plusActive) {
+    receiverBanner.hidden = false;
+    receiverBanner.textContent = pendingShares > 0
+      ? `${pendingShares} trusted-contact message(s) waiting — open the email and unlock [redacted].`
+      : 'You can receive trusted-contact unlocks without paying for Plus.';
+  } else if (receiverBanner) {
+    receiverBanner.hidden = true;
+  }
+
+  if (upgradeBtn) {
+    upgradeBtn.hidden = !hasAccount || !emailVerified || plusActive;
+    upgradeBtn.textContent = 'Upgrade — Veil Plus';
+  }
+
+  if (registerBlock) registerBlock.hidden = false;
+  if (activeBlock) activeBlock.hidden = !plusActive;
+
+  if (manageLink && GoldspirePersonalProvision?.plusPageUrl) {
+    manageLink.href = GoldspirePersonalProvision.plusPageUrl();
+  }
+
+  const slotBar = document.getElementById('plus-slot-bar');
+  const slotLabel = document.getElementById('plus-slot-label');
+  const teamNudge = document.getElementById('plus-team-nudge');
+  const teamLink = document.getElementById('plus-team-link');
+  const portal = GoldspireConstants?.PORTAL_ORIGIN?.replace(/\/$/, '') || 'https://veil.goldspireventures.com';
+  if (teamLink) teamLink.href = `${portal}/pricing.html#team`;
+
+  if (!plusActive || !contactsList) return;
+
+  contactsList.innerHTML = '';
+  try {
+    const payload = await GoldspirePersonalShare?.listContacts?.();
+    const included = payload?.includedContacts || settings.personalIncludedContacts || 6;
+    const extra = payload?.extraContactSlots || settings.personalExtraContactSlots || 0;
+    const limit = payload?.contactLimit || included + extra;
+    const contacts = payload?.contacts || [];
+    const atIncludedCap = contacts.length >= included;
+
+    if (contactsSummary) {
+      contactsSummary.textContent = `${contacts.length} / ${limit} trusted contacts (${included} included${extra ? ` + ${extra} paid` : ''})`;
+    }
+    if (slotBar) {
+      slotBar.hidden = !atIncludedCap;
+      if (slotLabel) {
+        slotLabel.textContent = atIncludedCap
+          ? 'Need another contact? Add a monthly slot or switch to Team.'
+          : '';
+      }
+    }
+    if (teamNudge) teamNudge.hidden = contacts.length < included;
+
+    for (const contact of contacts) {
+      const li = document.createElement('li');
+      const status = contact.registered ? 'ready' : 'pending Veil install';
+      li.textContent = `${contact.email} (${status})`;
+      contactsList.appendChild(li);
+    }
+  } catch (error) {
+    if (contactsSummary) {
+      contactsSummary.textContent = error?.message || 'Could not load contacts.';
+    }
+  }
+}
+
+document.getElementById('plus-register-btn')?.addEventListener('click', async () => {
+  const email = document.getElementById('personalEmail')?.value?.trim();
+  if (!email) {
+    showStatus('Enter your email first.');
+    return;
+  }
+  try {
+    const body = await GoldspirePersonalProvision.register(email);
+    if (body.emailVerified === true) {
+      await GoldspirePersonalShare?.registerContact?.(email);
+      showStatus('Email saved and verified — you can receive trusted-contact unlocks.');
+    } else if (body.verification?.verifyUrl) {
+      showStatus(`Verification link (dev): ${body.verification.verifyUrl}`);
+    } else {
+      showStatus(body.verification?.message || 'Check your inbox for a verification link.');
+    }
+    await refreshPlusPanel();
+  } catch (error) {
+    showStatus(error?.message || 'Registration failed.');
+  }
+});
+
+document.getElementById('plus-resend-verify-btn')?.addEventListener('click', async () => {
+  try {
+    const result = await GoldspirePersonalProvision.sendVerificationEmail();
+    if (result?.verifyUrl) {
+      showStatus(`Verification link (dev): ${result.verifyUrl}`);
+    } else {
+      showStatus(result?.message || 'Verification email sent.');
+    }
+  } catch (error) {
+    showStatus(error?.message || 'Could not send verification email.');
+  }
+});
+
+document.getElementById('plus-upgrade-btn')?.addEventListener('click', async () => {
+  try {
+    const url = await GoldspirePersonalProvision.startCheckout();
+    api.tabs.create({ url });
+  } catch (error) {
+    showStatus(error?.message || 'Could not start checkout.');
+  }
+});
+
+document.getElementById('plus-add-contact-btn')?.addEventListener('click', async () => {
+  const email = document.getElementById('plus-contact-email')?.value?.trim();
+  if (!email) {
+    showStatus('Enter a contact email.');
+    return;
+  }
+  try {
+    await GoldspirePersonalShare.addContact(email);
+    document.getElementById('plus-contact-email').value = '';
+    showStatus('Contact added.');
+    await refreshPlusPanel();
+  } catch (error) {
+    const msg = error?.message || '';
+    if (/slot|limit|402/i.test(msg)) {
+      showStatus('Contact limit reached — add a slot or set up Team.');
+    } else {
+      showStatus(msg || 'Could not add contact.');
+    }
+  }
+});
+
+document.getElementById('plus-add-slot-btn')?.addEventListener('click', async () => {
+  try {
+    await GoldspirePersonalProvision.purchaseContactSlot();
+    showStatus('Contact slot added to your subscription.');
+    await GoldspirePersonalProvision.syncStatus();
+    await refreshPlusPanel();
+  } catch (error) {
+    showStatus(error?.message || 'Could not add contact slot.');
+  }
+});
 
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();

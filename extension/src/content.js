@@ -54,6 +54,20 @@
       );
   }
 
+  function canUseDirectShare(settings) {
+    if (canUseOrgSharing(settings)) return true;
+    return globalThis.GoldspirePersonalCapability?.canUseDirectShare?.(settings) === true;
+  }
+
+  function isPersonalDirectShare(settings) {
+    return !canUseOrgSharing(settings)
+      && globalThis.GoldspirePersonalCapability?.canUseDirectShare?.(settings) === true;
+  }
+
+  async function personalShareMessage(type, payload = {}) {
+    return orgShareMessage(type, payload);
+  }
+
   async function ensureOrgSharingReady(settings) {
     if (!canUseOrgSharing(settings)) return;
     const email = settings.orgMemberEmail?.trim();
@@ -1104,6 +1118,11 @@
       expiresAt: isOneTime ? Date.now() + oneTimeTtl : null,
       burnAfterRead: isOneTime,
     });
+    void global.GoldspireAttestation?.record?.({
+      ciphertext: payload,
+      mode: isOneTime ? 'one-time' : mode,
+      profile,
+    });
     const fullMarker = GoldspireSecureMarker.wrapSecured(payload, '', version);
 
     await GoldspireRedacted.insertRedacted(context, fullMarker, settings);
@@ -1115,6 +1134,39 @@
       const unlockLink = GoldspireSecureMarker.buildUnlockLink(fullMarker);
       if (settings.copyOneTimeCodeAutomatically) await copyWithAutoClear(unlockSecret, settings);
 
+      const shareBody = GoldspireShareHelper?.oneTimeMessage?.(unlockSecret, unlockLink || '') || unlockSecret;
+      const extraActions = [];
+      if (GoldspireShareHelper?.mailtoUrl) {
+        extraActions.push({
+          id: 'share-email',
+          label: 'Email code',
+          onClick: () => {
+            window.open(
+              GoldspireShareHelper.mailtoUrl({ subject: 'Veil unlock code', body: shareBody }),
+              '_blank',
+            );
+          },
+        });
+      }
+      if (GoldspireShareHelper?.smsUrl) {
+        extraActions.push({
+          id: 'share-sms',
+          label: 'Text code',
+          onClick: () => {
+            window.open(GoldspireShareHelper.smsUrl(shareBody), '_blank');
+          },
+        });
+      }
+      if (navigator.share && GoldspireShareHelper?.shareNative) {
+        extraActions.push({
+          id: 'share-native',
+          label: 'Share…',
+          onClick: async () => {
+            await GoldspireShareHelper.shareNative({ title: 'Veil unlock code', text: shareBody });
+          },
+        });
+      }
+
       GoldspireSecureUI.showResultDialog({
         title: 'Secured with one-time code',
         lines: [
@@ -1124,7 +1176,9 @@
         copyItems: [
           { label: 'Copy code', value: unlockSecret },
           ...(unlockLink ? [{ label: 'Copy link', value: unlockLink }] : []),
+          { label: 'Copy share message', value: shareBody },
         ],
+        extraActions,
       });
 
       if (copyLink && unlockLink) await copyWithAutoClear(unlockLink, settings);
@@ -1258,6 +1312,26 @@
       }
     }
 
+    if (
+      isOneTime
+      && (
+        isPersonalDirectShare(settings)
+        || globalThis.GoldspirePersonalCapability?.canReceivePlusShares?.(settings)
+      )
+    ) {
+      await personalShareMessage('PERSONAL_SYNC_SHARES');
+      const lookup = await personalShareMessage('PERSONAL_LOOKUP_SHARE_KEY', { fullMarker });
+      if (lookup?.key) {
+        try {
+          const plaintext = await runUnlock(lookup.key.trim());
+          GoldspireSecureUI.showToast('Unlocked via trusted contact.', 'success');
+          return plaintext;
+        } catch {
+          // Fall back to manual code entry.
+        }
+      }
+    }
+
     if (!isOneTime) {
       const teamPassphrase = await resolveTeamPassphrase(settings);
       if (teamPassphrase) {
@@ -1352,7 +1426,82 @@
         confirmLabel: 'Continue anyway',
       });
     }
+    void GoldspireRecentRecipients?.rememberMany?.(recipientEmails);
+    if (isPersonalDirectShare(settings)) {
+      await runPersonalDirectShare(context, settings, recipientEmails);
+      return;
+    }
     await deliverDirectShare(context, settings, recipientEmails);
+  }
+
+  async function runPersonalDirectShare(context, settings, recipientEmails) {
+    const targets = sortTargetsForReplacement(validateSecureTargets(context));
+    const securedList = [];
+
+    for (const target of targets) {
+      const unlockSecret = GoldspireSecureCrypto.generateOneTimeCode(16);
+      securedList.push(
+        await executeSecure(target, settings, {
+          mode: 'one-time',
+          unlockSecret,
+          copyLink: false,
+          skipClipboard: true,
+        }),
+      );
+    }
+
+    for (const secured of securedList) {
+      const delivered = await personalShareMessage('PERSONAL_DELIVER_SHARE', {
+        recipientEmails,
+        unlockSecret: secured.unlockSecret,
+        fullMarker: secured.fullMarker,
+      });
+      if (delivered?.error) throw new Error(delivered.error);
+    }
+
+    showResultDialogTop({
+      title: 'Secured — unlock sent to contacts',
+      lines: recipientEmails.map((email) => ({ label: 'Sent to', value: email })),
+      copyItems: [],
+    });
+  }
+
+  async function runMagicLinkSecure(context, settings) {
+    const targets = sortTargetsForReplacement(validateSecureTargets(context));
+    const securedList = [];
+
+    for (const target of targets) {
+      const unlockSecret = GoldspireSecureCrypto.generateOneTimeCode(16);
+      securedList.push(
+        await executeSecure(target, settings, {
+          mode: 'one-time',
+          unlockSecret,
+          copyLink: false,
+          skipClipboard: true,
+          silentOneTime: true,
+        }),
+      );
+    }
+
+    const lines = [];
+    const copyItems = [];
+    for (const secured of securedList) {
+      const result = await personalShareMessage('PERSONAL_CREATE_MAGIC_LINK', {
+        unlockSecret: secured.unlockSecret,
+        fullMarker: secured.fullMarker,
+      });
+      if (result?.error) throw new Error(result.error);
+      if (result?.url) {
+        lines.push({ label: 'Magic link', value: result.url });
+        copyItems.push({ label: 'Copy link', value: result.url });
+      }
+    }
+
+    showResultDialogTop({
+      title: 'Secured — share magic link separately',
+      lines,
+      copyItems,
+    });
   }
 
   async function deliverDirectShare(context, settings, recipientEmails) {
@@ -1503,7 +1652,9 @@
       return;
     }
 
-    const sharingAvailable = canUseOrgSharing(settings);
+    const sharingAvailable = canUseDirectShare(settings);
+    const plusDirect = isPersonalDirectShare(settings);
+    const magicAvailable = globalThis.GoldspirePersonalCapability?.canUseMagicLinks?.(settings) === true;
 
     const selectionSummary = getSelectionSummary();
     const isOrg = globalThis.GoldspireCopy?.isOrgProfile?.(settings) || false;
@@ -1515,22 +1666,42 @@
         checked: defaultMode === 'team',
       },
       ...(sharingAvailable
-        ? [{ value: 'direct', label: 'Specific people', checked: false }]
+        ? [{
+          value: 'direct',
+          label: plusDirect
+            ? (globalThis.GoldspirePersonalCapability?.directShareLabel?.() || 'Trusted contacts')
+            : 'Specific people',
+          checked: false,
+        }]
+        : []),
+      ...(magicAvailable
+        ? [{ value: 'magic', label: 'Magic link', checked: false }]
         : []),
       { value: 'one-time', label: 'One-time', checked: defaultMode === 'one-time' },
     ];
+
+    const selectedText = getSelectionContext()?.selectedText?.trim() || '';
+    const sheetDetections = selectedText && globalThis.GoldspireDetectionLib?.analyzeAll
+      ? globalThis.GoldspireDetectionLib.analyzeAll(selectedText, { source: 'selection' })
+      : [];
 
     await showSecureSheetTop({
       title: selectionSummary?.multi ? `Secure ${selectionSummary.count} items` : 'Secure selection',
       modes: protectionOptions.map(({ value, label }) => ({ value, label })),
       defaultMode,
       settings,
+      detections: sheetDetections,
       onSubmit: async ({ mode, recipients }) => {
         const isDirect = mode === 'direct';
         const isOneTime = mode === 'one-time';
 
         if (isDirect) {
           await runDirectShare(context, settings, recipients);
+          return;
+        }
+
+        if (mode === 'magic') {
+          await runMagicLinkSecure(context, settings);
           return;
         }
 

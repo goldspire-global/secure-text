@@ -91,7 +91,7 @@
     const el = document.getElementById(PROMPT_ID);
     if (!el) return;
     el.classList.add('gst-ui--exit');
-    window.setTimeout(() => el.remove(), 200);
+    window.setTimeout(() => el.remove(), 240);
   }
 
   function attachOutsideDismiss(rootEl, onCancel) {
@@ -385,6 +385,7 @@
     modes = [],
     defaultMode = 'team',
     settings = null,
+    detections = [],
     onSubmit,
     onCancel,
   }) {
@@ -401,14 +402,19 @@
         ? '<p class="gst-veil-pop__hint">Uses your saved team passphrase from Veil settings.</p>'
         : '<p class="gst-veil-pop__hint">Uses your saved passphrase from Veil settings.</p>',
       direct: `
-        <p class="gst-veil-pop__hint">Unlock keys go only to the people you name — not everyone on the email thread. Use Team for groups or lists.</p>
+        <p class="gst-veil-pop__hint">Unlock keys go only to the people you name — not everyone on the email thread.</p>
         <div class="gst-veil-pop__field">
-          <span class="gst-veil-pop__field-label">Work email(s)</span>
-          <input class="gst-veil-pop__field-input" name="recipients" type="email" placeholder="colleague@company.com" autocomplete="email" />
+          <span class="gst-veil-pop__field-label">Email(s)</span>
+          <input class="gst-veil-pop__field-input" name="recipients" type="email" placeholder="friend@example.com" autocomplete="email" />
         </div>
       `,
-      'one-time': '<p class="gst-veil-pop__hint">Recipient gets a one-time unlock code.</p>',
+      magic: '<p class="gst-veil-pop__hint">Creates a one-time link you share separately. Recipient opens it to get the unlock code — no Veil account needed.</p>',
+      'one-time': '<p class="gst-veil-pop__hint">Recipient gets a one-time unlock code you share out of band.</p>',
     };
+
+    const detectionSummary = Array.isArray(detections) && detections.length
+      ? global.GoldspireVeilExplain?.buildExplainSummary?.(detections, { context: {}, settings }) || []
+      : [];
 
     const pop = document.createElement('div');
     pop.id = PROMPT_ID;
@@ -419,6 +425,8 @@
         <span class="gst-veil-pop__detect">${escapeHtml(title)}</span>
         <button type="button" class="gst-veil-pop__close" data-action="cancel" title="Close">✕</button>
       </div>
+      ${detectionSummary.length ? `<ul class="gst-veil-pop__why">${detectionSummary.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
+      <p class="gst-veil-pop__trust">Encrypted in your browser before send</p>
       <div class="gst-veil-pop__chips" data-mode-chips></div>
       <div class="gst-veil-pop__panel" data-panel-slot></div>
       <div class="gst-veil-pop__actions">

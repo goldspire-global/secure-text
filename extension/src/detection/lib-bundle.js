@@ -4,23 +4,60 @@
 (function (global) {
   const API_KEY_PREFIXES = [
     { prefix: 'sk-', label: 'OpenAI-style secret key' },
+    { prefix: 'sk-ant-', label: 'Anthropic API key' },
     { prefix: 'sk_live_', label: 'Stripe secret key (live)' },
     { prefix: 'sk_test_', label: 'Stripe secret key (test)' },
     { prefix: 'rk_live_', label: 'Stripe restricted key (live)' },
     { prefix: 'rk_test_', label: 'Stripe restricted key (test)' },
+    { prefix: 'pk_live_', label: 'Stripe publishable key (live)' },
+    { prefix: 'pk_test_', label: 'Stripe publishable key (test)' },
     { prefix: 'whsec_', label: 'Stripe webhook signing secret' },
     { prefix: 'sk-proj-', label: 'OpenAI project key' },
     { prefix: 'ghp_', label: 'GitHub personal access token' },
+    { prefix: 'gho_', label: 'GitHub OAuth token' },
+    { prefix: 'ghu_', label: 'GitHub user-to-server token' },
     { prefix: 'ghs_', label: 'GitHub secret' },
+    { prefix: 'ghr_', label: 'GitHub refresh token' },
+    { prefix: 'github_pat_', label: 'GitHub fine-grained PAT' },
     { prefix: 'glpat-', label: 'GitLab personal access token' },
+    { prefix: 'glptt-', label: 'GitLab pipeline trigger token' },
     { prefix: 'xoxb-', label: 'Slack bot token' },
     { prefix: 'xoxp-', label: 'Slack user token' },
     { prefix: 'xoxa-', label: 'Slack app token' },
     { prefix: 'xoxr-', label: 'Slack refresh token' },
     { prefix: 'xoxs-', label: 'Slack session token' },
+    { prefix: 'xapp-', label: 'Twitter/X app token' },
     { prefix: 'AIza', label: 'Google API key' },
     { prefix: 'AKIA', label: 'AWS access key id' },
+    { prefix: 'ASIA', label: 'AWS temporary access key id' },
     { prefix: 'ya29.', label: 'Google OAuth token' },
+    { prefix: 'SG.', label: 'SendGrid API key' },
+    { prefix: 'sbp_', label: 'Supabase service key' },
+    { prefix: 'sbp_live_', label: 'Supabase live key' },
+    { prefix: 'sb_publishable_', label: 'Supabase publishable key' },
+    { prefix: 'pplx-', label: 'Perplexity API key' },
+    { prefix: 'sq0atp-', label: 'Square access token' },
+    { prefix: 'sq0csp-', label: 'Square OAuth secret' },
+    { prefix: 'shpat_', label: 'Shopify access token' },
+    { prefix: 'shpss_', label: 'Shopify shared secret' },
+    { prefix: 'shpca_', label: 'Shopify custom app token' },
+    { prefix: 'figd_', label: 'Figma personal access token' },
+    { prefix: 'npm_', label: 'npm access token' },
+    { prefix: 'keylive_', label: 'Pusher live key' },
+    { prefix: 'keytest_', label: 'Pusher test key' },
+    { prefix: 'sk_live', label: 'Clerk secret key' },
+    { prefix: 'pk_live', label: 'Clerk publishable key' },
+    { prefix: 'dop_v1_', label: 'DigitalOcean personal access token' },
+    { prefix: 'linode_', label: 'Linode API token' },
+    { prefix: 'hf_', label: 'Hugging Face token' },
+    { prefix: 'r8_', label: 'Replicate API token' },
+    { prefix: 'vapi-', label: 'Vapi API key' },
+    { prefix: 'tvly-', label: 'Tavily API key' },
+    { prefix: 'sess_', label: 'Stripe session secret' },
+    { prefix: 'seti_', label: 'Stripe setup intent secret' },
+    { prefix: 'pi_', label: 'Stripe payment intent secret' },
+    { prefix: 'EAAG', label: 'Meta/Facebook access token' },
+    { prefix: 'EAAJ', label: 'Meta/Facebook access token' },
   ];
 
   function redactPreview(value, { showLast = 4 } = {}) {
@@ -171,6 +208,72 @@
     return results;
   }
 
+  function findPrivateKeys(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const patterns = [
+      /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----[\s\S]{0,8000}?-----END (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/g,
+      /-----BEGIN PGP PRIVATE KEY BLOCK-----[\s\S]{0,8000}?-----END PGP PRIVATE KEY BLOCK-----/g,
+    ];
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(input)) !== null) {
+        const raw = match[0];
+        const key = raw.slice(0, 64);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({
+          category: 'private_key',
+          matchedText: '-----BEGIN PRIVATE KEY----- …',
+          matchedTextRaw: raw,
+          index: match.index,
+          confidence: 97,
+          severity: 'critical',
+          recommendation: 'Never share private keys in email or chat — rotate if exposed.',
+        });
+      }
+    }
+    return results;
+  }
+
+  function findConnectionStrings(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const patterns = [
+      { re: /(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqp|amqps):\/\/[^\s'"<>]{8,}/gi, label: 'Database/message broker URL' },
+      { re: /DefaultEndpointsProtocol=https;AccountName=[^;\s'"<>]+;AccountKey=[^;\s'"<>]+/gi, label: 'Azure storage connection string' },
+      { re: /Endpoint=sb:\/\/[^;\s'"<>]+;SharedAccessKey=[^;\s'"<>]+/gi, label: 'Azure Service Bus connection' },
+      { re: /hooks\.slack\.com\/services\/[A-Za-z0-9/_-]{20,}/gi, label: 'Slack incoming webhook' },
+      { re: /discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]{20,}/gi, label: 'Discord webhook' },
+      { re: /\bAC[a-f0-9]{32}\b/gi, label: 'Twilio Account SID' },
+      { re: /\bSK[a-f0-9]{32}\b/g, label: 'Twilio API key' },
+    ];
+    for (const { re, label } of patterns) {
+      let match;
+      while ((match = re.exec(input)) !== null) {
+        const raw = match[0];
+        const key = raw.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({
+          category: 'api_key',
+          matchedText: redactPreview(raw, { showLast: 4 }),
+          matchedTextRaw: raw,
+          index: match.index,
+          confidence: 94,
+          severity: 'critical',
+          recommendation: `Remove or encrypt credentials (${label}).`,
+          tags: ['connection_string'],
+        });
+      }
+    }
+    return results;
+  }
+
   const EXAMPLE_EMAIL_DOMAINS = new Set(['example.com', 'example.org', 'test.com', 'localhost']);
 
   function findEmails(text, context = {}) {
@@ -211,37 +314,87 @@
     const input = String(text || '');
     if (!input) return [];
     if (fieldLooksLikeIban(input)) return [];
-    const patterns = [
+    const results = [];
+    const seen = new Set();
+
+    function countryTagsFromRaw(raw) {
+      const compact = String(raw || '').replace(/\s/g, '');
+      if (compact.startsWith('+44')) return ['gb'];
+      if (compact.startsWith('+61')) return ['au'];
+      if (compact.startsWith('+353')) return ['ie'];
+      if (compact.startsWith('+49')) return ['de'];
+      if (compact.startsWith('+33')) return ['fr'];
+      if (compact.startsWith('+34')) return ['es'];
+      if (compact.startsWith('+39')) return ['it'];
+      if (compact.startsWith('+31')) return ['nl'];
+      if (compact.startsWith('+65')) return ['sg'];
+      if (compact.startsWith('+91')) return ['in'];
+      if (compact.startsWith('+81')) return ['jp'];
+      if (compact.startsWith('+82')) return ['kr'];
+      if (compact.startsWith('+1')) return ['us'];
+      return [];
+    }
+
+    function pushPhone(raw, index, confidence, tags = []) {
+      const digits = normalizeDigits(raw);
+      if (digits.length < 8 || digits.length > 15) return;
+      if (seen.has(digits)) return;
+      seen.add(digits);
+      let conf = confidence;
+      if (context.fieldType === 'tel' || context.isPhoneField) conf -= 20;
+      if (conf < 45) return;
+      const mergedTags = [...new Set([...tags, ...countryTagsFromRaw(raw)])];
+      results.push({
+        category: 'phone',
+        matchedText: redactPreview(digits, { showLast: 4 }),
+        matchedTextRaw: raw,
+        index,
+        confidence: Math.min(94, conf),
+        severity: 'medium',
+        recommendation: 'Confirm this recipient should receive personal data.',
+        tags: mergedTags,
+      });
+    }
+
+    const labeledPatterns = [
+      { re: /\b(?:mobile|cell|phone|tel|telephone|contact)[#:\s-]*(\+?\d[\d\s().+-]{7,18}\d)\b/gi, boost: 14 },
+      { re: /(?:^|[\s(,;])(\+44[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){9,10})\b/g, boost: 12, tags: ['gb'] },
+      { re: /(?:^|[\s(,;])(\+61[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['au'] },
+      { re: /(?:^|[\s(,;])(\+353[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){7,10})\b/g, boost: 12, tags: ['ie'] },
+      { re: /(?:^|[\s(,;])(\+49[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,12})\b/g, boost: 12, tags: ['de'] },
+      { re: /(?:^|[\s(,;])(\+33[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['fr'] },
+      { re: /(?:^|[\s(,;])(\+34[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['es'] },
+      { re: /(?:^|[\s(,;])(\+39[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,11})\b/g, boost: 12, tags: ['it'] },
+      { re: /(?:^|[\s(,;])(\+31[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['nl'] },
+      { re: /(?:^|[\s(,;])(\+65[\s-]?(?:\d[\s-]?){8})\b/g, boost: 12, tags: ['sg'] },
+      { re: /(?:^|[\s(,;])(\+91[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['in'] },
+      { re: /(?:^|[\s(,;])(\+81[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){9,10})\b/g, boost: 12, tags: ['jp'] },
+      { re: /(?:^|[\s(,;])(\+82[\s-]?(?:\(?0\)?\s*)?(?:\d[\s-]?){8,10})\b/g, boost: 12, tags: ['kr'] },
+      { re: /(?:^|[\s(,;])(\+1[\s-]?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4})\b/g, boost: 10, tags: ['us'] },
+    ];
+
+    for (const { re, boost, tags } of labeledPatterns) {
+      let match;
+      while ((match = re.exec(input)) !== null) {
+        const raw = match[1] || match[0];
+        const offset = match[0].indexOf(raw);
+        pushPhone(raw, match.index + (offset >= 0 ? offset : 0), 72 + (boost || 0), tags || []);
+      }
+    }
+
+    const genericPatterns = [
       /\b\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/g,
       /\b\(\d{3}\)\s*\d{3}[-.\s]?\d{4}\b/g,
       /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g,
     ];
-    const results = [];
-    const seen = new Set();
 
-    for (const pattern of patterns) {
+    for (const pattern of genericPatterns) {
       let match;
       while ((match = pattern.exec(input)) !== null) {
         const raw = match[0];
-        const digits = normalizeDigits(raw);
-        if (digits.length < 10 || digits.length > 15) continue;
-        if (seen.has(digits)) continue;
-        seen.add(digits);
-
         let confidence = 72;
-        if (digits.length === 10 || digits.length === 11) confidence += 10;
-        if (context.fieldType === 'tel' || context.isPhoneField) confidence -= 20;
-        if (confidence < 45) continue;
-
-        results.push({
-          category: 'phone',
-          matchedText: redactPreview(digits, { showLast: 4 }),
-          matchedTextRaw: raw,
-          index: match.index,
-          confidence: Math.min(92, confidence),
-          severity: 'medium',
-          recommendation: 'Confirm this recipient should receive personal data.',
-        });
+        if (normalizeDigits(raw).length === 10 || normalizeDigits(raw).length === 11) confidence += 10;
+        pushPhone(raw, match.index, confidence);
       }
     }
     return results;
@@ -910,6 +1063,262 @@
       });
     }
 
+    const RCS = global.GoldspireRegionalChecksums || {};
+
+    const bsnPattern = /\b(?:BSN|burgerservicenummer|sofi)[#:\s-]*(\d{3})[\s.]?(\d{3})[\s.]?(\d{3})\b/gi;
+    while ((match = bsnPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (RCS.bsnCheck && !RCS.bsnCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'critical',
+        recommendation: 'Dutch BSN — do not share in plain text.',
+        tags: ['bsn', 'nl'],
+      });
+    }
+
+    const cpfPattern = /\b(?:CPF|cadastro de pessoa)[#:\s-]*(\d{3})[\.\s]?(\d{3})[\.\s]?(\d{3})[\-\s]?(\d{2})\b/gi;
+    while ((match = cpfPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}${match[4]}`;
+      if (RCS.cpfCheck && !RCS.cpfCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'critical',
+        recommendation: 'Brazilian CPF — do not share in plain text.',
+        tags: ['cpf', 'br'],
+      });
+    }
+
+    const hkidPattern = /\b(?:HKID|香港身份證)[#:\s-]*([A-Z]{1,2})[\s-]?(\d{6})[\s-]?\(?([0-9A])\)?\b/gi;
+    while ((match = hkidPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`.toUpperCase();
+      if (RCS.hkidCheck && !RCS.hkidCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 90,
+        severity: 'critical',
+        recommendation: 'Hong Kong ID — do not share in plain text.',
+        tags: ['hkid', 'hk'],
+      });
+    }
+    const hkidBarePattern = /\b([A-Z]{1,2})\s?(\d{6})\s?\(?([0-9A])\)?\b/g;
+    while ((match = hkidBarePattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`.toUpperCase();
+      if (!RCS.hkidCheck || !RCS.hkidCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 85,
+        severity: 'high',
+        recommendation: 'Hong Kong ID — do not share in plain text.',
+        tags: ['hkid', 'hk'],
+      });
+    }
+
+    const irdPattern = /\b(?:IRD|tax number|GST number)[#:\s-]*(\d{2,3})[\s-]?(\d{3})[\s-]?(\d{3})\b/gi;
+    while ((match = irdPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (RCS.nzIrdCheck && !RCS.nzIrdCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'New Zealand IRD number — do not share in plain text.',
+        tags: ['ird', 'nz'],
+      });
+    }
+
+    const steuerPattern = /\b(?:Steuer-ID|steueridentifikationsnummer|tax id de)[#:\s-]*(\d{11})\b/gi;
+    while ((match = steuerPattern.exec(input)) !== null) {
+      const raw = match[1];
+      if (RCS.germanSteuerIdCheck && !RCS.germanSteuerIdCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'German tax ID — do not share in plain text.',
+        tags: ['steuer', 'de'],
+      });
+    }
+
+    const sePattern = /\b(?:personnummer|personnr)[#:\s-]*(\d{6})[\s-]?(\d{4})\b/gi;
+    while ((match = sePattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}`;
+      if (RCS.swedishPersonnummerCheck && !RCS.swedishPersonnummerCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 87,
+        severity: 'high',
+        recommendation: 'Swedish personnummer — do not share in plain text.',
+        tags: ['personnummer', 'se'],
+      });
+    }
+
+    const noPattern = /\b(?:fødselsnummer|fodselsnummer|fnr)[#:\s-]*(\d{6})[\s-]?(\d{5})\b/gi;
+    while ((match = noPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}`;
+      if (RCS.norwegianFnrCheck && !RCS.norwegianFnrCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 87,
+        severity: 'high',
+        recommendation: 'Norwegian fødselsnummer — do not share in plain text.',
+        tags: ['fnr', 'no'],
+      });
+    }
+
+    const dkPattern = /\b(?:CPR|cpr-nr)[#:\s-]*(\d{6})[\s-]?(\d{4})\b/gi;
+    while ((match = dkPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}`;
+      if (RCS.danishCprCheck && !RCS.danishCprCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 84,
+        severity: 'high',
+        recommendation: 'Danish CPR number — do not share in plain text.',
+        tags: ['cpr', 'dk'],
+      });
+    }
+
+    const curpPattern = /\b(?:CURP)[#:\s-]*([A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d)\b/gi;
+    while ((match = curpPattern.exec(input)) !== null) {
+      const raw = match[1].toUpperCase();
+      if (RCS.curpShapeCheck && !RCS.curpShapeCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 88,
+        severity: 'high',
+        recommendation: 'Mexican CURP — do not share in plain text.',
+        tags: ['curp', 'mx'],
+      });
+    }
+
+    const myNumberPattern = /\b(?:マイナンバー|my number|individual number)[#:\s-]*(\d{4})[\s-]?(\d{4})[\s-]?(\d{4})\b/gi;
+    while ((match = myNumberPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (RCS.japanMyNumberCheck && !RCS.japanMyNumberCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 4 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'critical',
+        recommendation: 'Japanese My Number — do not share in plain text.',
+        tags: ['mynumber', 'jp'],
+      });
+    }
+
+    const rrnPattern = /\b(?:RRN|resident registration|주민등록번호)[#:\s-]*(\d{6})[\s-]?(\d{7})\b/gi;
+    while ((match = rrnPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}`;
+      if (RCS.koreanRrnCheck && !RCS.koreanRrnCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'critical',
+        recommendation: 'Korean resident registration number — do not share in plain text.',
+        tags: ['rrn', 'kr'],
+      });
+    }
+
+    const bePattern = /\b(?:rijksregisternummer|national register)[#:\s-]*(\d{2})[\.\s]?(\d{2})[\.\s]?(\d{2})[\-\s]?(\d{3})[\.\s]?(\d{2})\b/gi;
+    while ((match = bePattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}${match[4]}${match[5]}`;
+      if (RCS.belgianNrnCheck && !RCS.belgianNrnCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'Belgian national register number — do not share in plain text.',
+        tags: ['nrn', 'be'],
+      });
+    }
+
+    const zaPattern = /\b(?:SA ID|south africa id)[#:\s-]*(\d{13})\b/gi;
+    while ((match = zaPattern.exec(input)) !== null) {
+      const raw = match[1];
+      if (RCS.southAfricanIdCheck && !RCS.southAfricanIdCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'South African ID number — do not share in plain text.',
+        tags: ['sa_id', 'za'],
+      });
+    }
+
+    const twPattern = /\b(?:TW ID|taiwan id|身分證)[#:\s-]*([A-Z])(\d{9})\b/gi;
+    while ((match = twPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}`.toUpperCase();
+      if (RCS.taiwanIdCheck && !RCS.taiwanIdCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 87,
+        severity: 'high',
+        recommendation: 'Taiwan national ID — do not share in plain text.',
+        tags: ['tw_id', 'tw'],
+      });
+    }
+
+    const itinPattern = /\b(?:ITIN|individual taxpayer)[#:\s-]*(9\d{2})[\s-]?(5\d|6\d|7\d)[\s-]?(\d{4})\b/gi;
+    while ((match = itinPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      push({
+        category: 'tax_id',
+        matchedText: redactPreview(raw, { showLast: 4 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 84,
+        severity: 'high',
+        recommendation: 'US ITIN — do not share in plain text.',
+        tags: ['itin', 'us'],
+      });
+    }
+
     return results;
   }
 
@@ -1103,6 +1512,7 @@
     medical_record_number: 92,
     nhs_number: 92,
     jwt: 91,
+    private_key: 91,
     bank_account: 90,
     routing_number: 90,
     swift_bic: 89,
@@ -1133,6 +1543,8 @@
     const ctx = context || {};
     const resolved = suppressIbanConflicts(text, sortDetections([
       ...findCreditCards(text),
+      ...findPrivateKeys(text),
+      ...findConnectionStrings(text),
       ...findJwts(text),
       ...findApiKeys(text),
       ...findEmails(text, context),
@@ -1174,6 +1586,8 @@
     luhnCheck,
     findCreditCards,
     findJwts,
+    findPrivateKeys,
+    findConnectionStrings,
     findApiKeys,
     findEmails,
     findPhones,

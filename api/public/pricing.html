@@ -6,6 +6,7 @@
   <meta name="description" content="Veil pricing — free personal use, team and enterprise cloud with policy packs and admin controls." />
   <title>Pricing — Veil by Goldspire</title>
   <link rel="stylesheet" href="portal/common.css" />
+  <link rel="stylesheet" href="portal/premium.css" />
   <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
@@ -34,7 +35,7 @@
       <p class="hint" data-price-currency-note hidden></p>
     </section>
 
-    <section class="grid-4">
+    <section class="grid-5">
       <div class="card card--flat price-card">
         <p class="eyebrow">Personal</p>
         <p class="price-card__amount">Free</p>
@@ -42,12 +43,26 @@
         <ul class="trust-list">
           <li>Inline <code>[redacted]</code> encrypt &amp; unlock</li>
           <li>Veil copilot on paste &amp; typing</li>
-          <li>Hosted unlock links for recipients</li>
+          <li>One-time codes + hosted unlock links</li>
+          <li>Email / SMS share helpers for codes</li>
         </ul>
         <a class="btn btn--ghost" href="install.html">Install free</a>
       </div>
 
-      <div class="card price-card price-card--featured">
+      <div class="card price-card price-card--featured" id="plus">
+        <p class="eyebrow">Veil Plus</p>
+        <p class="price-card__amount" data-price-plus>$4.99 <span class="price-card__unit">/ mo</span></p>
+        <p class="hint">6 trusted contacts included · <span data-local-price="plus-contact-addon"></span> per extra</p>
+        <ul class="trust-list">
+          <li>Everything in Personal</li>
+          <li>Direct unlock to trusted contacts</li>
+          <li>Magic links (one-time, no Veil required)</li>
+          <li>Add contact slots as you grow</li>
+        </ul>
+        <a class="btn" href="plus.html">Get Veil Plus</a>
+      </div>
+
+      <div class="card card--flat price-card" id="team">
         <p class="eyebrow">Team</p>
         <p class="price-card__amount" data-price-team>$7 <span class="price-card__unit">/ user / mo</span></p>
         <p class="hint"><span data-local-price="team-annual-equiv"></span> · min. 5 seats · card required</p>
@@ -57,7 +72,7 @@
           <li>Policy packs: Finance, Healthcare, GDPR, Engineering</li>
           <li>Team tokens, SIEM webhook, security events</li>
         </ul>
-        <a class="btn" href="create.html">Set up your team</a>
+        <a class="btn" href="create.html?billing=1">Set up your team</a>
       </div>
 
       <div class="card card--flat price-card">
@@ -70,7 +85,7 @@
           <li>Chrome / Edge managed policy deployment</li>
           <li>Priority support queue</li>
         </ul>
-        <a class="btn" href="create.html">Create organization</a>
+        <a class="btn" href="create.html?billing=1">Create organization</a>
       </div>
 
       <div class="card card--flat price-card">
@@ -94,13 +109,13 @@
           <p class="hint">Free, always. Encryption runs in your browser; no account required.</p>
         </div>
         <div>
+          <h3>Veil Plus</h3>
+          <p class="hint"><span data-local-price="plus-monthly"></span> — 6 contacts included. Extra slots <span data-local-price="plus-contact-addon"></span>/mo each. Subscribe from the extension.</p>
+        </div>
+        <div>
           <h3>Team &amp; Enterprise</h3>
           <p class="hint" data-billing-phase="paid">Create your organization online, then subscribe in <strong>Admin → Overview → Billing</strong>. <span data-local-price="billing-line"></span></p>
           <p class="hint" data-billing-phase="early" hidden>Free during early access; list prices apply at general availability.</p>
-        </div>
-        <div>
-          <h3>Custom</h3>
-          <p class="hint">Large deployments, regulated procurement, or rollout support beyond self-serve.</p>
         </div>
       </div>
     </section>
@@ -108,13 +123,13 @@
     <section class="card">
       <h2>Get started</h2>
       <ol class="steps">
-        <li><a href="install.html">Install Veil</a> for personal use, or <a href="create.html">create a team</a> for cloud admin.</li>
+        <li><a href="install.html">Install Veil</a> for personal use, or <a href="create.html?billing=1">create a team</a> for cloud admin.</li>
         <li>Choose a <strong>policy pack</strong> in the admin console.</li>
         <li>Members install and join with your code and work email.</li>
         <li>Subscribe with a card before the trial ends to keep team cloud access.</li>
       </ol>
       <div class="btn-row">
-        <a class="btn" href="create.html">Create organization</a>
+        <a class="btn" href="create.html?billing=1">Create organization</a>
         <a class="btn btn--ghost" href="index.html">See how Veil works</a>
       </div>
     </section>
@@ -127,6 +142,7 @@
   <script src="portal/contacts.js"></script>
   <script src="portal/billing.js"></script>
   <script src="portal/pricing.js"></script>
+  <script src="portal/motion.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('pricing');
     GoldspirePortalNav.renderPortalFooter?.();

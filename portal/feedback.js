@@ -36,6 +36,44 @@
     };
   }
 
+  function detectBrowser() {
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    if (/Edg\//i.test(ua)) return 'Microsoft Edge';
+    if (/Firefox\//i.test(ua)) return 'Firefox';
+    if (/Chrome\//i.test(ua)) return 'Chrome';
+    if (/Safari\//i.test(ua)) return 'Safari';
+    return 'Web browser';
+  }
+
+  function resolveParams(raw) {
+    const params = { ...raw };
+    if (!params.browser) params.browser = detectBrowser();
+    if (!params.profile) {
+      const session = global.GoldspirePortalApp?.loadAdminSession?.();
+      if (session?.adminToken) {
+        params.profile = `Team admin (${session.displayName || session.orgId || 'organization'})`;
+        if (!params.orgId && session.orgId) params.orgId = session.orgId;
+        if (!params.orgName && session.displayName) params.orgName = session.displayName;
+      } else {
+        params.profile = 'Portal visitor';
+      }
+    }
+    if (!params.version) {
+      params.version = global.GoldspirePortal?.EXTENSION_VERSION
+        || global.GoldspirePortal?.PORTAL_VERSION
+        || 'portal (no extension context)';
+    }
+    if (!params.page) {
+      const ref = typeof document !== 'undefined' ? document.referrer : '';
+      if (ref && /^https?:/i.test(ref)) {
+        params.page = ref;
+      } else if (typeof global.location !== 'undefined') {
+        params.page = `${global.location.origin}${global.location.pathname}`;
+      }
+    }
+    return params;
+  }
+
   function pageHost(pageUrl) {
     if (!pageUrl) return '';
     try {
@@ -124,9 +162,13 @@
     const ticketRefEl = document.getElementById('feedback-ticket-ref');
     if (!form || !kindEl || !messageEl || !diagEl) return;
 
-    const params = readParams();
-    const diagnostics = buildDiagnostics(params);
-    diagEl.textContent = diagnostics;
+    const params = resolveParams(readParams());
+
+    function currentDiagnostics() {
+      return buildDiagnostics(params);
+    }
+
+    diagEl.textContent = currentDiagnostics();
 
     if (params.kind && SUBJECTS[params.kind]) {
       kindEl.value = params.kind;
@@ -172,7 +214,7 @@
     emailBtn?.addEventListener('click', () => {
       const kind = kindEl.value || 'feedback';
       const subject = SUBJECTS[kind] || SUBJECTS.feedback;
-      const body = buildBody(messageEl.value, diagnostics);
+      const body = buildBody(messageEl.value, currentDiagnostics());
       const mailto = `mailto:${supportEmail()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       global.location.href = mailto;
     });
@@ -180,7 +222,7 @@
     copyBtn?.addEventListener('click', async () => {
       const kind = kindEl.value || 'feedback';
       const subject = SUBJECTS[kind] || SUBJECTS.feedback;
-      const text = `To: ${supportEmail()}\nSubject: ${subject}\n\n${buildBody(messageEl.value, diagnostics)}`;
+      const text = `To: ${supportEmail()}\nSubject: ${subject}\n\n${buildBody(messageEl.value, currentDiagnostics())}`;
       try {
         await navigator.clipboard.writeText(text);
         if (statusEl) {
@@ -202,6 +244,8 @@
     init,
     buildDiagnostics,
     readParams,
+    resolveParams,
+    detectBrowser,
     buildTicketPayload,
     submitTicket,
     KIND_LABELS,

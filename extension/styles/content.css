@@ -5,9 +5,11 @@
   z-index: 2147483646;
   display: grid;
   place-items: center;
-  background: rgba(8, 10, 18, 0.42);
+  background: rgba(6, 8, 14, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  animation: gst-fade-in 0.2s ease both;
+  animation: gst-fade-in 0.28s var(--veil-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .gst-overlay--compact {
@@ -121,13 +123,16 @@
 
 .gst-dialog {
   width: min(340px, calc(100vw - 28px));
-  border-radius: 12px;
-  background: #111522;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(22, 28, 42, 0.98) 0%, rgba(14, 18, 30, 0.98) 100%);
   color: #f4f6fb;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(232, 185, 35, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    0 0 48px rgba(232, 185, 35, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 14px 16px;
-  animation: gst-dialog-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: gst-dialog-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .gst-dialog--compact {
@@ -772,6 +777,14 @@
   margin-bottom: 2px;
 }
 
+.gst-veil-pop__trust {
+  margin: 0 0 8px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
 .gst-veil-pop__head {
   display: flex;
   align-items: center;
@@ -1174,8 +1187,18 @@
 }
 
 .gst-ui--exit {
-  animation: gst-ui-exit 0.18s ease forwards;
+  animation: gst-ui-exit 0.24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   pointer-events: none;
+}
+
+.gst-ui--exit .gst-dialog,
+.gst-ui--exit .gst-veil-pop {
+  animation: gst-dialog-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes gst-dialog-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
 }
 
 @keyframes gst-ui-exit {

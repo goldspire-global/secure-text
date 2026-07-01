@@ -1,13 +1,47 @@
 /**
- * Transactional email — Resend when RESEND_API_KEY is set; otherwise no-op with skipped flag.
+ * Transactional email — Brevo (preferred) or Resend when API keys are set.
  */
-export async function sendEmail(env, { to, subject, html, text, replyTo }) {
-  const apiKey = String(env.RESEND_API_KEY || '').trim();
-  const from = String(env.VEIL_EMAIL_FROM || 'Veil <noreply@goldspireventures.com>').trim();
-  const recipient = String(to || '').trim();
-  if (!recipient) return { ok: false, error: 'missing_recipient' };
-  if (!apiKey) return { ok: false, skipped: true, reason: 'RESEND_API_KEY not configured' };
 
+function parseFromAddress(raw) {
+  const value = String(raw || '').trim();
+  const match = value.match(/^(.+?)\s*<([^>]+)>$/);
+  if (match) {
+    return { name: match[1].trim(), email: match[2].trim() };
+  }
+  return { email: value };
+}
+
+async function sendViaBrevo(apiKey, { from, to, subject, html, text, replyTo }) {
+  const payload = {
+    sender: from,
+    to: [{ email: to }],
+    subject: String(subject || '').slice(0, 200),
+    htmlContent: html || undefined,
+    textContent: text || undefined,
+  };
+  if (replyTo) payload.replyTo = { email: replyTo };
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    return { ok: false, error: `brevo_${response.status}`, detail: body.slice(0, 200) };
+  }
+  const data = await response.json().catch(() => ({}));
+  return { ok: true, id: data.messageId, provider: 'brevo' };
+}
+
+async function sendViaResend(apiKey, { from, to, subject, html, text, replyTo }) {
+  const fromHeader = from.name ? `${from.name} <${from.email}>` : from.email;
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -15,8 +49,8 @@ export async function sendEmail(env, { to, subject, html, text, replyTo }) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from,
-      to: [recipient],
+      from: fromHeader,
+      to: [to],
       subject: String(subject || '').slice(0, 200),
       html: html || undefined,
       text: text || undefined,
@@ -30,9 +64,26 @@ export async function sendEmail(env, { to, subject, html, text, replyTo }) {
     return { ok: false, error: `resend_${response.status}`, detail: body.slice(0, 200) };
   }
   const data = await response.json().catch(() => ({}));
-  return { ok: true, id: data.id };
+  return { ok: true, id: data.id, provider: 'resend' };
+}
+
+export async function sendEmail(env, { to, subject, html, text, replyTo }) {
+  const brevoKey = String(env.BREVO_API_KEY || '').trim();
+  const resendKey = String(env.RESEND_API_KEY || '').trim();
+  const from = parseFromAddress(env.VEIL_EMAIL_FROM || 'Veil <noreply@goldspireventures.com>');
+  const recipient = String(to || '').trim();
+  if (!recipient) return { ok: false, error: 'missing_recipient' };
+  if (!from.email) return { ok: false, error: 'missing_sender' };
+
+  const message = { from, to: recipient, subject, html, text, replyTo };
+
+  if (brevoKey) return sendViaBrevo(brevoKey, message);
+  if (resendKey) return sendViaResend(resendKey, message);
+
+  return { ok: false, skipped: true, reason: 'BREVO_API_KEY or RESEND_API_KEY not configured' };
 }
 
 export function isEmailConfigured(env) {
-  return Boolean(String(env.RESEND_API_KEY || '').trim());
+  return Boolean(String(env.BREVO_API_KEY || '').trim())
+    || Boolean(String(env.RESEND_API_KEY || '').trim());
 }

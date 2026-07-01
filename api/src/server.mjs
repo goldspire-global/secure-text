@@ -30,7 +30,7 @@ import {
   deactivateMember,
   addOrgMember,
 } from './admin-service.mjs';
-import { ingestExtensionEvents, getSecurityEventSummary, exportSecurityEvents } from './events-service.mjs';
+import { ingestExtensionEvents, getSecurityEventSummary, exportSecurityEvents, getOrgLearningInsights } from './events-service.mjs';
 import { buildComplianceReportHtml } from './compliance-export.mjs';
 import { sendMemberInvite } from './invite-service.mjs';
 import { runWeeklyOrgDigests } from './digest-service.mjs';
@@ -50,6 +50,25 @@ import {
 import { handleStripeWebhook } from './stripe-service.mjs';
 import { platformConfig } from './billing.mjs';
 import { createTeamCheckoutSession } from './billing-checkout.mjs';
+import {
+  registerPersonalAccount,
+  getPersonalStatus,
+  listPersonalContacts,
+  addPersonalContact,
+  registerPersonalContact,
+} from './personal-service.mjs';
+import {
+  sendPersonalVerificationEmail,
+  confirmPersonalEmailVerification,
+} from './personal-verification-service.mjs';
+import { createPersonalCheckoutSession, purchasePersonalContactSlot } from './personal-billing.mjs';
+import {
+  createPersonalShares,
+  listPersonalPendingShares,
+  lookupPersonalUnlockKey,
+  createMagicClaim,
+  redeemMagicClaim,
+} from './personal-share-service.mjs';
 import {
   ingestClientEvents,
   getOpsSummary,
@@ -722,6 +741,102 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // --- Veil Plus (personal) ---
+
+    if (req.method === 'POST' && pathname === '/v1/personal/register') {
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const deviceId = req.headers['x-device-id'] || '';
+      const body = await readBody(req);
+      const result = await registerPersonalAccount(deviceId, body);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/status') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await getPersonalStatus(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/verify/send') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await sendPersonalVerificationEmail(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/verify-email') {
+      const claimToken = url.searchParams.get('t') || '';
+      json(res, req, 200, await confirmPersonalEmailVerification(claimToken));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/checkout') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await createPersonalCheckoutSession(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/contacts') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await listPersonalContacts(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/contacts') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 201, await addPersonalContact(token, deviceId, body));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/contacts/purchase-slot') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await purchasePersonalContactSlot(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'PUT' && pathname === '/v1/personal/contact/register') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 200, await registerPersonalContact(token, deviceId, body));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/shares') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 201, await createPersonalShares(token, deviceId, body));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/shares/pending') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await listPersonalPendingShares(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/shares/unlock-key') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const fingerprint = url.searchParams.get('fingerprint') || '';
+      json(res, req, 200, await lookupPersonalUnlockKey(token, deviceId, fingerprint));
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/personal/magic-links') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 201, await createMagicClaim(token, deviceId, body));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/magic-claim') {
+      const claimToken = url.searchParams.get('t') || '';
+      json(res, req, 200, await redeemMagicClaim(claimToken));
+      return;
+    }
+
     if (req.method === 'POST' && pathname === '/v1/extension/events') {
       if (!String(req.headers['content-type'] || '').includes('application/json')) {
         throw httpError(415, 'Content-Type must be application/json.');
@@ -895,6 +1010,12 @@ const server = createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/v1/orgs/me/security-events/summary') {
         const days = url.searchParams.get('days') || '30';
         json(res, req, 200, await getSecurityEventSummary(admin, { days }));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me/learning/insights') {
+        const days = url.searchParams.get('days') || '30';
+        json(res, req, 200, await getOrgLearningInsights(admin, { days }));
         return;
       }
 

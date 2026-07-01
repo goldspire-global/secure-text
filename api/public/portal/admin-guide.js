@@ -88,6 +88,9 @@
     const security = overview.security || {};
     const policy = overview.policy || {};
 
+    const protectedCount = (security.encryptActions || 0) + (security.maskActions || 0);
+    const aiBlocked = security.aiIncidents || 0;
+
     const tile = (label, value, sub) => `
       <div class="stat-tile">
         <div class="stat-tile__value">${value}</div>
@@ -99,7 +102,8 @@
     container.innerHTML = [
       tile('Active members', members.active || 0, `${members.connected || 0} connected`),
       tile('Browsers', devices.active || 0, `${devices.unlinked || 0} unlinked`),
-      tile('Events (30d)', security.total || 0, `${security.blocks || 0} blocks`),
+      tile('Protected (30d)', protectedCount || security.total || 0, `${security.blocks || 0} policy blocks`),
+      tile('AI incidents (30d)', aiBlocked, 'Sanitized before model'),
       tile('Policy', policy.packLabel || 'Not set', `v${policy.version || 1}`),
     ].join('');
   }

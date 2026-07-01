@@ -11,8 +11,8 @@
     return [
       {
         target: '#goldspire-selection-status',
-        title: 'Selection bar',
-        body: 'Highlight sensitive text on any page. Quick secures with your saved passphrase; Options opens advanced choices.',
+        title: 'Keyboard-edge protection',
+        body: 'Veil watches what you highlight on any page. Quick secure replaces secrets with [redacted] before they leave your browser.',
         prime: (pill) => {
           if (!pill) return;
           pill.classList.add('gst-selection-status--visible');
@@ -20,12 +20,16 @@
       },
       {
         target: '#goldspire-selection-status .gst-pill-split',
-        title: 'Quick secure',
-        body: 'One click replaces the selection with [redacted]. Use the keyboard shortcut anytime — shown in the extension Help tab.',
+        title: 'One-click secure',
+        body: 'Encrypt with your saved passphrase instantly — or open Options for team, direct, or one-time modes.',
       },
       {
         title: 'Paste copilot',
-        body: 'When you paste a secret, Veil offers Secure or Mask inline. It stays quiet on signup forms and respects Allow / Always on this site.',
+        body: 'Paste a secret in email or forms — Veil shows what it detected (e.g. sk-…x4K9) and offers Secure or Mask. Stays quiet on signup fields.',
+      },
+      {
+        title: 'Before AI chat',
+        body: 'On ChatGPT, Claude, Gemini, and Copilot, Veil offers Sanitize so secrets never reach the model.',
       },
     ];
   }

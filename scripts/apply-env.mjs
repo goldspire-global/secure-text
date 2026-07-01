@@ -80,6 +80,21 @@ const stripeBillingPortalUrl = env.STRIPE_BILLING_PORTAL_URL ?? '';
 const storeUrlChrome = env.STORE_URL_CHROME ?? '';
 const storeUrlEdge = env.STORE_URL_EDGE ?? '';
 
+let extensionVersion = '';
+try {
+  const manifest = JSON.parse(readFileSync(join(repoRoot, 'extension', 'manifest.json'), 'utf8'));
+  extensionVersion = manifest.version || '';
+} catch {
+  extensionVersion = '';
+}
+let portalVersion = '';
+try {
+  const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
+  portalVersion = pkg.version || '';
+} catch {
+  portalVersion = '';
+}
+
 const constantsContents = `/**
  * Built-in defaults shipped with the extension (no user setup required).
  * Generated from repo-root .env via \`npm run env:apply\` — do not edit by hand.
@@ -141,6 +156,8 @@ const portalConfigContents = `/**
     PRIVACY_EMAIL: ${jsString(privacyEmail)},
     SALES_EMAIL: ${jsString(salesEmail)},
     LEGAL_EMAIL: ${jsString(legalEmail)},
+    EXTENSION_VERSION: ${jsString(extensionVersion)},
+    PORTAL_VERSION: ${jsString(portalVersion)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;
@@ -150,7 +167,7 @@ writeFileSync(rootConstantsPath, constantsContents);
 writeFileSync(portalConfigPath, portalConfigContents);
 
 mkdirSync(join(apiPublicDir, 'portal'), { recursive: true });
-for (const file of ['common.css', 'app.js', 'config.js', 'nav.js', 'tabs.js', 'admin-guide.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'contacts.js', 'veil-mark.svg', 'favicon.png']) {
+for (const file of ['common.css', 'premium.css', 'motion.js', 'app.js', 'config.js', 'nav.js', 'tabs.js', 'admin-guide.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'contacts.js', 'team-gate.js', 'veil-mark.svg', 'favicon.png']) {
   cpSync(join(repoRoot, 'portal', file), join(apiPublicDir, 'portal', file), { force: true });
 }
 const unlockAssets = ['unlock.html', 'unlock.css', 'unlock.js'];
@@ -171,15 +188,28 @@ for (const page of [
   'join.html',
   'install.html',
   'pricing.html',
+  'plus.html',
+  'plus.js',
+  'claim.html',
+  'claim.js',
+  'verify-email.html',
+  'verify-email.js',
   'privacy.html',
   'terms.html',
   'feedback.html',
+  'practice.html',
+  'practice.css',
 ]) {
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }
 
 cpSync(join(repoRoot, 'api', 'ops', 'ops.html'), join(apiPublicDir, 'ops.html'), { force: true });
 cpSync(join(repoRoot, 'api', 'ops', 'ops.js'), join(apiPublicDir, 'portal', 'ops.js'), { force: true });
+
+const outlookAddinDir = join(repoRoot, 'outlook-addin');
+if (existsSync(outlookAddinDir)) {
+  cpSync(outlookAddinDir, join(apiPublicDir, 'outlook-addin'), { force: true, recursive: true });
+}
 
 console.log(`Applied .env → ${constantsPath}`);
 console.log(`Applied .env → ${rootConstantsPath}`);

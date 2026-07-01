@@ -12,6 +12,7 @@
     date_of_birth: ['GDPR', 'HIPAA'],
     bank_account: ['PCI DSS', 'GDPR', 'SOC 2', 'GLBA'],
     api_key: ['SOC 2', 'ISO 27001'],
+    private_key: ['SOC 2', 'ISO 27001', 'PCI DSS'],
     jwt: ['SOC 2', 'ISO 27001'],
     password: ['SOC 2', 'ISO 27001'],
     email: ['GDPR'],

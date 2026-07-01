@@ -29,6 +29,16 @@
       next.learningHints = [];
     }
 
+    if (next.personalContactLimit == null) next.personalContactLimit = 6;
+    if (next.personalIncludedContacts == null) next.personalIncludedContacts = 6;
+    if (next.personalContactCount == null) next.personalContactCount = 0;
+    if (next.personalPlusActive != null) {
+      next.personalPlusActive = next.personalPlusActive === true;
+    }
+    if (next.personalEmailVerified != null) {
+      next.personalEmailVerified = next.personalEmailVerified === true;
+    }
+
     // Existing installs before 1.3.3: skip auto tour; new users get tour after setup.
     if (next.setupComplete === true && next.tourComplete === undefined) {
       next.tourComplete = true;

@@ -24,9 +24,11 @@
       ...extra,
     });
     if (actionId === ACTION_IDS.mask) {
-      void global.GoldspireWeeklyDigest?.record?.('mask');
+      void global.GoldspireWeeklyDigest?.record?.(request.context?.isAiSurface ? 'ai' : 'mask');
     } else if (actionId === ACTION_IDS.encrypt) {
       void global.GoldspireWeeklyDigest?.record?.('secure');
+    } else if (actionId === ACTION_IDS.tokenize) {
+      void global.GoldspireWeeklyDigest?.record?.('tokenize');
     }
   }
 

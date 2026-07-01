@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; base-uri 'none'; form-action 'none';"
+    />
+    <title>Verify email — Veil Plus</title>
+    <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
+    <link rel="stylesheet" href="unlock.css" />
+  </head>
+  <body>
+    <main class="unlock">
+      <header class="unlock__header">
+        <img class="unlock__logo" src="icons/icon-48.png" alt="" width="40" height="40" />
+        <div>
+          <h1>Verify your email</h1>
+          <p id="subtitle">Confirm your address for Veil Plus trusted contacts.</p>
+        </div>
+      </header>
+
+      <section id="loading" class="unlock__form">
+        <p class="hint">Verifying…</p>
+      </section>
+
+      <section id="result" class="result" hidden>
+        <h2>Email verified</h2>
+        <p class="hint" id="result-message">You can close this tab and return to Veil.</p>
+        <p class="hint" id="verified-email"></p>
+      </section>
+
+      <p id="error" class="error" hidden></p>
+    </main>
+    <script src="portal/config.js"></script>
+    <script src="verify-email.js"></script>
+  </body>
+</html>

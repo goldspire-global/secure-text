@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Practice securing secrets with Veil — safe sandbox, nothing is sent." />
+  <title>Practice — Veil by Goldspire</title>
+  <link rel="stylesheet" href="portal/common.css" />
+  <link rel="stylesheet" href="practice.css" />
+  <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
+</head>
+<body>
+  <div class="layout layout--wide">
+    <header class="site-header">
+      <div class="brand">
+        <img class="brand__mark" src="icons/icon-48.png" alt="" width="42" height="42" />
+        <div>
+          <strong class="brand__name">Veil</strong>
+          <span class="brand__byline">by Goldspire</span>
+        </div>
+      </div>
+      <nav class="nav nav--header" data-portal-nav></nav>
+    </header>
+
+  <main class="practice card hero--premium">
+    <header class="practice__header">
+      <img class="practice__logo" src="icons/icon-48.png" alt="" width="44" height="44" />
+      <div>
+        <h1>Practice your first secure</h1>
+        <p class="hint">Nothing on this page is sent anywhere. Veil runs entirely in your browser.</p>
+      </div>
+    </header>
+
+    <aside class="practice__banner">
+      <strong>Safe sandbox</strong> — the API key below is fake. Highlight it, click <strong>Secure</strong> on the Veil pill, or press your secure shortcut. You should see <code>[redacted]</code> replace the secret.
+    </aside>
+
+    <ol class="practice__steps">
+      <li>Highlight the line starting with <code>sk-</code> below</li>
+      <li>Click <strong>Secure</strong> on the Veil pill — or use <kbd>Ctrl+Shift+S</kbd> (<kbd>⌘⇧S</kbd> on Mac)</li>
+      <li>Click <strong>Unlock</strong> on <code>[redacted]</code> to verify it works</li>
+    </ol>
+
+    <div class="practice__compose" role="region" aria-label="Practice email compose">
+      <div class="practice__toolbar">
+        <button type="button" class="btn" disabled aria-hidden="true">Send</button>
+        <button type="button" class="btn btn--ghost" disabled aria-hidden="true">Discard</button>
+      </div>
+      <div class="practice__field">
+        <span>To</span>
+        <input type="text" value="client@example.com" readonly tabindex="-1" aria-hidden="true" />
+      </div>
+      <div class="practice__field">
+        <span>Subject</span>
+        <input type="text" value="Staging API credentials" readonly tabindex="-1" aria-hidden="true" />
+      </div>
+      <textarea id="practice-body" class="practice__body" aria-label="Message body">Hi — here is the staging key for the integration:
+
+sk-practice-demo-7f3a9b2c4e8d1a6f0b5c9e2d4a7f1b3
+
+Let me know once you've rotated it.</textarea>
+    </div>
+
+    <footer class="practice__footer">
+      <p>Ready for real mail? Open <a href="https://outlook.office.com" target="_blank" rel="noopener">Outlook</a> or <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a> — Veil works the same way.</p>
+      <p><a href="install.html">Install guide</a> · <a href="index.html">Back to Veil</a></p>
+    </footer>
+  </main>
+
+    <footer class="site-footer" data-portal-footer></footer>
+  </div>
+  <script src="portal/config.js"></script>
+  <script src="portal/nav.js"></script>
+  <script>
+    GoldspirePortalNav.renderPortalNav('practice');
+    GoldspirePortalNav.renderPortalFooter?.();
+  </script>
+  <script>
+    (function () {
+      const body = document.getElementById('practice-body');
+      if (body) {
+        body.focus();
+        const start = body.value.indexOf('sk-practice');
+        if (start >= 0) {
+          body.setSelectionRange(start, start + 59);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

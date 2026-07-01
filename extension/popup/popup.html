@@ -15,7 +15,7 @@
           <img class="popup__logo" src="../icons/icon-48.png" alt="" width="40" height="40" />
           <div>
             <h1>Welcome</h1>
-            <p id="setup-subtitle">Highlight sensitive text, secure it, then send as normal.</p>
+            <p id="setup-subtitle">Keyboard-edge protection — encrypt before send, in your browser.</p>
           </div>
         </header>
 
@@ -110,9 +110,14 @@
               <span class="popup__byline">by Goldspire</span>
               <span id="profile-chip" class="profile-chip"></span>
             </div>
-            <p>Highlight text, secure it, send as normal. Recipients click to unlock.</p>
+            <p>Keyboard-edge protection — highlight, secure, send as normal.</p>
           </div>
         </header>
+
+        <div id="protection-status" class="protection-status" hidden>
+          <span class="protection-status__pulse" aria-hidden="true"></span>
+          <span class="protection-status__text">Watching this tab</span>
+        </div>
 
         <nav class="tabs" role="tablist" aria-label="Veil">
           <button type="button" class="tabs__btn tabs__btn--active" data-tab="home" role="tab" aria-selected="true" aria-controls="tab-home" id="tab-btn-home">Home</button>
@@ -122,6 +127,11 @@
 
         <!-- Home -->
         <div id="tab-home" class="tab tab--active" role="tabpanel" aria-labelledby="tab-btn-home">
+          <div class="card card--first-secure" id="first-secure-card" hidden>
+            <h2 class="first-secure__title">Try your first secure</h2>
+            <p class="card__text">Open the safe practice page — highlight a fake API key and secure it in seconds.</p>
+            <button type="button" id="open-practice-page" class="btn btn--sm">Open practice page</button>
+          </div>
           <div class="card card--readiness" id="readiness-card" hidden>
             <h2 class="readiness__title">Setup checklist</h2>
             <ul class="readiness__list" id="readiness-list"></ul>
@@ -129,6 +139,11 @@
             <button type="button" id="readiness-enable-copilot" class="btn btn--ghost btn--sm" hidden>Enable copilot</button>
           </div>
           <div class="card card--hero">
+            <div id="protection-hero" class="protection-hero" hidden>
+              <p class="protection-hero__label">Protected this week</p>
+              <p class="protection-hero__value" id="protection-hero-total">0</p>
+              <div class="protection-hero__grid" id="protection-hero-grid"></div>
+            </div>
             <p id="weekly-digest-line" class="hint hint--digest" hidden></p>
             <p id="selection-preview" class="selection-preview">Highlight text on the page.</p>
             <div class="row row--stack">
@@ -165,6 +180,47 @@
                 <input id="resecureAfterUnlock" name="resecureAfterUnlock" type="checkbox" checked />
                 <span>Auto re-lock after unlock</span>
               </label>
+              <details class="card card--collapsible card--nested" id="plus-settings-panel">
+                <summary>Veil Plus &amp; trusted contacts</summary>
+                <p class="hint" id="plus-status-hint">Save and verify your email to receive direct unlocks from Plus senders — free. Upgrade to send to your own trusted contacts.</p>
+                <div id="plus-register-block">
+                  <label class="field">
+                    <span>Your email</span>
+                    <input id="personalEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+                    <small class="hint" id="plus-email-hint">Use the same address your contacts add in Veil. We send a one-time verification link.</small>
+                  </label>
+                  <div class="row row--gap-sm">
+                    <button type="button" id="plus-register-btn" class="btn btn--ghost btn--sm">Save email</button>
+                    <button type="button" id="plus-resend-verify-btn" class="btn btn--ghost btn--sm" hidden>Resend verification</button>
+                    <button type="button" id="plus-upgrade-btn" class="btn btn--sm" hidden>Upgrade to send</button>
+                  </div>
+                  <p class="hint" id="plus-verify-banner" hidden></p>
+                  <p class="hint" id="plus-receiver-banner" hidden></p>
+                </div>
+                <div id="plus-active-block" hidden>
+                  <p class="settings-status">
+                    <span class="settings-status__label">Plan</span>
+                    <span id="plus-plan-label" class="settings-status__value">Veil Plus</span>
+                  </p>
+                  <p class="hint" id="plus-contacts-summary">—</p>
+                  <div class="plus-slot-bar" id="plus-slot-bar" hidden>
+                    <span id="plus-slot-label" class="hint"></span>
+                    <button type="button" id="plus-add-slot-btn" class="btn btn--ghost btn--sm">Add slot</button>
+                  </div>
+                  <p class="hint plus-team-nudge" id="plus-team-nudge" hidden>
+                    Sharing with a larger group? <a href="#" id="plus-team-link" target="_blank" rel="noopener">Set up a Team</a> instead.
+                  </p>
+                  <ul id="plus-contacts-list" class="plus-contacts"></ul>
+                  <label class="field">
+                    <span>Add trusted contact</span>
+                    <div class="field-row">
+                      <input id="plus-contact-email" type="email" placeholder="friend@example.com" />
+                      <button type="button" id="plus-add-contact-btn" class="btn btn--ghost btn--sm">Add</button>
+                    </div>
+                  </label>
+                  <a id="plus-manage-link" class="hint" href="#" target="_blank" rel="noopener">Manage on veil.goldspireventures.com</a>
+                </div>
+              </details>
               <details class="card card--collapsible card--nested">
                 <summary>Password generator</summary>
                 <output id="generated-password-personal" class="password-output">—</output>
@@ -332,6 +388,19 @@
 
         <!-- Help -->
         <div id="tab-help" class="tab" role="tabpanel" aria-labelledby="tab-btn-help">
+          <details class="card card--security-proof" id="security-proof-card" open>
+            <summary class="security-proof__head">
+              <span class="security-proof__title">Security proof</span>
+              <span class="security-proof__badge" id="security-proof-badge">Zero-knowledge</span>
+            </summary>
+            <ul class="security-proof__list" id="security-proof-list">
+              <li><span>AES-GCM + PBKDF2</span><span class="security-proof__ok">Client-side</span></li>
+              <li><span>Secure &amp; Tokenize</span><span class="security-proof__ok">No plaintext upload</span></li>
+              <li><span>Copilot explain</span><span class="security-proof__ok">Redacted preview only</span></li>
+            </ul>
+            <p class="hint" id="security-proof-detail">Encryption runs in your browser. Goldspire stores ciphertext and metadata — never passphrases or message bodies.</p>
+            <p class="hint security-proof__attestation" id="security-proof-attestation"></p>
+          </details>
           <details class="card card--help-context" id="help-context-card">
             <summary class="help-context__head">
               <span class="help-context__title">Your setup</span>
@@ -349,13 +418,25 @@
           <div id="help-personal" class="help-content">
             <div class="card">
               <h2>How it works</h2>
+              <p class="card__text">Veil sits at the keyboard — before secrets reach Gmail, Outlook, or AI chat.</p>
               <ol>
                 <li>Open Gmail, Outlook, or any form</li>
                 <li>Paste or highlight a secret — Veil copilot offers <strong>Secure</strong> or <strong>Mask</strong></li>
                 <li>Or press the shortcut below to <strong>Secure selection</strong></li>
                 <li>Text becomes <code>[redacted]</code> — recipients unlock with your passphrase</li>
               </ol>
-              <p class="hint">Recipients without Veil can use the unlock link you share out of band.</p>
+              <p class="hint">Plaintext never leaves your browser for Secure or Tokenize. Recipients without Veil use the hosted unlock page.</p>
+            </div>
+            <div class="card">
+              <h2>AI surfaces protected</h2>
+              <p class="card__text">Veil intercepts paste and typing on supported AI sites — <strong>Sanitize</strong> before your secrets reach the model.</p>
+              <ul class="ai-coverage-list">
+                <li>ChatGPT <span class="ai-coverage-list__badge">Active</span></li>
+                <li>Claude <span class="ai-coverage-list__badge">Active</span></li>
+                <li>Google Gemini <span class="ai-coverage-list__badge">Active</span></li>
+                <li>Microsoft Copilot <span class="ai-coverage-list__badge">Active</span></li>
+                <li>Perplexity <span class="ai-coverage-list__badge">Active</span></li>
+              </ul>
             </div>
             <div class="card">
               <h2>Smart copilot</h2>
@@ -437,8 +518,11 @@
     <script src="../src/status-notice.js"></script>
     <script src="../src/org-provision.js"></script>
     <script src="../src/org-share.js"></script>
-    <script src="../src/browser.js"></script>
+    <script src="../src/personal-capability.js"></script>
+    <script src="../src/personal-provision.js"></script>
+    <script src="../src/personal-share.js"></script>
     <script src="../src/weekly-digest.js"></script>
+    <script src="../src/attestation.js"></script>
     <script src="tour.js"></script>
     <script src="popup.js"></script>
   </body>

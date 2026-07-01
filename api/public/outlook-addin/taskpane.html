@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Veil — Outlook</title>
+  <link rel="stylesheet" href="taskpane.css" />
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <main class="veil-pane">
+    <header class="veil-pane__brand">
+      <img src="../icons/icon-48.png" alt="" width="36" height="36" />
+      <div>
+        <h1>Veil</h1>
+        <p>Keyboard-edge protection for Outlook</p>
+      </div>
+    </header>
+
+    <aside class="veil-trust">
+      Decryption runs in this task pane. Your passphrase and secrets never upload to Goldspire.
+    </aside>
+
+    <p id="scan-status" class="status">Scanning message for <code>[redacted]</code>…</p>
+
+    <form id="unlock-form" hidden>
+      <label class="field">
+        <span>Passphrase</span>
+        <input id="passphrase" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="btn" id="unlock-btn">Unlock in message</button>
+    </form>
+
+    <section id="result" class="result" hidden>
+      <p class="status status--ok">Unlocked locally</p>
+      <code id="result-text"></code>
+    </section>
+
+    <p id="error" class="status status--error" hidden></p>
+
+    <p class="hint">
+      Need the browser extension for compose? <a href="https://veil.goldspireventures.com/install.html" target="_blank" rel="noopener">Install Veil</a>
+    </p>
+  </main>
+
+  <script src="../constants.js"></script>
+  <script src="../crypto.js"></script>
+  <script src="../marker.js"></script>
+  <script src="taskpane.js"></script>
+</body>
+</html>

@@ -73,6 +73,7 @@
       </div>
       <p class="gst-veil-pop__trigger">${escapeHtml(triggerLabel)}</p>
       ${explainLines.length ? `<ul class="gst-veil-pop__why">${explainLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
+      <p class="gst-veil-pop__trust">Encrypted in your browser · plaintext never sent to Goldspire</p>
       <div class="gst-veil-pop__chips" data-veil-actions></div>
       ${allowAction ? `<div class="gst-veil-pop__allow-row">
         <button type="button" class="gst-veil-pop__allow" data-action-id="ignore">Allow</button>

@@ -10,7 +10,7 @@
 
   function stepsForProfile(profile) {
     const isOrg = profile === 'organization';
-    return [
+    const steps = [
       {
         tab: 'home',
         target: '#tab-home .card--hero',
@@ -38,12 +38,20 @@
         body: 'Smart shows the pill when Veil detects sensitive text. Off keeps your screen completely clear — copilot still works on paste.',
       },
       {
+        tab: 'settings',
+        target: '#plus-settings-panel',
+        title: 'Veil Plus',
+        body: 'Free covers everything. Plus adds 6 trusted contacts for direct unlock — extra slots or Team when you outgrow personal.',
+        personalOnly: true,
+      },
+      {
         tab: 'help',
         target: '#help-context-card',
         title: 'Help matches your setup',
         body: 'Your setup explains how Veil behaves with your current settings — including why something might not appear.',
       },
     ];
+    return isOrg ? steps.filter((s) => !s.personalOnly) : steps;
   }
 
   function removeOverlay() {
@@ -117,14 +125,38 @@
     removeOverlay();
     if (marked && global.chrome?.storage?.sync) {
       markComplete(global.chrome);
-      global.chrome.tabs?.query?.({ active: true, currentWindow: true }, (tabs) => {
-        if (global.chrome.runtime?.lastError) return;
-        const tabId = tabs?.[0]?.id;
-        if (!tabId) return;
-        global.chrome.tabs.sendMessage(tabId, { type: 'START_PAGE_TOUR' }, () => {
-          void global.chrome.runtime?.lastError;
-        });
-      });
+      global.chrome.storage.sync.get(
+        { firstSecurePractice: false, securityProfile: 'personal' },
+        (settings) => {
+          if (global.chrome.runtime?.lastError) return;
+          const portal = global.GoldspireConstants?.PORTAL_ORIGIN?.replace(/\/$/, '');
+          if (!settings?.firstSecurePractice && settings?.securityProfile === 'personal' && portal) {
+            global.chrome.storage.sync.set({ firstSecurePractice: true }, () => {
+              global.chrome.tabs.create({ url: `${portal}/practice.html`, active: true }, (tab) => {
+                if (!tab?.id) return;
+                const tabId = tab.id;
+                const tryStart = (attempts = 0) => {
+                  global.chrome.tabs.sendMessage(tabId, { type: 'START_PAGE_TOUR', force: true }, () => {
+                    if (global.chrome.runtime?.lastError && attempts < 10) {
+                      window.setTimeout(() => tryStart(attempts + 1), 450);
+                    }
+                  });
+                };
+                window.setTimeout(() => tryStart(), 700);
+              });
+            });
+            return;
+          }
+          global.chrome.tabs?.query?.({ active: true, currentWindow: true }, (tabs) => {
+            if (global.chrome.runtime?.lastError) return;
+            const tabId = tabs?.[0]?.id;
+            if (!tabId) return;
+            global.chrome.tabs.sendMessage(tabId, { type: 'START_PAGE_TOUR' }, () => {
+              void global.chrome.runtime?.lastError;
+            });
+          });
+        },
+      );
     }
   }
 

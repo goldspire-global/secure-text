@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; base-uri 'none'; form-action 'none';"
+    />
+    <title>Claim unlock — Veil Plus</title>
+    <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
+    <link rel="stylesheet" href="unlock.css" />
+  </head>
+  <body>
+    <main class="unlock">
+      <header class="unlock__header">
+        <img class="unlock__logo" src="icons/icon-48.png" alt="" width="40" height="40" />
+        <div>
+          <h1>Veil magic link</h1>
+          <p id="subtitle">One-time unlock code from a Veil Plus sender.</p>
+        </div>
+      </header>
+
+      <section id="loading" class="unlock__form">
+        <p class="hint">Loading…</p>
+      </section>
+
+      <section id="result" class="result" hidden>
+        <h2>Your unlock code</h2>
+        <p class="hint">Use this code to unlock the secured message — share it only if you still need to.</p>
+        <code id="result-value"></code>
+        <div class="result__actions">
+          <button type="button" id="copy-result" class="btn btn--ghost">Copy code</button>
+          <a id="unlock-page-link" class="btn" href="unlock.html">Open unlock page</a>
+        </div>
+      </section>
+
+      <p id="error" class="error" hidden></p>
+    </main>
+    <script src="portal/config.js"></script>
+    <script src="claim.js"></script>
+  </body>
+</html>

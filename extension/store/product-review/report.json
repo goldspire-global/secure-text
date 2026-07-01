@@ -1,0 +1,25 @@
+{
+  "passed": [
+    "/",
+    "/index.html",
+    "/install.html",
+    "/practice.html",
+    "/pricing.html",
+    "/create.html",
+    "/join.html",
+    "/unlock.html",
+    "/privacy.html",
+    "/terms.html",
+    "/feedback.html",
+    "/admin.html",
+    "/outlook-addin/taskpane.html"
+  ],
+  "failed": [],
+  "warnings": [
+    {
+      "route": "popup",
+      "reason": "popup: chrome is not defined"
+    }
+  ],
+  "screenshots": "C:\\Users\\eamon\\Personal Projects\\secure-text\\extension\\store\\product-review"
+}

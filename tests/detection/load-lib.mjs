@@ -8,6 +8,7 @@ const libPath = join(root, 'extension/src/detection/lib-bundle.js');
 
 export function loadDetectionLib() {
   const sandbox = { globalThis: {} };
+  vm.runInNewContext(readFileSync(join(root, 'extension/src/detection/regional-checksums.js'), 'utf8'), sandbox);
   vm.runInNewContext(readFileSync(libPath, 'utf8'), sandbox);
   vm.runInNewContext(readFileSync(join(root, 'extension/src/detection/context-resolve.js'), 'utf8'), sandbox);
   vm.runInNewContext(readFileSync(join(root, 'extension/src/detection/gating.js'), 'utf8'), sandbox);

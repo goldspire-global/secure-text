@@ -9,6 +9,9 @@
 
   function formatDetectionLine(detection) {
     const label = formatCategoryLabel(detection.category);
+    const preview = detection.matchedText
+      ? ` — \`${detection.matchedText}\``
+      : '';
     const severity = detection.severity ? ` · ${detection.severity}` : '';
     const confidence = Number(detection.confidence) >= 50
       ? ` · ${Math.round(detection.confidence)}% match`
@@ -17,7 +20,7 @@
       ? detection.compliance
       : (global.GoldspireCompliance?.frameworksFor?.(detection.category) || []);
     const compliance = fw.length ? ` · ${fw.slice(0, 2).join(', ')}` : '';
-    return `${label}${severity}${confidence}${compliance}`;
+    return `${label}${preview}${severity}${confidence}${compliance}`;
   }
 
   function buildTriggerLabel(context = {}, alreadyInserted = false) {

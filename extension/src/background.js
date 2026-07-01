@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/decisions.js', 'events/ingest.js', 'events/platform-ingest.js', 'tokens/format.js', 'tokens/api.js');
+importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'personal-capability.js', 'personal-provision.js', 'personal-share.js', 'events/bus.js', 'events/decisions.js', 'events/ingest.js', 'events/platform-ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -48,6 +48,7 @@ const CONTENT_FILES = [
   'src/detection/compliance.js',
   'src/detection/scoring.js',
   'src/detection/engine.js',
+  'src/detection/regional-checksums.js',
   'src/detection/lib-bundle.js',
   'src/detection/detectors/credit-card.js',
   'src/detection/detectors/jwt.js',
@@ -87,6 +88,10 @@ const CONTENT_FILES = [
   'src/ai/bootstrap.js',
   'src/observe/paste-observe.js',
   'src/weekly-digest.js',
+  'src/attestation.js',
+  'src/share-helper.js',
+  'src/recent-recipients.js',
+  'src/personal-capability.js',
   'src/content-tour.js',
   'src/content.js',
   'src/unlock-host.js',
@@ -175,6 +180,17 @@ async function syncCloudOrgShares() {
   }
 }
 
+async function syncPersonalShares() {
+  try {
+    const settings = await GoldspireSettings.load();
+    if (GoldspirePersonalCapability?.canReceivePlusShares?.(settings)) {
+      await GoldspirePersonalShare.syncPendingShares();
+    }
+  } catch (error) {
+    console.warn(`${MENU_LOG}: Veil Plus share sync failed`, error);
+  }
+}
+
 async function uploadVeilSecurityEvents() {
   try {
     const result = await GoldspireVeilIngest?.uploadPendingEvents?.();
@@ -218,6 +234,7 @@ async function bootstrapPolicies() {
   await applyEnterprisePolicy();
   await syncCloudOrgPolicy();
   await syncCloudOrgShares();
+  await syncPersonalShares();
   await syncLearningBundle();
   await uploadVeilSecurityEvents();
   await flushOpsTelemetry();
@@ -476,12 +493,16 @@ scheduleOrgSyncAlarm();
 if (api.tabs?.onActivated) {
   api.tabs.onActivated.addListener(() => {
     syncCloudOrgShares();
+    syncPersonalShares();
   });
 }
 
 if (api.tabs?.onUpdated) {
   api.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-    if (changeInfo.status === 'complete') syncCloudOrgShares();
+    if (changeInfo.status === 'complete') {
+      syncCloudOrgShares();
+      syncPersonalShares();
+    }
   });
 }
 
@@ -490,6 +511,7 @@ if (api.alarms?.onAlarm) {
     if (alarm.name === 'goldspire-org-sync') {
       syncCloudOrgPolicy();
       syncCloudOrgShares();
+      syncPersonalShares();
     }
     if (alarm.name === 'goldspire-veil-events') {
       uploadVeilSecurityEvents();
@@ -655,6 +677,34 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     GoldspireOrgShare.deliverSharesForMembers(message)
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error?.message || 'Share delivery failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PERSONAL_SYNC_SHARES') {
+    GoldspirePersonalShare.syncPendingShares()
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Plus share sync failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PERSONAL_LOOKUP_SHARE_KEY') {
+    GoldspirePersonalShare.lookupKeyForMarker(message.fullMarker)
+      .then((key) => sendResponse({ key }))
+      .catch(() => sendResponse({ key: '' }));
+    return true;
+  }
+
+  if (message?.type === 'PERSONAL_DELIVER_SHARE') {
+    GoldspirePersonalShare.deliverSharesForContacts(message)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Plus share delivery failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PERSONAL_CREATE_MAGIC_LINK') {
+    GoldspirePersonalShare.createMagicLink(message)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Magic link failed.' }));
     return true;
   }
 
