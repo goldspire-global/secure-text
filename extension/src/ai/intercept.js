@@ -57,13 +57,15 @@
     const rawDetections = (global.GoldspireDetection?.analyze?.(text, context) || [])
       .filter((hit) => hit.confidence >= (global.GoldspireVeilCopilot?.MIN_CONFIDENCE || 50));
 
-    const detections = (global.GoldspireDetectionGating?.filterForPrompt?.(
-      rawDetections,
+    const detections = global.GoldspireVeilAllowMemory?.filterPromptableDetections?.(
+      global.GoldspireDetectionGating?.filterForPrompt?.(
+        rawDetections,
+        { ...context, intent: 'ai_prompt' },
+        'paste',
+      ) || rawDetections,
+      host,
       { ...context, intent: 'ai_prompt' },
-      'paste',
-    ) || rawDetections).filter(
-      (hit) => !global.GoldspireVeilSnooze?.isCategorySnoozed?.(host, hit.category),
-    );
+    ) || [];
 
     if (detections.length === 0) return;
 
@@ -132,14 +134,16 @@
             recommended,
             choice: actionId,
           });
-          if (actionId === 'ignore') {
-            global.GoldspireVeilSnooze?.allowComposition?.(
+          if (actionId === 'ignore' || actionId === 'ignore-site') {
+            await global.GoldspireVeilAllowMemory?.recordAllow?.({
               host,
               text,
-              { raw: text, category: detections[0]?.category },
+              match: { raw: text, category: detections[0]?.category },
               fieldState,
               detections,
-            );
+              context,
+              scope: actionId === 'ignore-site' ? 'site' : 'session',
+            });
             await global.GoldspireVeilCopilot?.runAction?.('ignore', { text, context, detections, settings });
             resolve({ continued: true });
             return;

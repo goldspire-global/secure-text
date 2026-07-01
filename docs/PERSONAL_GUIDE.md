@@ -6,8 +6,8 @@ Quick start for **Personal** profile users (no team, no join code).
 
 ## Install
 
-1. Install from [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/search/Veil%20Goldspire) or [Chrome Web Store](https://chromewebstore.google.com/search/Veil%20Goldspire) (search **Veil by Goldspire**).
-2. Open the Veil popup → **Personal** → choose a passphrase (**16+ characters**).
+1. Install from [Veil on Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkbblkoncafpmcpkd) or [Chrome Web Store](https://chromewebstore.google.com/search/Veil%20Goldspire) (search **Veil by Goldspire**).
+2. Open the Veil popup → **Personal** → **Quick setup** (or choose your own passphrase).
 
 ![Veil popup — personal setup complete](screenshots/popup-home-checklist.png)
 
@@ -24,6 +24,8 @@ Quick start for **Personal** profile users (no team, no join code).
 
 Smart copilot stays quiet while you type name, email, or DOB on signup forms — but still catches API keys.
 
+**Allow** dismisses the prompt for that field and snoozes the category on the site for 24 hours. **Always on this site** remembers the category locally (not for passwords, API keys, cards, or JWTs). Manage rules under **Settings → Always allow on these sites**.
+
 ## Recipients without Veil
 
 Share the passphrase out of band. If you use one-time mode, share the unlock code separately. External recipients can use the [hosted unlock page](https://join-veil.goldspireventures.com/unlock.html) when you include a link.
@@ -32,6 +34,7 @@ Share the passphrase out of band. If you use one-time mode, share the unlock cod
 
 - **Veil copilot** — on by default; turn off in Settings if you prefer shortcut-only
 - **On-page hints** — Smart / Always / Off
+- **Always allow on these sites** — per-site rules from **Allow → Always on this site**; clear anytime in Settings
 - **Share anonymous copilot signals** — on by default under Help; improves Veil for everyone (metadata only, never your text). Uncheck to opt out.
 - **Feedback** — Help tab → Report a problem
 

@@ -32,7 +32,7 @@
             <button type="button" class="profile-card" data-profile="personal">
               <span class="profile-card__mark" aria-hidden="true">P</span>
               <strong>Personal</strong>
-              <span class="profile-card__desc">Just me — secure passwords and secrets in email, forms, and notes.</span>
+              <span class="profile-card__desc">Just me — quick setup, secure secrets in email, forms, and notes.</span>
               <span class="profile-card__badge hint" id="setup-personal-badge" hidden>Passphrase saved here</span>
             </button>
             <button type="button" class="profile-card" data-profile="organization">
@@ -61,17 +61,22 @@
 
           <div id="setup-personal-new">
             <h2 class="setup-step__title">Personal setup</h2>
-            <p class="card__text">Your passphrase is encrypted and stored only in this browser. One-click secure after setup.</p>
+            <p class="card__text">Your passphrase stays encrypted on this browser only. Quick setup generates a strong one for you.</p>
+            <button type="button" id="setup-quick-personal" class="btn btn--full">Quick setup — generate &amp; go</button>
+            <p class="hint setup-personal-or">or choose your own</p>
             <label class="field">
               <span>Your passphrase</span>
-              <input id="setup-personal-passphrase" type="password" autocomplete="new-password" placeholder="Choose a strong passphrase (16+ chars)" />
+              <div class="field-row">
+                <input id="setup-personal-passphrase" type="password" autocomplete="new-password" placeholder="16+ characters" />
+                <button type="button" id="setup-generate-passphrase" class="btn btn--ghost btn--sm">Generate</button>
+              </div>
               <small id="setup-personal-strength" class="hint"></small>
             </label>
             <label class="checkbox">
               <input id="setup-personal-oneclick" type="checkbox" checked />
               <span>One-click secure with saved passphrase</span>
             </label>
-            <button type="button" id="setup-finish-personal" class="btn btn--full">Get started</button>
+            <button type="button" id="setup-finish-personal" class="btn btn--ghost btn--full">Use my passphrase</button>
           </div>
         </div>
 
@@ -130,7 +135,7 @@
               <button type="button" id="action-secure-options" class="btn btn--ghost">Secure with options…</button>
               <button type="button" id="action-unlock" class="btn btn--ghost">Unlock [redacted]</button>
             </div>
-            <p class="selection-tip" id="selection-tip-shortcuts">Quick secure shortcut shown in Help tab</p>
+            <p class="selection-tip" id="selection-tip-shortcuts"></p>
             <p class="hint hint--link-row">
               <button type="button" id="home-help-context-link" class="btn btn--text">How Veil behaves with your settings →</button>
             </p>
@@ -145,7 +150,10 @@
             <div id="settings-personal" hidden>
               <label class="field">
                 <span>Passphrase</span>
-                <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" />
+                <div class="field-row">
+                  <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" />
+                  <button type="button" id="passphrase-generate" class="btn btn--ghost btn--sm">Generate</button>
+                </div>
                 <small id="passphrase-strength" class="hint"></small>
               </label>
               <label class="checkbox">
@@ -314,6 +322,11 @@
             <ul id="snoozed-sites-list"></ul>
             <button type="button" id="clear-snoozed" class="btn btn--ghost btn--sm">Clear all</button>
           </div>
+          <div class="card" id="site-allow-rules-card" hidden>
+            <p class="card__text">Copilot “always allow” rules on these sites.</p>
+            <ul id="site-allow-rules-list"></ul>
+            <button type="button" id="clear-site-allows" class="btn btn--ghost btn--sm">Clear all</button>
+          </div>
         </div>
 
         <!-- Help -->
@@ -371,6 +384,11 @@
             </div>
           </div>
           <div class="card">
+            <h2>Get oriented</h2>
+            <p class="card__text">New to Veil? Take a quick tour of the popup — Home, Settings, and Help.</p>
+            <button type="button" id="replay-tour" class="btn btn--ghost btn--sm">Take the tour</button>
+          </div>
+          <div class="card">
             <h2>Keyboard shortcuts</h2>
             <p class="card__text" id="shortcut-hint">Secure · Options · Unlock · Generate password</p>
           </div>
@@ -418,6 +436,7 @@
     <script src="../src/status-notice.js"></script>
     <script src="../src/org-provision.js"></script>
     <script src="../src/org-share.js"></script>
+    <script src="tour.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

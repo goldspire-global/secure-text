@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Veil",
-  "version": "1.3.1",
+  "version": "1.3.3",
   "description": "Protect secrets in email and web apps before you send. Free for personal use; teams get copilot, tokens, and policy sync.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
@@ -109,6 +109,7 @@
         "src/observe/paste-insert.js",
         "src/share-recipients.js",
         "src/copilot/snooze.js",
+        "src/copilot/allow-memory.js",
         "src/copilot/explain.js",
         "src/copilot/prompt.js",
         "src/copilot/controller.js",

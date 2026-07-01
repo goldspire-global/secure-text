@@ -41,8 +41,12 @@
     const source = context?.source || 'paste';
     const raw = global.GoldspireDetection?.analyze?.(trimmed, context) || [];
     const floor = global.GoldspireDetectionGating?.minConfidence?.(context, source) ?? MIN_CONFIDENCE;
-    const detections = global.GoldspireDetectionGating?.filterForPrompt?.(raw, context, source)
-      || raw.filter((hit) => hit.confidence >= floor);
+    const detections = global.GoldspireVeilAllowMemory?.filterPromptableDetections?.(
+      global.GoldspireDetectionGating?.filterForPrompt?.(raw, context, source)
+        || raw.filter((hit) => hit.confidence >= floor),
+      context.host || '',
+      context,
+    ) || [];
 
     if (!detections.length) return null;
 
@@ -73,7 +77,11 @@
     if (!analyzed) return null;
 
     const host = context.host || '';
-    analyzed.detections = analyzed.detections.filter(
+    analyzed.detections = global.GoldspireVeilAllowMemory?.filterPromptableDetections?.(
+      analyzed.detections,
+      host,
+      context,
+    ) || analyzed.detections.filter(
       (hit) => !global.GoldspireVeilSnooze?.isCategorySnoozed?.(host, hit.category),
     );
     if (!analyzed.detections.length) return null;
@@ -141,22 +149,26 @@
             recommended,
             choice: actionId,
           });
-          const needsSelection = actionId !== 'ignore' && alreadyInserted && match;
+          const needsSelection = actionId !== 'ignore' && actionId !== 'ignore-site' && alreadyInserted && match;
           const selectionContext = needsSelection
             ? global.GoldspirePasteInsert?.buildSelectionForMatch?.(fieldState, match)
             : null;
-          const result = await global.GoldspireVeilCopilot?.applyPasteAction?.(actionId, {
-            text,
-            target,
-            caret,
-            context,
-            detections,
-            settings,
-            alreadyInserted,
-            fieldState,
-            match,
-            selectionContext,
-          });
+          const result = await global.GoldspireVeilCopilot?.applyPasteAction?.(
+            actionId === 'ignore-site' ? 'ignore' : actionId,
+            {
+              text,
+              target,
+              caret,
+              context,
+              detections,
+              settings,
+              alreadyInserted,
+              fieldState,
+              match,
+              selectionContext,
+              allowScope: actionId === 'ignore-site' ? 'site' : 'session',
+            },
+          );
           resolve({ actionId, ...result });
         },
       });

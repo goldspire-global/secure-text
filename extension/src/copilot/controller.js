@@ -70,12 +70,14 @@
     fieldState = null,
     match = null,
     selectionContext = null,
+    allowScope = 'session',
   }) {
     const request = {
       text,
       context,
       detections,
       settings,
+      allowScope,
     };
 
     if (actionId === 'ignore') {
@@ -93,13 +95,15 @@
           nextFieldState = global.GoldspirePasteInsert?.readFieldState?.(target) || fieldState;
         }
       }
-      global.GoldspireVeilSnooze?.allowComposition?.(
-        context.host,
+      await global.GoldspireVeilAllowMemory?.recordAllow?.({
+        host: context.host,
         text,
         match,
-        nextFieldState,
+        fieldState: nextFieldState,
         detections,
-      );
+        context,
+        scope: request.allowScope === 'site' ? 'site' : 'session',
+      });
       await runAction('ignore', request);
       return { ok: true, inserted: text };
     }

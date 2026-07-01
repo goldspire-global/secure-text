@@ -756,6 +756,29 @@
   cursor: not-allowed;
 }
 
+.gst-veil-pop__allow-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.gst-veil-pop__allow-site {
+  border: none;
+  background: transparent;
+  color: #9dd4ff;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.gst-veil-pop__allow-site:hover {
+  color: #d4e9ff;
+}
+
 .gst-veil-pop__allow {
   all: unset;
   cursor: pointer;

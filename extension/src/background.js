@@ -72,6 +72,7 @@ const CONTENT_FILES = [
   'src/observe/context.js',
   'src/observe/paste-insert.js',
   'src/copilot/snooze.js',
+  'src/copilot/allow-memory.js',
   'src/copilot/explain.js',
   'src/copilot/prompt.js',
   'src/copilot/controller.js',

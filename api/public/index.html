@@ -16,24 +16,51 @@
         <img class="brand__mark" src="portal/veil-mark.svg" alt="" width="42" height="42" />
         <div>
           <strong class="brand__name">Veil</strong>
-          <span class="brand__byline">by Goldspire Ventures</span>
+          <span class="brand__byline">by Goldspire</span>
         </div>
       </div>
       <nav class="nav nav--header" data-portal-nav></nav>
     </header>
 
-    <section class="hero card">
+    <div class="trust-strip">
+      <span class="trust-strip__badge">✓ Live on Microsoft Edge</span>
+      <span>Browser-native · Local encryption · Metadata-only team analytics</span>
+    </div>
+
+    <section class="hero card hero--premium">
       <p class="eyebrow">Browser-native security for email &amp; web</p>
       <h1>Protect sensitive text before it leaves the browser</h1>
       <p class="lede hero__lede">
         Veil is a browser extension and team platform for securing secrets in Outlook, Gmail, and everyday web apps.
         Replace API keys, credentials, and PII with <code>[redacted]</code> or team tokens — encrypted locally, sent as normal mail.
       </p>
-      <div class="btn-row">
+      <div class="btn-row hero__actions">
         <a class="btn" href="install.html">Install free (personal)</a>
         <a class="btn btn--ghost" href="create.html" data-nav-create>Set up a team</a>
         <a class="btn btn--ghost" href="join.html">Join a team</a>
         <a class="btn btn--ghost" href="pricing.html">Pricing</a>
+      </div>
+    </section>
+
+    <section class="card card--flat">
+      <h2>How Veil fits your day</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <strong>Paste or highlight</strong>
+          <p>Veil copilot catches secrets in compose, forms, and AI chat — quietly on signup pages.</p>
+        </div>
+        <div class="flow-step">
+          <strong>Secure or mask</strong>
+          <p>One click replaces sensitive text with <code>[redacted]</code> or a team token inline.</p>
+        </div>
+        <div class="flow-step">
+          <strong>Send as normal</strong>
+          <p>Email and forms look ordinary. Recipients unlock in place with Veil or your hosted link.</p>
+        </div>
+        <div class="flow-step">
+          <strong>Teams stay in control</strong>
+          <p>Policy packs, SIEM export, and admin console — without reading message content.</p>
+        </div>
       </div>
     </section>
 
@@ -62,15 +89,18 @@
     </section>
 
     <section class="grid-3">
-      <div class="card card--flat">
+      <div class="card card--flat feature-card">
+        <span class="feature-card__icon" aria-hidden="true">✉</span>
         <h2>Secure in the compose window</h2>
         <p>Highlight or paste a secret. Veil replaces it with <code>[redacted]</code> inline. Teammates with the extension click to unlock in the thread.</p>
       </div>
-      <div class="card card--flat">
+      <div class="card card--flat feature-card">
+        <span class="feature-card__icon" aria-hidden="true">🔗</span>
         <h2>Team tokens for email</h2>
         <p>Share <code>[veil:vt_…]</code> placeholders across Outlook and Gmail. Org members reveal with one click — ciphertext stays in your Veil cloud, never plaintext.</p>
       </div>
-      <div class="card card--flat">
+      <div class="card card--flat feature-card">
+        <span class="feature-card__icon" aria-hidden="true">🛡</span>
         <h2>Veil copilot</h2>
         <p>On paste and while typing, Veil flags sensitive data and offers Secure, Mask, or Tokenize — with clear reasons before you send.</p>
       </div>

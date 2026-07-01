@@ -142,6 +142,8 @@ export function loadVeilStack(extra = {}) {
     'extension/src/status-notice.js',
     'extension/src/copilot/controller.js',
     'extension/src/copilot/snooze.js',
+    'extension/src/learning/safety.js',
+    'extension/src/copilot/allow-memory.js',
     'extension/src/copilot/explain.js',
     'extension/src/observe/context.js',
     'extension/src/copilot/prompt.js',

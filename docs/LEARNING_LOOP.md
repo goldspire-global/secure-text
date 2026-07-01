@@ -59,6 +59,18 @@ LEARNING_TRAIN_MIN_SAMPLES=10
 
 Ops → **Learning** tab shows automation status, last bundle version, and new decision count.
 
+### Local “always allow” (per device)
+
+Users can click **Always on this site** on paste, selection, or AI prompts. Rules live in `chrome.storage.local` as `gstSiteAllowRules` (`host`, `category`, `intent`) — up to 64 entries, manageable under Settings.
+
+| Layer | Scope | Secrets (`api_key`, `jwt`, `password`, `credit_card`) |
+|-------|--------|--------------------------------------------------------|
+| **Allow** | Same field + 24h category snooze on host | Still prompts |
+| **Always on this site** | This host + category (+ intent) | Never offered / never stored |
+| **Fleet learning bundle** | Global/org signed weights | Cannot auto-suppress without ops |
+
+`ignore_site` decisions upload as learning signals (when telemetry is on) so fleet bundles can eventually align with repeated per-site allows — local rules apply immediately; bundles refine thresholds over time.
+
 ### Signed bundles
 
 - `LEARNING_BUNDLE_SECRET` in `.env` → `npm run env:apply` → extension verifies HMAC

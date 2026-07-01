@@ -79,6 +79,7 @@ const SETTINGS_KEYS = [
   'passwordSymbols',
   'enforceStrongPassphrase',
   'setupComplete',
+  'tourComplete',
   'orgId',
   'orgDisplayName',
   'orgProvisionSource',
@@ -392,11 +393,15 @@ function switchTab(tabName) {
   });
   if (tabName === 'settings') {
     loadSnoozedSites();
+    loadSiteAllowRules();
     refreshPassphraseField().catch(() => {});
     refreshContextualHelp().catch(() => {});
   }
   if (tabName === 'help') {
     refreshContextualHelp().catch(() => {});
+  }
+  if (tabName === 'home') {
+    refreshHomeShortcuts().catch(() => {});
   }
 }
 
@@ -525,6 +530,26 @@ async function refreshContextualHelp() {
   const hintsHint = document.getElementById('hints-settings-hint');
   if (copilotHint) copilotHint.textContent = ctx.settingsHints.copilot;
   if (hintsHint) hintsHint.textContent = ctx.settingsHints.hints;
+}
+
+function isMailComposeHost(host = '') {
+  return /mail\.google|googlemail|outlook\.(live|office)|office365|hotmail/i.test(host);
+}
+
+async function refreshHomeShortcuts() {
+  const selectionTip = document.getElementById('selection-tip-shortcuts');
+  const shortcutHint = document.getElementById('shortcut-hint');
+  if (!selectionTip && !shortcutHint) return;
+
+  const activeHost = await readActiveTabHost();
+  const mailCompose = isMailComposeHost(activeHost);
+
+  if (selectionTip && GoldspireCopy?.homeShortcutsLine) {
+    selectionTip.textContent = GoldspireCopy.homeShortcutsLine({ mailCompose });
+  }
+  if (shortcutHint && GoldspireCopy?.helpShortcutsLine) {
+    shortcutHint.textContent = GoldspireCopy.helpShortcutsLine();
+  }
 }
 
 async function refreshPassphraseField() {
@@ -781,8 +806,78 @@ async function finishSetup(profile, extraSettings = {}, passphrase = '') {
 
   showMain(profile);
   await loadSettings();
-  showStatus('Setup complete — highlight text and press Ctrl+Shift+S.');
+  const secureShortcut = GoldspireCopy?.shortcut?.('secure') || 'Ctrl+Shift+S';
+  showStatus(`Setup complete — highlight text and press ${secureShortcut}.`);
+  GoldspirePopupTour?.maybeStartAfterSetup?.(profile, {
+    switchTab,
+    api,
+  });
 }
+
+function generatePersonalPassphrase() {
+  return generateLocalPassword({
+    length: 20,
+    lowercase: true,
+    uppercase: true,
+    digits: true,
+    symbols: true,
+  });
+}
+
+function fillSetupPassphrase(value) {
+  const input = document.getElementById('setup-personal-passphrase');
+  if (!input) return;
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+async function completePersonalSetup(passphrase, { oneClick = true, triggerEl = null } = {}) {
+  const a = GoldspirePassphrasePolicy?.assessPassphrase?.(passphrase, 'personal');
+  if (a && !a.ok) {
+    showStatus(a.message);
+    return false;
+  }
+
+  const prevLabel = triggerEl?.textContent;
+  if (triggerEl) {
+    triggerEl.disabled = true;
+    triggerEl.textContent = 'Saving…';
+  }
+
+  try {
+    await finishSetup('personal', { useSavedPassphrase: oneClick }, passphrase);
+    return true;
+  } catch (e) {
+    showStatus(e?.message || 'Setup failed.');
+    return false;
+  } finally {
+    if (triggerEl && prevLabel) {
+      triggerEl.disabled = false;
+      triggerEl.textContent = prevLabel;
+    }
+  }
+}
+
+document.getElementById('setup-quick-personal')?.addEventListener('click', async () => {
+  const btn = document.getElementById('setup-quick-personal');
+  const oneClick = document.getElementById('setup-personal-oneclick')?.checked !== false;
+  const passphrase = generatePersonalPassphrase();
+  fillSetupPassphrase(passphrase);
+  await completePersonalSetup(passphrase, { oneClick, triggerEl: btn });
+});
+
+document.getElementById('setup-generate-passphrase')?.addEventListener('click', () => {
+  fillSetupPassphrase(generatePersonalPassphrase());
+  document.getElementById('setup-personal-passphrase')?.focus();
+});
+
+document.getElementById('passphrase-generate')?.addEventListener('click', () => {
+  if (!passphraseInput) return;
+  passphraseInput.value = generatePersonalPassphrase();
+  passphraseDirty = true;
+  refreshPassphraseStrength();
+  passphraseInput.focus();
+});
 
 document.getElementById('setup-finish-personal')?.addEventListener('click', async () => {
   const passphrase = document.getElementById('setup-personal-passphrase').value.trim();
@@ -790,30 +885,12 @@ document.getElementById('setup-finish-personal')?.addEventListener('click', asyn
   const finishBtn = document.getElementById('setup-finish-personal');
 
   if (!passphrase) {
-    showStatus('Choose a passphrase to encrypt your secrets.');
+    showStatus('Enter a passphrase, or use Quick setup.');
     document.getElementById('setup-personal-passphrase')?.focus();
     return;
   }
 
-  const a = GoldspirePassphrasePolicy?.assessPassphrase?.(passphrase, 'personal');
-  if (a && !a.ok) { showStatus(a.message); return; }
-
-  const prevLabel = finishBtn?.textContent;
-  if (finishBtn) {
-    finishBtn.disabled = true;
-    finishBtn.textContent = 'Saving…';
-  }
-
-  try {
-    await finishSetup('personal', { useSavedPassphrase: oneClick }, passphrase);
-  } catch (e) {
-    showStatus(e?.message || 'Setup failed.');
-  } finally {
-    if (finishBtn) {
-      finishBtn.disabled = false;
-      finishBtn.textContent = prevLabel || 'Get started';
-    }
-  }
+  await completePersonalSetup(passphrase, { oneClick, triggerEl: finishBtn });
 });
 
 document.getElementById('setup-continue-personal')?.addEventListener('click', async () => {
@@ -975,7 +1052,7 @@ document.getElementById('disconnect-org')?.addEventListener('click', async () =>
 
 document.getElementById('reset-setup')?.addEventListener('click', async () => {
   if (!confirm('Reset setup? Your passphrase stays saved but you\'ll re-choose personal vs team.')) return;
-  await writeSyncSettings({ setupComplete: false });
+  await writeSyncSettings({ setupComplete: false, tourComplete: false });
   showSetup();
 });
 
@@ -1056,6 +1133,7 @@ async function loadSettings() {
   applyManagedChrome(settings);
     await refreshReadinessChecklist();
     await refreshContextualHelp();
+    GoldspirePopupTour?.maybeStartAfterSetup?.('organization', { switchTab, api });
     return;
   }
 
@@ -1110,6 +1188,7 @@ async function loadSettings() {
   applyManagedChrome(settings);
   await refreshReadinessChecklist();
   await refreshContextualHelp();
+  await refreshHomeShortcuts();
 }
 
 form?.addEventListener('submit', async (event) => {
@@ -1461,6 +1540,47 @@ function loadSnoozedSites() {
   });
 }
 
+function formatAllowRuleLabel(rule = {}) {
+  const cat = String(rule.category || '').replace(/_/g, ' ');
+  const intent = rule.intent && rule.intent !== '*' ? ` · ${rule.intent}` : '';
+  return `${rule.host} · ${cat}${intent}`;
+}
+
+function loadSiteAllowRules() {
+  const card = document.getElementById('site-allow-rules-card');
+  const list = document.getElementById('site-allow-rules-list');
+  if (!card || !list) return;
+
+  api.storage.local.get({ gstSiteAllowRules: [] }, (result) => {
+    if (api.runtime.lastError) return;
+    const rules = result.gstSiteAllowRules || [];
+    card.hidden = rules.length === 0;
+    list.innerHTML = rules.map((rule, index) =>
+      `<li class="snoozed-row"><span>${escapePopupHtml(formatAllowRuleLabel(rule))}</span><button type="button" class="btn btn--ghost btn--sm" data-remove-allow="${index}">Remove</button></li>`,
+    ).join('');
+
+    list.querySelectorAll('[data-remove-allow]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.removeAllow);
+        api.storage.local.get({ gstSiteAllowRules: [] }, (r) => {
+          const updated = (r.gstSiteAllowRules || []).filter((_, i) => i !== idx);
+          api.storage.local.set({ gstSiteAllowRules: updated }, () => {
+            loadSiteAllowRules();
+            refreshContextualHelp().catch(() => {});
+          });
+        });
+      });
+    });
+  });
+}
+
+document.getElementById('clear-site-allows')?.addEventListener('click', () => {
+  api.storage.local.set({ gstSiteAllowRules: [] }, () => {
+    loadSiteAllowRules();
+    refreshContextualHelp().catch(() => {});
+  });
+});
+
 document.getElementById('clear-snoozed')?.addEventListener('click', () => {
   api.storage.local.set({ gstSnoozedHosts: [] }, () => {
     loadSnoozedSites();
@@ -1493,15 +1613,6 @@ if (typeof GoldspireConstants !== 'undefined') {
   if (helpPortalLink && base) helpPortalLink.href = `${base}index.html`;
   if (helpInstallLink && base) helpInstallLink.href = `${base}install.html`;
   if (helpPrivacyLink && base) helpPrivacyLink.href = `${base}privacy.html`;
-}
-
-const shortcutHint = document.getElementById('shortcut-hint');
-const selectionTip = document.getElementById('selection-tip-shortcuts');
-if (shortcutHint && typeof GoldspireCopy !== 'undefined') {
-  shortcutHint.textContent = `${GoldspireCopy.shortcutPair('secure')} secure · ${GoldspireCopy.shortcutPair('options')} options · ${GoldspireCopy.shortcut('unlock')} unlock · ${GoldspireCopy.shortcut('generate')} generate`;
-}
-if (selectionTip && typeof GoldspireCopy !== 'undefined') {
-  selectionTip.textContent = `${GoldspireCopy.shortcutPair('secure')} Quick · ${GoldspireCopy.shortcutPair('options')} Options · Outlook: use the pill on the right`;
 }
 
 async function collectFeedbackMeta() {
@@ -1580,6 +1691,14 @@ async function openFeedbackPortal(kind) {
   });
 }
 
+document.getElementById('replay-tour')?.addEventListener('click', async () => {
+  const settings = await readSyncSettings();
+  GoldspirePopupTour?.start?.(settings.securityProfile || 'personal', {
+    switchTab,
+    api,
+    force: true,
+  });
+});
 document.getElementById('feedback-send')?.addEventListener('click', () => {
   submitFeedbackTicket('feedback', 'General feedback from extension popup')
     .then((result) => showStatus(`Ticket ${result.ticketRef} submitted — thank you.`))

@@ -12,9 +12,12 @@
   <div class="layout">
     <nav class="nav" data-portal-nav></nav>
 
+    <div class="page-split">
     <div class="card">
-      <h1>Join your team</h1>
-      <p class="lede">Enter the join code from your admin and your work email. You’ll need the Veil extension installed.</p>
+      <header class="page-hero">
+        <h1>Join your team</h1>
+        <p class="lede">Enter the join code from your admin and your work email. You’ll need the Veil extension installed.</p>
+      </header>
       <p class="hint">If your team uses invite-only mode, your admin must add your work email in Admin → People before you can connect.</p>
 
       <form id="join-form">
@@ -38,6 +41,18 @@
 
       <div id="status" class="status" role="status"></div>
       <p class="hint" id="join-next-steps" hidden>Need the extension? <a href="install.html">Install Veil</a> first, then refresh your mail tab (F5).</p>
+    </div>
+
+    <aside class="side-panel">
+      <h3>Before you join</h3>
+      <ul>
+        <li><a href="install.html">Install Veil</a> from Edge or Chrome</li>
+        <li>Open the extension → <strong>Team</strong></li>
+        <li>Enter the same join code and work email here</li>
+        <li>Refresh Outlook or Gmail after connecting</li>
+      </ul>
+      <p class="hint" style="margin-top:0.75rem;">Setting up a new team? <a href="create.html">Create one</a></p>
+    </aside>
     </div>
 
     <footer class="site-footer" data-portal-footer></footer>

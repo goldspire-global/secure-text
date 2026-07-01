@@ -61,7 +61,8 @@
       ? `<a href="mailto:${support}">Support</a>`
       : '<a href="feedback.html">Support</a>';
     footer.innerHTML = `
-      <span>Veil by Goldspire</span>
+      <span>Veil · <a href="https://goldspireventures.com">Goldspire Ventures Ltd</a></span>
+      <a href="https://goldspire.dev">Goldspire Studio</a>
       <a href="privacy.html">Privacy</a>
       <a href="terms.html">Terms</a>
       <a href="install.html">Install</a>

@@ -56,7 +56,22 @@
       hide();
       return;
     }
-    if (actionId === 'ignore') {
+    if (actionId === 'ignore' || actionId === 'ignore-site') {
+      await global.GoldspireVeilAllowMemory?.recordAllow?.({
+        host: context.host,
+        text,
+        match: { raw: text, category: detections[0]?.category },
+        fieldState: { text },
+        detections,
+        context,
+        scope: actionId === 'ignore-site' ? 'site' : 'session',
+      });
+      await global.GoldspireVeilCopilot?.runAction?.('ignore', {
+        text,
+        context,
+        detections,
+        settings,
+      });
       hide();
       return;
     }
@@ -98,7 +113,28 @@
     const actions = global.GoldspireVeilCopilot?.listCopilotActions?.(context, settings, detections) || [];
     actionsEl.innerHTML = '';
     for (const action of actions) {
-      if (action.id === 'ignore') continue;
+      if (action.id === 'ignore') {
+        const allowBtn = document.createElement('button');
+        allowBtn.type = 'button';
+        allowBtn.className = 'gst-veil-selection-bar__btn gst-veil-selection-bar__btn--allow';
+        allowBtn.textContent = 'Allow';
+        allowBtn.addEventListener('click', () => {
+          onSelectionAction('ignore', { text, context, detections, settings, selectionContext });
+        });
+        actionsEl.appendChild(allowBtn);
+        if (global.GoldspireVeilAllowMemory?.canRememberSiteAllow?.(detections)) {
+          const siteBtn = document.createElement('button');
+          siteBtn.type = 'button';
+          siteBtn.className = 'gst-veil-selection-bar__btn gst-veil-selection-bar__btn--allow';
+          siteBtn.textContent = 'Always here';
+          siteBtn.title = 'Stop prompting for this type on this site';
+          siteBtn.addEventListener('click', () => {
+            onSelectionAction('ignore-site', { text, context, detections, settings, selectionContext });
+          });
+          actionsEl.appendChild(siteBtn);
+        }
+        continue;
+      }
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'gst-veil-selection-bar__btn';
@@ -139,8 +175,12 @@
         source: 'selection',
       }) || { source: 'selection', host: location.hostname || '' };
 
-      const detections = (global.GoldspireDetection?.analyze?.(trimmed, context) || [])
-        .filter((hit) => hit.confidence >= global.GoldspireVeilCopilot.MIN_CONFIDENCE);
+      const detections = global.GoldspireVeilAllowMemory?.filterPromptableDetections?.(
+        (global.GoldspireDetection?.analyze?.(trimmed, context) || [])
+          .filter((hit) => hit.confidence >= global.GoldspireVeilCopilot.MIN_CONFIDENCE),
+        context.host || '',
+        context,
+      ) || [];
 
       if (detections.length === 0) {
         hide();

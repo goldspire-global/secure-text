@@ -24,6 +24,7 @@
     passphraseFromVault: false,
     enforceStrongPassphrase: true,
     setupComplete: false,
+    tourComplete: false,
     orgId: '',
     orgDisplayName: '',
     orgProvisionSource: '',

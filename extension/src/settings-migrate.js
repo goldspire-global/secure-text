@@ -29,6 +29,11 @@
       next.learningHints = [];
     }
 
+    // Existing installs before 1.3.3: skip auto tour; new users get tour after setup.
+    if (next.setupComplete === true && next.tourComplete === undefined) {
+      next.tourComplete = true;
+    }
+
     return next;
   }
 

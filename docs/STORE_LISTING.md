@@ -56,8 +56,8 @@ https://join-veil.goldspireventures.com/feedback.html
 
 ## Edge Add-ons
 
-- **Live listing:** https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkbklkoncafpmcpkd
-- **Extension ID:** `kfnpkdgfdpalmfibbkbklkoncafpmcpkd`
+- **Live listing:** https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd
+- **Extension ID:** `kfnpkdgfdpalmfibbkblkoncafpmcpkd`
 - Store display name is **Veil** (subtitle: Goldspire Ventures Ltd). Search “Veil Goldspire” may not rank yet — use the direct URL on [install.html](../install.html).
 - Open the listing **in Microsoft Edge** (Chrome shows “incompatible” because it cannot install Edge extensions).
 - Package: `extension/store/veil-1.2.3.zip` from `npm run package:store`.

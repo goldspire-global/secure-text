@@ -74,6 +74,30 @@
     return 'Open any page, paste or highlight a secret — or use Secure selection below.';
   }
 
+  function shortcutLabel(label, name = label) {
+    return `${shortcut(label)} ${name}`;
+  }
+
+  function helpShortcutsLine() {
+    return [
+      shortcutLabel('secure'),
+      shortcutLabel('options'),
+      shortcutLabel('unlock'),
+      shortcutLabel('generate'),
+    ].join(' · ');
+  }
+
+  function homeShortcutsLine(options = {}) {
+    const parts = [
+      `${shortcut('secure')} secure`,
+      `${shortcut('options')} options`,
+    ];
+    if (options.mailCompose) {
+      parts.push('Pill on the right in compose');
+    }
+    return parts.join(' · ');
+  }
+
   global.GoldspireCopy = {
     isOrgProfile,
     passphraseNoun,
@@ -85,6 +109,9 @@
     modKey,
     shortcut,
     shortcutPair,
+    shortcutLabel,
+    helpShortcutsLine,
+    homeShortcutsLine,
     refreshTabHint,
     homeEmptyHint,
   };

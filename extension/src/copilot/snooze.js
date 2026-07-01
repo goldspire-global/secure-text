@@ -15,6 +15,7 @@
       for (const host of stored[STORAGE_KEY] || []) {
         if (host) hosts.add(host);
       }
+      await global.GoldspireVeilAllowMemory?.loadSiteAllowRules?.();
     } catch {
       // Non-critical.
     }

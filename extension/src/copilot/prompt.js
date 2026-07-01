@@ -58,6 +58,8 @@
     }) || [];
     const primaryActions = actions.filter((a) => a.id !== 'ignore');
     const allowAction = actions.find((a) => a.id === 'ignore');
+    const showSiteAllow = allowAction
+      && global.GoldspireVeilAllowMemory?.canRememberSiteAllow?.(detections);
     const typingClass = context.source === 'type' ? ' gst-veil-pop--typing' : '';
 
     const pop = document.createElement('div');
@@ -72,7 +74,10 @@
       <p class="gst-veil-pop__trigger">${escapeHtml(triggerLabel)}</p>
       ${explainLines.length ? `<ul class="gst-veil-pop__why">${explainLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
       <div class="gst-veil-pop__chips" data-veil-actions></div>
-      ${allowAction ? '<button type="button" class="gst-veil-pop__allow" data-action-id="ignore">Allow</button>' : ''}
+      ${allowAction ? `<div class="gst-veil-pop__allow-row">
+        <button type="button" class="gst-veil-pop__allow" data-action-id="ignore">Allow</button>
+        ${showSiteAllow ? '<button type="button" class="gst-veil-pop__allow-site" data-action-id="ignore-site" title="Stop prompting for this type on this site">Always on this site</button>' : ''}
+      </div>` : ''}
     `;
 
     const container = pop.querySelector('[data-veil-actions]');
@@ -113,6 +118,21 @@
         );
       }
     });
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        document.removeEventListener('keydown', onKeyDown);
+        removePrompt();
+        onDismiss?.();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    window.setTimeout(() => {
+      if (!document.getElementById(PROMPT_ID)) {
+        document.removeEventListener('keydown', onKeyDown);
+      }
+    }, 0);
 
     document.documentElement.appendChild(pop);
 
