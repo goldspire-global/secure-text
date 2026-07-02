@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "env:apply": "node scripts/apply-env.mjs",
+    "deploy:portal": "npm run env:apply && npx wrangler pages deploy api/public --project-name=veil --branch=main",
+    "deploy:worker": "npx wrangler deploy --cwd infra/veil-portal-worker",
     "package": "npm run env:apply && node extension/scripts/package.mjs && node scripts/deploy-pages.mjs",
     "package:store": "npm run package && node scripts/package-store.mjs",
     "build": "npm run package",

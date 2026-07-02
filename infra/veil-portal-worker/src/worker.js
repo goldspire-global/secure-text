@@ -8,6 +8,8 @@ const REDIRECT_TO_CANONICAL = new Set([
 ]);
 
 function upstreamPath(pathname) {
+  if (pathname === '/' || pathname === '' || pathname === '/index.html') return '/';
+  if (pathname === '/practice' || pathname === '/practice.html') return '/practice/';
   if (!pathname.endsWith('.html')) return pathname;
   const base = pathname.slice(1, -5);
   if (!base || base === 'index') return '/';

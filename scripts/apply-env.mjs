@@ -206,6 +206,17 @@ for (const page of [
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }
 
+const practiceIndexDir = join(apiPublicDir, 'practice');
+mkdirSync(practiceIndexDir, { recursive: true });
+const practiceHtml = readFileSync(join(repoRoot, 'practice.html'), 'utf8');
+const practiceIndexHtml = practiceHtml.replace(
+  '<meta charset="utf-8" />',
+  '<meta charset="utf-8" />\n  <base href="/" />',
+);
+writeFileSync(join(practiceIndexDir, 'index.html'), practiceIndexHtml);
+mkdirSync(join(repoRoot, 'practice'), { recursive: true });
+writeFileSync(join(repoRoot, 'practice', 'index.html'), practiceIndexHtml);
+
 cpSync(join(repoRoot, 'api', 'ops', 'ops.html'), join(apiPublicDir, 'ops.html'), { force: true });
 cpSync(join(repoRoot, 'api', 'ops', 'ops.js'), join(apiPublicDir, 'portal', 'ops.js'), { force: true });
 
