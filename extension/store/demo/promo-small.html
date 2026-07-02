@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=440, height=280" />
+    <title>Veil promo — small</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      html, body {
+        width: 440px;
+        height: 280px;
+        overflow: hidden;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background:
+          radial-gradient(ellipse 80% 70% at 20% 0%, rgba(212, 160, 23, 0.22), transparent 55%),
+          radial-gradient(ellipse 60% 50% at 100% 100%, rgba(96, 165, 250, 0.12), transparent 50%),
+          #0a0e16;
+        color: #eef2ff;
+      }
+      .wrap {
+        height: 100%;
+        padding: 28px 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .brand img {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+      }
+      .brand strong {
+        display: block;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+      }
+      .brand span {
+        font-size: 13px;
+        color: #9aa3b8;
+      }
+      h1 {
+        font-size: 22px;
+        line-height: 1.25;
+        font-weight: 600;
+        max-width: 18ch;
+      }
+      .tag {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(212, 160, 23, 0.15);
+        border: 1px solid rgba(212, 160, 23, 0.45);
+        color: #f0c14b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="brand">
+        <img src="/icons/icon-128.png" alt="" />
+        <div>
+          <strong>Veil</strong>
+          <span>by Goldspire</span>
+        </div>
+      </div>
+      <div>
+        <h1>Encrypt secrets before you send</h1>
+        <span class="tag">Free for personal use</span>
+      </div>
+    </div>
+  </body>
+</html>

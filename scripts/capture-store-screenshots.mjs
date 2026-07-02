@@ -1,23 +1,37 @@
 #!/usr/bin/env node
 /**
- * Capture Chrome/Edge store screenshots (1280×800) with Playwright.
- *
- * Requires: npm install && npx playwright install chromium
+ * Chrome Web Store assets — 5 screenshots (1280×800) + promo tiles.
  * Run: npm run capture:store
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { selectPracticeKey } from './lib/practice-smoke-helpers.mjs';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionDir = join(repoRoot, 'extension');
 const demoDir = join(extensionDir, 'store', 'demo');
 const outDir = join(extensionDir, 'store', 'screenshots');
-const VIEWPORT = { width: 1280, height: 800 };
+const SHOT = { width: 1280, height: 800 };
+
+const CAPTION_STYLE = `
+  .store-caption {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+    padding: 18px 32px 22px;
+    background: linear-gradient(transparent, rgba(8, 10, 16, 0.92) 35%);
+    pointer-events: none;
+  }
+  .store-caption strong {
+    display: block; font: 600 22px "Segoe UI", system-ui, sans-serif;
+    color: #f4f6fb; margin-bottom: 4px;
+  }
+  .store-caption span {
+    font: 400 15px "Segoe UI", system-ui, sans-serif; color: #9aa3b8;
+  }
+`;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -41,6 +55,10 @@ function resolveAsset(urlPath) {
   if (clean.startsWith('/icons/')) {
     return join(extensionDir, clean.slice(1));
   }
+  if (clean === '/practice' || clean === '/practice.html') return join(repoRoot, 'practice.html');
+  if (clean.startsWith('/portal/')) return join(repoRoot, 'portal', clean.slice('/portal/'.length));
+  if (clean === '/practice.css') return join(repoRoot, 'practice.css');
+  if (clean === '/practice-tour.css') return join(repoRoot, 'practice-tour.css');
   return join(demoDir, clean.replace(/^\//, ''));
 }
 
@@ -84,27 +102,17 @@ async function getExtensionId(context) {
   return new URL(worker.url()).host;
 }
 
-async function seedExtensionSettings(context) {
+async function seedSettings(context, values) {
   const worker = await waitForServiceWorker(context);
-  await worker.evaluate(async () => {
-    await chrome.storage.sync.set({
-      setupComplete: true,
-      copilotEnabled: true,
-      securityProfile: 'personal',
-      dlpMode: 'off',
-      useSavedPassphrase: true,
-      passphrase: 'StoreCaptureDemo1!',
-      showFloatingButton: true,
-      selectionUiMode: 'smart',
-      autoDetectRedacted: true,
-    });
-  });
+  await worker.evaluate(async (payload) => {
+    await chrome.storage.sync.set(payload);
+  }, values);
 }
 
 async function launchWithExtension(userDataDir) {
   return chromium.launchPersistentContext(userDataDir, {
     headless: false,
-    viewport: VIEWPORT,
+    viewport: SHOT,
     args: [
       `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
@@ -112,9 +120,53 @@ async function launchWithExtension(userDataDir) {
   });
 }
 
+async function addCaption(page, title, subtitle) {
+  await page.evaluate(({ title, subtitle }) => {
+    const el = document.createElement('div');
+    el.className = 'store-caption';
+    el.innerHTML = `<strong>${title}</strong><span>${subtitle}</span>`;
+    document.body.appendChild(el);
+  }, { title, subtitle });
+}
+
+async function captureWelcome(context, extensionId, outputPath) {
+  await seedSettings(context, { setupComplete: false, tourComplete: false, securityProfile: 'personal' });
+  const page = await context.newPage();
+  await page.setViewportSize(SHOT);
+  await page.goto(`chrome-extension://${extensionId}/popup/popup.html`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('#view-setup:not([hidden])', { timeout: 15000 });
+  await page.waitForTimeout(400);
+  await page.addStyleTag({
+    content: `
+      html, body {
+        width: 1280px !important; height: 800px !important; min-height: 0 !important;
+        margin: 0 !important;
+        background: radial-gradient(ellipse at 28% 18%, #1a2235 0%, #0d111b 55%, #080a10 100%) !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+      }
+      .popup { box-shadow: 0 28px 90px rgba(0,0,0,0.55); border: 1px solid rgba(212,160,23,0.28); border-radius: 16px; }
+      ${CAPTION_STYLE}
+    `,
+  });
+  await addCaption(page, 'Free for personal use', 'Pick Personal or join your team with a code from IT');
+  await page.screenshot({ path: outputPath, type: 'png' });
+  await page.close();
+  await seedSettings(context, {
+    setupComplete: true,
+    copilotEnabled: true,
+    securityProfile: 'personal',
+    dlpMode: 'off',
+    useSavedPassphrase: true,
+    passphrase: 'StoreCaptureDemo1!',
+    showSelectionPill: true,
+    selectionUiMode: 'smart',
+    tourComplete: true,
+  });
+}
+
 async function capturePopup(context, extensionId, outputPath) {
   const page = await context.newPage();
-  await page.setViewportSize(VIEWPORT);
+  await page.setViewportSize(SHOT);
   await page.goto(`chrome-extension://${extensionId}/popup/popup.html`, {
     waitUntil: 'networkidle',
   });
@@ -178,7 +230,7 @@ async function waitForExtensionReady(page) {
 
 async function captureCopilot(context, baseUrl, outputPath) {
   const page = await context.newPage();
-  await page.setViewportSize(VIEWPORT);
+  await page.setViewportSize(SHOT);
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseUrl });
   await page.goto(`${baseUrl}/demo/02-copilot-compose.html`, { waitUntil: 'networkidle' });
   await waitForExtensionReady(page);
@@ -204,13 +256,51 @@ async function captureCopilot(context, baseUrl, outputPath) {
   }
 
   await page.waitForTimeout(400);
-  await page.screenshot({ path: outputPath, fullPage: false });
+  await page.addStyleTag({ content: CAPTION_STYLE });
+  await addCaption(page, 'Smart copilot on paste', 'Catches API keys before they land in email or forms');
+  await page.screenshot({ path: outputPath, type: 'png' });
+  await page.close();
+}
+
+async function captureStaticDemo(context, baseUrl, demoPath, outputPath, title, subtitle) {
+  const page = await context.newPage();
+  await page.setViewportSize(SHOT);
+  await page.goto(`${baseUrl}/demo/${demoPath}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(300);
+  await page.addStyleTag({ content: CAPTION_STYLE });
+  await addCaption(page, title, subtitle);
+  await page.screenshot({ path: outputPath, type: 'png' });
+  await page.close();
+}
+
+async function capturePracticeSecure(context, baseUrl, outputPath) {
+  const page = await context.newPage();
+  await page.setViewportSize(SHOT);
+  await page.goto(`${baseUrl}/practice`, { waitUntil: 'networkidle' });
+  await waitForExtensionReady(page);
+  await selectPracticeKey(page, '#practice-body', 'sk-practice-demo-7f3a9b2c4e8d1a6f0b5c9e2d4a7f1b3');
+  await page.waitForTimeout(600);
+  await page.locator('.gst-pill-half--quick').click({ timeout: 10000 });
+  await page.waitForSelector('.gst-result__value, a.gst-redacted', { timeout: 10000 });
+  await page.waitForTimeout(500);
+  await page.addStyleTag({ content: CAPTION_STYLE });
+  await addCaption(page, 'Hands-on practice mode', 'Try secure → unlock in a safe sandbox before real mail');
+  await page.screenshot({ path: outputPath, type: 'png' });
+  await page.close();
+}
+
+async function capturePromo(context, baseUrl, demoPath, outputPath, width, height) {
+  const page = await context.newPage();
+  await page.setViewportSize({ width, height });
+  await page.goto(`${baseUrl}/demo/${demoPath}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: outputPath, type: 'png' });
   await page.close();
 }
 
 async function captureStaticPage(context, url, outputPath) {
   const page = await context.newPage();
-  await page.setViewportSize(VIEWPORT);
+  await page.setViewportSize(SHOT);
   await page.goto(url, { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
   await page.screenshot({ path: outputPath, fullPage: false });
@@ -218,7 +308,6 @@ async function captureStaticPage(context, url, outputPath) {
 }
 
 async function main() {
-  const { mkdirSync } = await import('node:fs');
   mkdirSync(outDir, { recursive: true });
 
   const { server, baseUrl } = await startDemoServer();
@@ -229,13 +318,12 @@ async function main() {
 
   try {
     await waitForServiceWorker(context);
-    await seedExtensionSettings(context);
     const extensionId = await getExtensionId(context);
 
     const shots = [
       {
-        name: '01-popup-checklist.png',
-        run: () => capturePopup(context, extensionId, join(outDir, '01-popup-checklist.png')),
+        name: '01-welcome.png',
+        run: () => captureWelcome(context, extensionId, join(outDir, '01-welcome.png')),
       },
       {
         name: '02-copilot-compose.png',
@@ -243,19 +331,21 @@ async function main() {
       },
       {
         name: '03-email-redacted.png',
-        run: () => captureStaticPage(
-          context,
-          `${baseUrl}/demo/03-email-redacted.html`,
-          join(outDir, '03-email-redacted.png'),
+        run: () => captureStaticDemo(
+          context, baseUrl, '03-email-redacted.html', join(outDir, '03-email-redacted.png'),
+          'Clickable [redacted] links', 'Recipients unlock in the same email thread — passphrase stays separate',
         ),
       },
       {
         name: '04-email-token.png',
-        run: () => captureStaticPage(
-          context,
-          `${baseUrl}/demo/04-email-token.html`,
-          join(outDir, '04-email-token.png'),
+        run: () => captureStaticDemo(
+          context, baseUrl, '04-email-token.html', join(outDir, '04-email-token.png'),
+          'Team tokenization', 'Org members reveal vault tokens without pasting plaintext',
         ),
+      },
+      {
+        name: '05-practice-secure.png',
+        run: () => capturePracticeSecure(context, baseUrl, join(outDir, '05-practice-secure.png')),
       },
     ];
 
@@ -265,7 +355,15 @@ async function main() {
       console.log(`  → ${join(outDir, shot.name)}`);
     }
 
-    console.log(`\nDone. Upload images from:\n  ${outDir}`);
+    console.log('Capturing promo-small.png…');
+    await capturePromo(context, baseUrl, 'promo-small.html', join(outDir, 'promo-small.png'), 440, 280);
+    console.log('Capturing promo-marquee.png…');
+    await capturePromo(context, baseUrl, 'promo-marquee.html', join(outDir, 'promo-marquee.png'), 1400, 560);
+
+    console.log(`\nDone. Upload from:\n  ${outDir}`);
+    console.log('\nScreenshots (upload in order):');
+    shots.forEach((s, i) => console.log(`  ${i + 1}. ${s.name}`));
+    console.log('Promo: promo-small.png (440×280), promo-marquee.png (1400×560)');
   } finally {
     await context.close();
     server.close();

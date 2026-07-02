@@ -8,6 +8,11 @@ import { MEMBERSHIP_POLICIES } from './membership.mjs';
 import { getPolicyPack, resolveIndustrySettings, normalizeEnabledPackIds } from './policy-packs.mjs';
 import { initialBillingSettings, publicBillingSummary } from './billing.mjs';
 import { preserveServerBilling } from './billing-guard.mjs';
+import {
+  deactivateOrgMemberDevices,
+  memberRegisteredSql,
+  revokeOrgMemberDevice,
+} from './member-devices.mjs';
 
 const JOIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -388,8 +393,9 @@ export async function setJoinCodeActive(admin, code, active) {
 
 export async function listMembersAdmin(admin) {
   const pool = getPool();
+  const registeredExpr = memberRegisteredSql('m');
   const result = await pool.query(
-    `SELECT m.email, m.display_name, m.device_id IS NOT NULL AS registered, m.active,
+    `SELECT m.email, m.display_name, ${registeredExpr} AS registered, m.active,
             m.created_at, m.updated_at, m.team_id, t.name AS team_name
      FROM org_members m
      LEFT JOIN org_teams t ON t.id = m.team_id
@@ -419,8 +425,10 @@ export async function listDevices(admin) {
             dp.extension_version, dp.browser, dp.platform,
             om.email AS member_email
      FROM device_provisions dp
+     LEFT JOIN org_member_devices omd
+       ON omd.org_id = dp.org_id AND omd.device_id = dp.device_id AND omd.active = true
      LEFT JOIN org_members om
-       ON om.org_id = dp.org_id AND om.device_id = dp.device_id
+       ON om.id = omd.member_id AND om.active = true
      WHERE dp.org_id = $1
      ORDER BY dp.updated_at DESC`,
     [admin.org.id],
@@ -451,7 +459,12 @@ export async function getOrgOverview(admin) {
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE active)::int AS active,
-         COUNT(*) FILTER (WHERE active AND device_id IS NOT NULL)::int AS connected
+         COUNT(*) FILTER (
+           WHERE active AND EXISTS (
+             SELECT 1 FROM org_member_devices omd
+             WHERE omd.member_id = org_members.id AND omd.active = true
+           )
+         )::int AS connected
        FROM org_members WHERE org_id = $1`,
       [orgId],
     ),
@@ -460,10 +473,10 @@ export async function getOrgOverview(admin) {
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE revoked_at IS NULL)::int AS active,
          COUNT(*) FILTER (WHERE revoked_at IS NULL AND NOT EXISTS (
-           SELECT 1 FROM org_members om
-           WHERE om.org_id = device_provisions.org_id
-             AND om.device_id = device_provisions.device_id
-             AND om.active = true
+           SELECT 1 FROM org_member_devices omd
+           WHERE omd.org_id = device_provisions.org_id
+             AND omd.device_id = device_provisions.device_id
+             AND omd.active = true
          ))::int AS unlinked
        FROM device_provisions WHERE org_id = $1`,
       [orgId],
@@ -542,6 +555,7 @@ export async function revokeDevice(admin, deviceId) {
   );
 
   if (result.rowCount === 0) throw httpError(404, 'Device not found or already revoked.');
+  await revokeOrgMemberDevice(pool, admin.org.id, device);
   return { ok: true, deviceId: device };
 }
 
@@ -559,6 +573,7 @@ export async function deactivateMember(admin, email) {
   );
 
   if (result.rowCount === 0) throw httpError(404, 'Member not found.');
+  await deactivateOrgMemberDevices(pool, admin.org.id, normalized);
   return { ok: true, email: normalized };
 }
 
@@ -568,6 +583,7 @@ export async function addOrgMember(admin, body = {}) {
   if (!email || !email.includes('@')) throw httpError(400, 'Valid member email is required.');
 
   const pool = getPool();
+  const registeredExpr = memberRegisteredSql('org_members');
   const result = await pool.query(
     `INSERT INTO org_members (org_id, email, display_name, active)
      VALUES ($1, $2, $3, true)
@@ -575,7 +591,7 @@ export async function addOrgMember(admin, body = {}) {
        display_name = COALESCE(EXCLUDED.display_name, org_members.display_name),
        active = true,
        updated_at = now()
-     RETURNING email, display_name, device_id IS NOT NULL AS registered`,
+     RETURNING email, display_name, ${registeredExpr} AS registered`,
     [admin.org.id, email, displayName],
   );
 

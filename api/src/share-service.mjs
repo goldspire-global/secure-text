@@ -3,6 +3,7 @@ import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { authenticateRequest, normalizeEmail } from './auth.mjs';
 import { assertMemberEmailAllowed, loadOrgSettings } from './membership.mjs';
+import { registerOrgMemberDeviceKey, memberRegisteredSql } from './member-devices.mjs';
 
 function inboxEncryptionKey(orgId, recipientEmail) {
   const pepper = process.env.ORG_INBOX_ENC_KEY || process.env.DATABASE_URL || 'goldspire-inbox-dev-key';
@@ -53,26 +54,16 @@ export async function registerMember(token, deviceId, body = {}) {
   const orgSettings = await loadOrgSettings(pool, auth.org_id);
   await assertMemberEmailAllowed(pool, auth.org_id, email, auth.device_id, orgSettings);
 
-  const result = await pool.query(
-    `INSERT INTO org_members (org_id, email, display_name, public_key_jwk, device_id, active)
-     VALUES ($1, $2, $3, $4::jsonb, $5, true)
-     ON CONFLICT (org_id, email) DO UPDATE SET
-       display_name = COALESCE(EXCLUDED.display_name, org_members.display_name),
-       public_key_jwk = EXCLUDED.public_key_jwk,
-       device_id = EXCLUDED.device_id,
-       active = true,
-       updated_at = now()
-     RETURNING id, email, display_name`,
-    [
-      auth.org_id,
-      email,
-      String(body.displayName || '').trim() || null,
-      JSON.stringify(body.publicKeyJwk),
-      auth.device_id,
-    ],
+  const result = await registerOrgMemberDeviceKey(
+    pool,
+    auth.org_id,
+    auth.device_id,
+    email,
+    body.publicKeyJwk,
+    String(body.displayName || '').trim() || null,
   );
 
-  return { ok: true, member: result.rows[0] };
+  return { ok: true, member: result };
 }
 
 export async function listMembers(token, deviceId, query = '') {
@@ -80,9 +71,10 @@ export async function listMembers(token, deviceId, query = '') {
   const pool = getPool();
   const term = normalizeEmail(query);
 
+  const registeredExpr = memberRegisteredSql('org_members');
   const result = term
     ? await pool.query(
-        `SELECT email, display_name, public_key_jwk, (device_id IS NOT NULL AND public_key_jwk IS NOT NULL) AS registered
+        `SELECT email, display_name, public_key_jwk, ${registeredExpr} AS registered
          FROM org_members
          WHERE org_id = $1
            AND active = true
@@ -93,7 +85,7 @@ export async function listMembers(token, deviceId, query = '') {
         [auth.org_id, `%${term.replace(/[%_]/g, '')}%`, auth.member_email || ''],
       )
     : await pool.query(
-        `SELECT email, display_name, public_key_jwk, (device_id IS NOT NULL AND public_key_jwk IS NOT NULL) AS registered
+        `SELECT email, display_name, public_key_jwk, ${registeredExpr} AS registered
          FROM org_members
          WHERE org_id = $1
            AND active = true

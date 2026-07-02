@@ -26,6 +26,14 @@
         </div>
 
         <div id="setup-step-pick" class="setup-step">
+          <div id="setup-link-browser" class="setup-link-browser">
+            <p class="setup-label">Already use Veil on Chrome or Edge?</p>
+            <div class="row row--stack">
+              <button type="button" id="setup-link-team" class="btn btn--ghost btn--full">Link team on this browser</button>
+              <button type="button" id="setup-link-personal" class="btn btn--ghost btn--full">Restore personal account</button>
+            </div>
+          </div>
+          <p class="setup-divider" aria-hidden="true">or start fresh</p>
           <p class="setup-label">How will you use this?</p>
           <p class="hint" id="setup-returning-hint" hidden></p>
           <div class="profile-pick">
@@ -76,6 +84,11 @@
               <input id="setup-personal-oneclick" type="checkbox" checked />
               <span>One-click secure with saved passphrase</span>
             </label>
+            <label class="field">
+              <span>Sync across browsers (optional)</span>
+              <input id="setup-personal-sync-email" type="email" autocomplete="email" placeholder="you@example.com" />
+              <small class="hint">Same email on Chrome and Edge = one account. Free — no Plus required.</small>
+            </label>
             <button type="button" id="setup-finish-personal" class="btn btn--ghost btn--full">Use my passphrase</button>
           </div>
         </div>
@@ -96,6 +109,26 @@
           <button type="button" id="setup-org-connect" class="btn btn--full">Connect</button>
           <button type="button" id="setup-org-signin" class="btn btn--ghost btn--full">Open join page</button>
           <p class="hint">On a company-managed browser, your admin may have already set this up for you.</p>
+        </div>
+
+        <!-- Step 2c: restore personal on new browser -->
+        <div id="setup-step-link-personal" class="setup-step" hidden>
+          <button type="button" class="setup-back" data-back>← Back</button>
+          <h2 class="setup-step__title">Restore personal account</h2>
+          <p class="card__text">Use the same email you registered in Veil on your other browser. Settings, site rules, and your passphrase follow you.</p>
+          <label class="field">
+            <span>Your Veil email</span>
+            <input id="setup-restore-email" type="email" autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <button type="button" id="setup-restore-pull" class="btn btn--full">Link this browser</button>
+          <div id="setup-restore-passphrase-block" hidden>
+            <p class="hint">Enter your Veil passphrase once to finish linking — it stays encrypted on this device.</p>
+            <label class="field">
+              <span>Passphrase</span>
+              <input id="setup-restore-passphrase" type="password" autocomplete="current-password" placeholder="Same as your other browser" />
+            </label>
+            <button type="button" id="setup-restore-finish" class="btn btn--full">Save passphrase &amp; continue</button>
+          </div>
         </div>
       </section>
 
@@ -518,6 +551,7 @@
     <script src="../src/status-notice.js"></script>
     <script src="../src/org-provision.js"></script>
     <script src="../src/org-share.js"></script>
+    <script src="../src/profile-sync.js"></script>
     <script src="../src/personal-capability.js"></script>
     <script src="../src/personal-provision.js"></script>
     <script src="../src/personal-share.js"></script>

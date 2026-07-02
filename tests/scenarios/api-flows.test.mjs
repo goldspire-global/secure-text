@@ -299,3 +299,109 @@ test('scenario: SIEM webhook receives metadata on ingest', { skip: !hasDatabase(
 
   await closePool();
 });
+
+test('scenario: same member joins from second browser', { skip: !hasDatabase() }, async () => {
+  const { createOrganization, authenticateAdmin, addOrgMember } = await import('../../api/src/admin-service.mjs');
+  const { joinWithCode } = await import('../../api/src/org-service.mjs');
+  const { registerMember } = await import('../../api/src/share-service.mjs');
+  const { authenticateRequest } = await import('../../api/src/auth.mjs');
+  const { closePool } = await import('../../api/src/db.mjs');
+
+  const created = await createOrganization({
+    displayName: `Scenario Multi Dev ${randomBytes(3).toString('hex')}`,
+    teamPassphrase: TEAM_PASS,
+    adminEmail: 'multi-admin@scenario.veil',
+    settings: { membershipPolicy: 'invite' },
+  });
+  lastOrgId = created.orgId;
+
+  const email = 'multi-member@scenario.veil';
+  const admin = await authenticateAdmin(mockAdminReq(created.adminToken));
+  await addOrgMember(admin, { email, displayName: 'Multi Browser' });
+  const chromeDevice = `scenario-chrome-${randomBytes(4).toString('hex')}`;
+  const edgeDevice = `scenario-edge-${randomBytes(4).toString('hex')}`;
+
+  const chromeJoin = await joinWithCode(created.joinCode, chromeDevice, email);
+  await registerMember(chromeJoin.provisionToken, chromeDevice, {
+    email,
+    displayName: 'Multi Browser',
+    publicKeyJwk: demoPublicJwk(),
+  });
+
+  const edgeJoin = await joinWithCode(created.joinCode, edgeDevice, email);
+  assert.equal(edgeJoin.orgId, created.orgId);
+  assert.ok(edgeJoin.provisionToken);
+
+  await registerMember(edgeJoin.provisionToken, edgeDevice, {
+    email,
+    displayName: 'Multi Browser',
+    publicKeyJwk: demoPublicJwk(),
+  });
+
+  const chromeAuth = await authenticateRequest(chromeJoin.provisionToken, chromeDevice);
+  const edgeAuth = await authenticateRequest(edgeJoin.provisionToken, edgeDevice);
+  assert.equal(chromeAuth.member_email, email);
+  assert.equal(edgeAuth.member_email, email);
+  assert.notEqual(chromeAuth.device_id, edgeAuth.device_id);
+
+  await closePool();
+});
+
+test('scenario: personal account links second device by email', { skip: !hasDatabase() }, async () => {
+  process.env.VEIL_PERSONAL_SKIP_EMAIL_VERIFY = 'true';
+  process.env.VEIL_PERSONAL_CHECK_MX = 'false';
+  const { registerPersonalAccount, getPersonalStatus } = await import('../../api/src/personal-service.mjs');
+  const { closePool, getPool } = await import('../../api/src/db.mjs');
+
+  const email = `multi.personal.${randomBytes(4).toString('hex')}@gmail.com`;
+  const chromeDevice = `scenario-p-chrome-${randomBytes(4).toString('hex')}`;
+  const edgeDevice = `scenario-p-edge-${randomBytes(4).toString('hex')}`;
+
+  const first = await registerPersonalAccount(chromeDevice, { email }, { browser: 'Chrome' });
+  assert.ok(first.provisionToken);
+  assert.equal(first.email, email);
+
+  const second = await registerPersonalAccount(edgeDevice, { email }, { browser: 'Microsoft Edge' });
+  assert.ok(second.provisionToken);
+  assert.equal(second.accountId, first.accountId);
+  assert.equal(second.linkedExistingAccount, true);
+
+  const chromeStatus = await getPersonalStatus(first.provisionToken, chromeDevice);
+  const edgeStatus = await getPersonalStatus(second.provisionToken, edgeDevice);
+  assert.equal(chromeStatus.accountId, edgeStatus.accountId);
+  assert.equal(chromeStatus.email, email);
+
+  await getPool().query('DELETE FROM personal_accounts WHERE lower(owner_email) = lower($1)', [email]);
+  await closePool();
+});
+
+test('scenario: personal profile settings sync across devices', { skip: !hasDatabase() }, async () => {
+  process.env.VEIL_PERSONAL_SKIP_EMAIL_VERIFY = 'true';
+  const { registerPersonalAccount } = await import('../../api/src/personal-service.mjs');
+  const { putPersonalProfileSync, getPersonalProfileSync } = await import('../../api/src/profile-sync-service.mjs');
+  const { closePool, getPool } = await import('../../api/src/db.mjs');
+
+  const email = `profile-sync-${randomBytes(4).toString('hex')}@gmail.com`;
+  const chromeDevice = `scenario-ps-chrome-${randomBytes(4).toString('hex')}`;
+  const edgeDevice = `scenario-ps-edge-${randomBytes(4).toString('hex')}`;
+
+  const first = await registerPersonalAccount(chromeDevice, { email }, { browser: 'Chrome' });
+  await putPersonalProfileSync(first.provisionToken, chromeDevice, {
+    settings: { selectionUiMode: 'always', copilotEnabled: false, copilotUserSet: true },
+    copilotMemory: {
+      siteAllowRules: [{ host: 'mail.google.com', category: 'api_key', intent: '*', createdAt: Date.now() }],
+      snoozedHosts: ['chat.openai.com'],
+    },
+  });
+
+  const second = await registerPersonalAccount(edgeDevice, { email }, { browser: 'Microsoft Edge' });
+  const pulled = await getPersonalProfileSync(second.provisionToken, edgeDevice);
+  assert.equal(pulled.settings.selectionUiMode, 'always');
+  assert.equal(pulled.settings.copilotEnabled, false);
+  assert.equal(pulled.copilotMemory.siteAllowRules.length, 1);
+  assert.equal(pulled.copilotMemory.siteAllowRules[0].host, 'mail.google.com');
+  assert.deepEqual(pulled.copilotMemory.snoozedHosts, ['chat.openai.com']);
+
+  await getPool().query('DELETE FROM personal_accounts WHERE lower(owner_email) = lower($1)', [email]);
+  await closePool();
+});

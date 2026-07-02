@@ -185,6 +185,7 @@
     }
 
     await writeSyncSettings(patch);
+    await global.GoldspireProfileSync?.pullOrgProfile?.().catch(() => {});
     return { ok: true, orgId: payload.orgId, orgDisplayName: payload.orgDisplayName };
   }
 

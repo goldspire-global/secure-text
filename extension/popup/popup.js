@@ -303,22 +303,27 @@ function showSetupStep(step) {
   const pick = document.getElementById('setup-step-pick');
   const personal = document.getElementById('setup-step-personal');
   const org = document.getElementById('setup-step-organization');
+  const linkPersonal = document.getElementById('setup-step-link-personal');
   const progress = document.getElementById('setup-progress');
 
   pick.hidden = step !== 'pick';
   personal.hidden = step !== 'personal';
   org.hidden = step !== 'organization';
+  if (linkPersonal) linkPersonal.hidden = step !== 'link-personal';
 
   if (progress) {
-    progress.hidden = step === 'pick';
-    progress.setAttribute('aria-hidden', step === 'pick' ? 'true' : 'false');
+    progress.hidden = step === 'pick' || step === 'link-personal';
+    progress.setAttribute('aria-hidden', progress.hidden ? 'true' : 'false');
     const dots = progress.querySelectorAll('.setup-progress__dot');
     dots.forEach((dot, index) => {
-      dot.classList.toggle('setup-progress__dot--active', step !== 'pick' && index === 0);
+      dot.classList.toggle('setup-progress__dot--active', step !== 'pick' && step !== 'link-personal' && index === 0);
     });
   }
 
-  const active = step === 'pick' ? pick : step === 'personal' ? personal : org;
+  const active = step === 'pick' ? pick
+    : step === 'personal' ? personal
+      : step === 'link-personal' ? linkPersonal
+        : org;
   animateSetupStep(active);
 }
 
@@ -356,7 +361,7 @@ async function refreshSetupReturningHints() {
     if (hasPersonal || hasTeam) {
       hint.hidden = false;
       hint.textContent = hasPersonal && hasTeam
-        ? 'Welcome back — pick Personal or Team to continue. Your passphrase stays saved on this browser.'
+        ? 'Welcome back — pick Personal or Team to continue, or link another browser above.'
         : hasPersonal
           ? 'Welcome back — Personal already has a passphrase saved here.'
           : 'Welcome back — your team connection is still active.';
@@ -905,6 +910,21 @@ document.getElementById('setup-personal-passphrase')?.addEventListener('input', 
   el.classList.toggle('hint--warn', !a.ok);
 });
 
+async function registerPersonalSyncEmail(email, passphrase = '') {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized || !GoldspirePersonalProvision?.register) return null;
+  const result = await GoldspirePersonalProvision.register(normalized);
+  const pp = passphrase || (await GoldspireSecrets.loadPassphrase('personal')) || '';
+  if (pp.trim()) {
+    await api.runtime.sendMessage({
+      type: 'PROFILE_SYNC_LINK_PASSPHRASE',
+      passphrase: pp.trim(),
+    }).catch(() => {});
+  }
+  await api.runtime.sendMessage({ type: 'PROFILE_SYNC_PULL' }).catch(() => {});
+  return result;
+}
+
 async function finishSetup(profile, extraSettings = {}, passphrase = '') {
   const profileDefaults = PROFILE_DEFAULTS[profile] || PROFILE_DEFAULTS.personal;
   // Preserve any org provisioning fields already written by ORG_JOIN / managed policy.
@@ -973,6 +993,15 @@ async function completePersonalSetup(passphrase, { oneClick = true, triggerEl = 
 
   try {
     await finishSetup('personal', { useSavedPassphrase: oneClick }, passphrase);
+    const syncEmail = document.getElementById('setup-personal-sync-email')?.value?.trim().toLowerCase() || '';
+    if (syncEmail) {
+      try {
+        await registerPersonalSyncEmail(syncEmail, passphrase);
+        showStatus('Personal setup complete — synced to your Veil account.');
+      } catch (syncError) {
+        showStatus(syncError?.message || 'Saved locally — cloud sync could not complete.');
+      }
+    }
     return true;
   } catch (e) {
     showStatus(e?.message || 'Setup failed.');
@@ -1057,6 +1086,93 @@ document.getElementById('setup-continue-personal')?.addEventListener('click', as
 document.getElementById('setup-personal-new-passphrase')?.addEventListener('click', () => {
   showPersonalSetupMode('new');
   document.getElementById('setup-personal-passphrase')?.focus();
+});
+
+document.getElementById('setup-link-team')?.addEventListener('click', () => {
+  showSetupStep('organization');
+  document.getElementById('setup-org-email')?.focus();
+});
+
+document.getElementById('setup-link-personal')?.addEventListener('click', () => {
+  showSetupStep('link-personal');
+  document.getElementById('setup-restore-email')?.focus();
+});
+
+document.getElementById('setup-restore-pull')?.addEventListener('click', async () => {
+  const email = document.getElementById('setup-restore-email')?.value?.trim().toLowerCase() || '';
+  const pullBtn = document.getElementById('setup-restore-pull');
+  const passphraseBlock = document.getElementById('setup-restore-passphrase-block');
+  if (!email) {
+    showStatus('Enter the email you use with Veil.');
+    return;
+  }
+
+  const prevLabel = pullBtn?.textContent;
+  if (pullBtn) {
+    pullBtn.disabled = true;
+    pullBtn.textContent = 'Linking…';
+  }
+
+  try {
+    await GoldspirePersonalProvision.register(email);
+    const pull = await api.runtime.sendMessage({ type: 'PROFILE_SYNC_PULL' });
+    if (pull?.restoredPassphrase) {
+      await finishSetup('personal', { personalEmail: email, profileNeedsPassphraseEntry: false });
+      showStatus('Welcome back — your Veil account is linked on this browser.');
+      return;
+    }
+    if (pull?.needsPassphraseEntry) {
+      if (passphraseBlock) passphraseBlock.hidden = false;
+      showStatus('Almost there — enter your Veil passphrase below.');
+      document.getElementById('setup-restore-passphrase')?.focus();
+      return;
+    }
+    await finishSetup('personal', { personalEmail: email });
+    showStatus('Settings restored — add a passphrase in Settings if you have not already.');
+  } catch (error) {
+    showStatus(error?.message || 'Could not link this browser.');
+  } finally {
+    if (pullBtn) {
+      pullBtn.disabled = false;
+      pullBtn.textContent = prevLabel || 'Link this browser';
+    }
+  }
+});
+
+document.getElementById('setup-restore-finish')?.addEventListener('click', async () => {
+  const email = document.getElementById('setup-restore-email')?.value?.trim().toLowerCase() || '';
+  const passphrase = document.getElementById('setup-restore-passphrase')?.value?.trim() || '';
+  const finishBtn = document.getElementById('setup-restore-finish');
+  if (!email || !passphrase) {
+    showStatus('Enter your email and passphrase.');
+    return;
+  }
+
+  const assessment = GoldspirePassphrasePolicy?.assessPassphrase?.(passphrase, 'personal');
+  if (assessment && !assessment.ok) {
+    showStatus(assessment.message);
+    return;
+  }
+
+  const prevLabel = finishBtn?.textContent;
+  if (finishBtn) {
+    finishBtn.disabled = true;
+    finishBtn.textContent = 'Saving…';
+  }
+
+  try {
+    await GoldspireSecrets.savePassphrase(passphrase, 'personal');
+    await registerPersonalSyncEmail(email, passphrase);
+    await finishSetup('personal', { personalEmail: email, profileNeedsPassphraseEntry: false }, passphrase);
+    showStatus('Linked — your passphrase and settings are on this browser.');
+  } catch (error) {
+    showStatus(error?.message || 'Could not save your passphrase.');
+  } finally {
+    if (finishBtn) {
+      finishBtn.disabled = false;
+      finishBtn.textContent = prevLabel || 'Save passphrase & continue';
+    }
+  }
 });
 
 document.getElementById('setup-org-connect')?.addEventListener('click', async () => {
@@ -1280,6 +1396,7 @@ async function loadSettings() {
   }
 
   if (settings.securityProfile !== 'organization') {
+    await api.runtime.sendMessage({ type: 'PROFILE_SYNC_PULL' }).catch(() => {});
     await GoldspirePersonalProvision?.syncStatus?.();
     if (settings.personalAccountId && settings.personalEmail && settings.personalEmailVerified) {
       try {
@@ -1338,6 +1455,10 @@ async function loadSettings() {
   await refreshFirstSecureCard();
   await refreshSecurityProof();
   if (profile === 'personal') await refreshPlusPanel();
+
+  if (settings.profileNeedsPassphraseEntry && profile === 'personal') {
+    showStatus('This browser is linked to your account — enter your Veil passphrase below and save to finish setup.');
+  }
 
   if (settings.setupComplete && settings.tourComplete !== true) {
     GoldspirePopupTour?.maybeStartAfterSetup?.(profile, { switchTab, api });
@@ -1477,7 +1598,11 @@ document.getElementById('plus-register-btn')?.addEventListener('click', async ()
   }
   try {
     const body = await GoldspirePersonalProvision.register(email);
-    if (body.emailVerified === true) {
+    if (body.needsPassphraseEntry) {
+      showStatus('Account linked — enter your Veil passphrase in Settings and save to finish on this browser.');
+    } else if (body.restoredPassphrase) {
+      showStatus('Account linked — your passphrase and settings were restored on this browser.');
+    } else if (body.emailVerified === true) {
       await GoldspirePersonalShare?.registerContact?.(email);
       showStatus('Email saved and verified — you can receive trusted-contact unlocks.');
     } else if (body.verification?.verifyUrl) {
@@ -1611,6 +1736,13 @@ form?.addEventListener('submit', async (event) => {
       await GoldspireSecrets.savePassphrase(orgPassphrase, 'organization');
     } else if (profile === 'personal' && (passphraseDirty || newPassphrase)) {
       await GoldspireSecrets.savePassphrase(newPassphrase, 'personal');
+      if (savedSettings.profileNeedsPassphraseEntry || current.profileNeedsPassphraseEntry) {
+        await api.runtime.sendMessage({
+          type: 'PROFILE_SYNC_LINK_PASSPHRASE',
+          passphrase: newPassphrase,
+        }).catch(() => {});
+        await writeSyncSettings({ profileNeedsPassphraseEntry: false });
+      }
     }
 
     applySettingsToForm({ ...current, ...savedSettings });

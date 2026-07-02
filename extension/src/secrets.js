@@ -154,6 +154,10 @@
     if (gst?.storage?.session) {
       await new Promise((resolve) => gst.storage.session.remove('passphrase', resolve));
     }
+    if (persist && gst?.runtime?.sendMessage) {
+      gst.sendMessage({ type: 'PROFILE_SYNC_PUSH_PASSPHRASE', passphrase: trimmed }).catch(() => {});
+    }
+    return;
   }
 
   async function loadPassphrase(profile) {

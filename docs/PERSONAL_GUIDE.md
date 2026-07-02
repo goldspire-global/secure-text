@@ -9,6 +9,11 @@ Quick start for **Personal** profile users (no team, no join code).
 1. Install from [Veil on Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd) or [Chrome Web Store](https://chromewebstore.google.com/detail/veil/jecnnfblijhbkadedjpmkfmbfekeohml).
 2. Open the Veil popup → **Personal** → **Quick setup** (or choose your own passphrase).
 
+**Chrome and Edge are one account** — install on both browsers with the same work email (team) or the same Veil Plus email. Preferences sync from the cloud automatically.
+
+- **Team:** join with the same code + email on each browser — team passphrase and policy download from the cloud (no manual copy).
+- **Personal:** passphrase and settings sync from the cloud when you link the browser; if this is a new browser, enter your passphrase once in Settings → Save.
+
 ![Veil popup — personal setup complete](screenshots/popup-home-checklist.png)
 
 ## Daily use

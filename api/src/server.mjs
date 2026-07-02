@@ -58,6 +58,12 @@ import {
   registerPersonalContact,
 } from './personal-service.mjs';
 import {
+  getOrgProfileSync,
+  putOrgProfileSync,
+  getPersonalProfileSync,
+  putPersonalProfileSync,
+} from './profile-sync-service.mjs';
+import {
   sendPersonalVerificationEmail,
   confirmPersonalEmailVerification,
 } from './personal-verification-service.mjs';
@@ -707,6 +713,22 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/v1/extension/profile-sync') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await getOrgProfileSync(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'PUT' && pathname === '/v1/extension/profile-sync') {
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 200, await putOrgProfileSync(token, deviceId, body));
+      return;
+    }
+
     if (req.method === 'POST' && pathname === '/v1/extension/org/shares') {
       if (!String(req.headers['content-type'] || '').includes('application/json')) {
         throw httpError(415, 'Content-Type must be application/json.');
@@ -749,7 +771,8 @@ const server = createServer(async (req, res) => {
       }
       const deviceId = req.headers['x-device-id'] || '';
       const body = await readBody(req);
-      const result = await registerPersonalAccount(deviceId, body);
+      const clientInfo = parseClientInfo(req);
+      const result = await registerPersonalAccount(deviceId, body, clientInfo);
       json(res, req, 200, result);
       return;
     }
@@ -757,6 +780,22 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/v1/personal/status') {
       const { token, deviceId } = parseAuthHeaders(req);
       json(res, req, 200, await getPersonalStatus(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/personal/profile-sync') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      json(res, req, 200, await getPersonalProfileSync(token, deviceId));
+      return;
+    }
+
+    if (req.method === 'PUT' && pathname === '/v1/personal/profile-sync') {
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const { token, deviceId } = parseAuthHeaders(req);
+      const body = await readBody(req);
+      json(res, req, 200, await putPersonalProfileSync(token, deviceId, body));
       return;
     }
 

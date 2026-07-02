@@ -18,12 +18,14 @@ Secure secrets in email & web before you send. Free personal use. Smart copilot,
 - Highlight or paste secrets → replace with `[redacted]`
 - Smart copilot catches API keys; stays quiet on signup forms
 - Recipients unlock on the same page with your passphrase
+- **Same email on Chrome and Edge** — settings, passphrase, and copilot memory sync (free)
 
 **For teams**
 - Join with a code from your admin
 - **Secure**, **Mask**, or **Tokenize** in compose
 - Policy sync, metadata-only security events, optional SIEM export
 - IT can deploy via Chrome or Edge managed policy
+- **Multi-browser continuity** — same work email links Chrome + Edge to one member seat
 
 **Privacy first** — Encryption runs in your browser. Veil cloud stores org membership and encrypted token blobs — never your plaintext secrets.
 

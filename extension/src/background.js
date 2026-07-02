@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'personal-capability.js', 'personal-provision.js', 'personal-share.js', 'events/bus.js', 'events/decisions.js', 'events/ingest.js', 'events/platform-ingest.js', 'tokens/format.js', 'tokens/api.js');
+importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'ops/telemetry.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'profile-sync.js', 'share-recipients.js', 'org-share.js', 'personal-capability.js', 'personal-provision.js', 'personal-share.js', 'events/bus.js', 'events/decisions.js', 'events/ingest.js', 'events/platform-ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -150,6 +150,9 @@ async function syncCloudOrgPolicy() {
         message: 'Org policy sync failed',
         source: 'background',
       });
+    }
+    if (result?.synced !== false) {
+      await GoldspireProfileSync?.pullOrgProfile?.().catch(() => {});
     }
     return result;
   } catch (error) {
@@ -528,6 +531,12 @@ if (api.alarms?.onAlarm) {
 if (api.storage?.onChanged) {
   api.storage.onChanged.addListener((changes, area) => {
     if (area === 'managed') bootstrapPolicies();
+    if (area === 'sync' && GoldspireProfileSync?.schedulePush) {
+      const touched = Object.keys(changes || {}).some((key) =>
+        GoldspireProfileSync.SYNCABLE_KEYS?.includes(key),
+      );
+      if (touched) GoldspireProfileSync.schedulePush();
+    }
   });
 }
 
@@ -642,6 +651,39 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     GoldspireOrgProvision.disconnectOrg()
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error?.message || 'Disconnect failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PROFILE_SYNC_PUSH_PASSPHRASE') {
+    GoldspireProfileSync.pushPersonalProfile({ passphrase: message.passphrase })
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Profile sync failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PROFILE_SYNC_PULL') {
+    GoldspireProfileSync.pullForCurrentProfile()
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Profile pull failed.' }));
+    return true;
+  }
+
+  if (message?.type === 'PROFILE_SYNC_LINK_PASSPHRASE') {
+    GoldspireProfileSync.linkPersonalPassphrase(message.passphrase)
+      .then(async (result) => {
+        if (result?.ok) {
+          await GoldspireProfileSync.pullPersonalProfile().catch(() => {});
+        }
+        sendResponse(result);
+      })
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Could not link passphrase.' }));
+    return true;
+  }
+
+  if (message?.type === 'PROFILE_SYNC_PUSH_COPILOT_MEMORY') {
+    GoldspireProfileSync.pushCopilotMemory()
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || 'Copilot memory sync failed.' }));
     return true;
   }
 

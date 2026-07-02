@@ -27,6 +27,8 @@
 - **Teams** — org email-domain MX verification; clearer create/join error messages when API unreachable.
 - **Mail add-ins** — shared Outlook/Gmail unlock pane assets on portal (extension still required for compose).
 - **Extension** — practice host content script, popup tour polish, selection/unlock reliability fixes.
+- **Multi-browser identity** — same work email or Veil Plus account can join from Chrome and Edge (one user, multiple connected browsers).
+- **Cloud profile sync** — copilot/hint preferences sync across browsers; personal passphrase syncs encrypted from the cloud (one-time entry if linking a new browser).
 
 ---
 

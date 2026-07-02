@@ -30,6 +30,11 @@
     try {
       const gst = global.GoldspireBrowser;
       gst?.storage?.local?.set?.({ [SITE_ALLOW_RULES_KEY]: siteAllowRules });
+      if (global.GoldspireProfileSync?.scheduleCopilotMemoryPush) {
+        global.GoldspireProfileSync.scheduleCopilotMemoryPush();
+      } else {
+        gst?.sendMessage?.({ type: 'PROFILE_SYNC_PUSH_COPILOT_MEMORY' })?.catch?.(() => {});
+      }
     } catch {
       // Non-critical.
     }

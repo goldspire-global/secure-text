@@ -34,9 +34,9 @@ export async function assertMemberEmailAllowed(pool, orgId, email, deviceId, set
     return;
   }
 
-  // invite — email must be pre-added by admin
+  // invite — email must be pre-added by admin (multiple browsers per email allowed)
   const result = await pool.query(
-    `SELECT device_id
+    `SELECT email
      FROM org_members
      WHERE org_id = $1 AND email = $2 AND active = true`,
     [orgId, email],
@@ -47,11 +47,6 @@ export async function assertMemberEmailAllowed(pool, orgId, email, deviceId, set
       403,
       'This email is not on the member list. Ask your admin to add you first.',
     );
-  }
-
-  const existingDevice = result.rows[0].device_id;
-  if (existingDevice && existingDevice !== deviceId) {
-    throw httpError(403, 'This email is already registered on another device.');
   }
 }
 

@@ -15,8 +15,10 @@ export async function authenticateRequest(token, deviceId) {
             o.settings, o.created_at
      FROM device_provisions dp
      JOIN organizations o ON o.id = dp.org_id
+     LEFT JOIN org_member_devices omd
+       ON omd.org_id = dp.org_id AND omd.device_id = dp.device_id AND omd.active = true
      LEFT JOIN org_members om
-       ON om.org_id = dp.org_id AND om.device_id = dp.device_id AND om.active = true
+       ON om.id = omd.member_id AND om.active = true
      WHERE dp.provision_token = $1 AND dp.device_id = $2`,
     [bearer, device],
   );

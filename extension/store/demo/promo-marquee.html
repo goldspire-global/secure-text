@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1400, height=560" />
+    <title>Veil promo — marquee</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      html, body {
+        width: 1400px;
+        height: 560px;
+        overflow: hidden;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background:
+          radial-gradient(ellipse 55% 80% at 12% 50%, rgba(212, 160, 23, 0.18), transparent 60%),
+          radial-gradient(ellipse 40% 60% at 88% 20%, rgba(96, 165, 250, 0.14), transparent 55%),
+          #0a0e16;
+        color: #eef2ff;
+      }
+      .wrap {
+        height: 100%;
+        padding: 56px 72px;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 48px;
+        align-items: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 28px;
+      }
+      .brand img {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+      }
+      .brand strong {
+        font-size: 34px;
+        letter-spacing: -0.02em;
+      }
+      .brand span {
+        display: block;
+        font-size: 16px;
+        color: #9aa3b8;
+        margin-top: 2px;
+      }
+      h1 {
+        font-size: 46px;
+        line-height: 1.12;
+        font-weight: 650;
+        letter-spacing: -0.03em;
+        max-width: 12ch;
+        margin-bottom: 18px;
+      }
+      .lede {
+        font-size: 20px;
+        line-height: 1.45;
+        color: #a8b0c2;
+        max-width: 34ch;
+        margin-bottom: 28px;
+      }
+      ul {
+        list-style: none;
+        display: grid;
+        gap: 12px;
+      }
+      li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 17px;
+        color: #d7deef;
+      }
+      li::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #d4a017, #f0c14b);
+        flex-shrink: 0;
+      }
+      .mock {
+        border-radius: 18px;
+        border: 1px solid rgba(212, 160, 23, 0.28);
+        background: #111827;
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+      }
+      .mock__bar {
+        height: 36px;
+        background: #202124;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+      }
+      .mock__dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #5f6368;
+      }
+      .mock__dot:nth-child(1) { background: #ff5f57; }
+      .mock__dot:nth-child(2) { background: #febc2e; }
+      .mock__dot:nth-child(3) { background: #28c840; }
+      .mock__body {
+        padding: 28px 32px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: #c9d1e8;
+      }
+      .pill {
+        display: inline-flex;
+        gap: 6px;
+        margin: 14px 0;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(212, 160, 23, 0.12);
+        border: 1px solid rgba(212, 160, 23, 0.35);
+        font-size: 13px;
+        color: #f0c14b;
+      }
+      .redacted {
+        color: #60a5fa;
+        text-decoration: underline;
+        cursor: default;
+      }
+      .copilot {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(212, 160, 23, 0.35);
+        font-size: 14px;
+      }
+      .copilot strong { color: #f0c14b; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div>
+        <div class="brand">
+          <img src="/icons/icon-128.png" alt="" />
+          <div>
+            <strong>Veil</strong>
+            <span>by Goldspire</span>
+          </div>
+        </div>
+        <h1>Keyboard-edge protection for email &amp; web</h1>
+        <p class="lede">Highlight or paste secrets — Veil encrypts before send. Free for personal use.</p>
+        <ul>
+          <li>Smart copilot catches API keys &amp; IBANs</li>
+          <li><code style="color:#f0c14b">[redacted]</code> links recipients unlock in place</li>
+          <li>Team mode with policy sync for IT</li>
+        </ul>
+      </div>
+      <div class="mock">
+        <div class="mock__bar">
+          <span class="mock__dot"></span>
+          <span class="mock__dot"></span>
+          <span class="mock__dot"></span>
+        </div>
+        <div class="mock__body">
+          <div style="color:#9aa3b8;font-size:13px;margin-bottom:8px;">outlook.office.com — New message</div>
+          <p>Hi — staging credentials are ready:</p>
+          <p class="pill">Quick · Options · Mask</p>
+          <p>Key: <span class="redacted">[redacted]</span> — click to unlock with passphrase.</p>
+          <div class="copilot">
+            <strong>Veil copilot</strong> — API key detected on paste. Secure before send?
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

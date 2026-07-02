@@ -51,19 +51,69 @@ function newProvisionToken() {
   return `ppt_${randomBytes(24).toString('base64url')}`;
 }
 
-export async function authenticatePersonalRequest(token, deviceId) {
+async function findPersonalProvision(pool, token, deviceId) {
   const bearer = String(token || '').trim();
   const device = String(deviceId || '').trim();
-  if (!bearer) throw httpError(401, 'Missing personal provision token.');
-  if (!device) throw httpError(400, 'Missing device id.');
+  if (!bearer || !device) return null;
 
-  const pool = getPool();
   const result = await pool.query(
-    `SELECT * FROM personal_accounts WHERE provision_token = $1 AND owner_device_id = $2`,
+    `SELECT pa.*, pdp.provision_token, pdp.device_id AS provision_device_id
+     FROM personal_device_provisions pdp
+     JOIN personal_accounts pa ON pa.id = pdp.account_id
+     WHERE pdp.provision_token = $1
+       AND pdp.device_id = $2
+       AND pdp.revoked_at IS NULL`,
     [bearer, device],
   );
-  if (result.rowCount === 0) throw httpError(401, 'Invalid personal token.');
-  return result.rows[0];
+  return result.rows[0] || null;
+}
+
+async function findPersonalProvisionByDevice(pool, deviceId) {
+  const device = String(deviceId || '').trim();
+  if (!device) return null;
+  const result = await pool.query(
+    `SELECT pa.*, pdp.provision_token, pdp.device_id AS provision_device_id
+     FROM personal_device_provisions pdp
+     JOIN personal_accounts pa ON pa.id = pdp.account_id
+     WHERE pdp.device_id = $1
+       AND pdp.revoked_at IS NULL
+     ORDER BY pdp.updated_at DESC
+     LIMIT 1`,
+    [device],
+  );
+  return result.rows[0] || null;
+}
+
+async function upsertPersonalDeviceProvision(pool, accountId, deviceId, clientInfo = {}) {
+  const device = String(deviceId || '').trim();
+  if (!device) throw httpError(400, 'Missing device id.');
+
+  const provisionToken = newProvisionToken();
+  const browser = String(clientInfo.browser || '').slice(0, 64);
+  const platform = String(clientInfo.platform || '').slice(0, 64);
+
+  const result = await pool.query(
+    `INSERT INTO personal_device_provisions
+       (account_id, device_id, provision_token, client_browser, client_platform)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (account_id, device_id) DO UPDATE SET
+       provision_token = personal_device_provisions.provision_token,
+       client_browser = CASE WHEN EXCLUDED.client_browser <> '' THEN EXCLUDED.client_browser ELSE personal_device_provisions.client_browser END,
+       client_platform = CASE WHEN EXCLUDED.client_platform <> '' THEN EXCLUDED.client_platform ELSE personal_device_provisions.client_platform END,
+       revoked_at = NULL,
+       updated_at = now()
+     RETURNING provision_token`,
+    [accountId, device, provisionToken, browser, platform],
+  );
+
+  return result.rows[0].provision_token;
+}
+
+export async function authenticatePersonalRequest(token, deviceId) {
+  const pool = getPool();
+  const row = await findPersonalProvision(pool, token, deviceId);
+  if (!row) throw httpError(401, 'Invalid personal token.');
+  return row;
 }
 
 export function isPlusActive(account) {
@@ -76,24 +126,32 @@ export function assertPlusActive(account) {
   }
 }
 
-export async function registerPersonalAccount(deviceId, body = {}) {
+export async function registerPersonalAccount(deviceId, body = {}, clientInfo = {}) {
   const device = String(deviceId || '').trim();
   const email = assertPersonalEmailFormat(body.email);
   await assertPersonalEmailDomainResolvable(email);
   if (!device) throw httpError(400, 'Missing device id.');
 
   const pool = getPool();
-  const existing = await pool.query(
-    `SELECT * FROM personal_accounts WHERE owner_device_id = $1`,
-    [device],
-  );
+  const byDevice = await findPersonalProvisionByDevice(pool, device);
   let row;
   let provisionToken = '';
+  let linkedExistingAccount = false;
 
-  if (existing.rowCount > 0) {
-    row = existing.rows[0];
-    provisionToken = row.provision_token;
+  if (byDevice) {
+    row = byDevice;
+    provisionToken = byDevice.provision_token;
     if (row.owner_email !== email) {
+      const emailOwner = await pool.query(
+        `SELECT id FROM personal_accounts WHERE lower(owner_email) = lower($1) AND id <> $2`,
+        [email, row.id],
+      );
+      if (emailOwner.rowCount > 0) {
+        throw httpError(
+          409,
+          'This email is already registered on another Veil account. Sign in from your original browser or contact support.',
+        );
+      }
       const updated = await pool.query(
         `UPDATE personal_accounts SET
            owner_email = $2,
@@ -108,15 +166,38 @@ export async function registerPersonalAccount(deviceId, body = {}) {
       row = updated.rows[0];
     }
   } else {
-    const id = newAccountId();
-    provisionToken = newProvisionToken();
-    const insert = await pool.query(
-      `INSERT INTO personal_accounts (id, owner_email, owner_device_id, provision_token)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [id, email, device, provisionToken],
+    const byEmail = await pool.query(
+      `SELECT * FROM personal_accounts WHERE lower(owner_email) = lower($1)`,
+      [email],
     );
-    row = insert.rows[0];
+
+    if (byEmail.rowCount > 0) {
+      row = byEmail.rows[0];
+      linkedExistingAccount = true;
+      provisionToken = await upsertPersonalDeviceProvision(pool, row.id, device, clientInfo);
+    } else {
+      const id = newAccountId();
+      provisionToken = newProvisionToken();
+      const insert = await pool.query(
+        `INSERT INTO personal_accounts (id, owner_email)
+         VALUES ($1, $2)
+         RETURNING *`,
+        [id, email],
+      );
+      row = insert.rows[0];
+      await pool.query(
+        `INSERT INTO personal_device_provisions
+           (account_id, device_id, provision_token, client_browser, client_platform)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          row.id,
+          device,
+          provisionToken,
+          String(clientInfo.browser || '').slice(0, 64),
+          String(clientInfo.platform || '').slice(0, 64),
+        ],
+      );
+    }
   }
 
   await maybeAutoVerifyForDev(row.id);
@@ -135,7 +216,7 @@ export async function registerPersonalAccount(deviceId, body = {}) {
       };
     }
   }
-  return { ...account, verification };
+  return { ...account, verification, linkedExistingAccount };
 }
 
 function publicAccount(row, provisionToken = '') {
@@ -279,6 +360,13 @@ export async function registerPersonalContact(token, deviceId, body = {}) {
 
   const pool = getPool();
   await pool.query(
+    `UPDATE personal_device_provisions
+     SET public_key_jwk = $1::jsonb, updated_at = now()
+     WHERE account_id = $2 AND device_id = $3 AND revoked_at IS NULL`,
+    [JSON.stringify(body.publicKeyJwk), account.id, deviceId],
+  );
+
+  await pool.query(
     `INSERT INTO personal_contacts (account_id, email, display_name, public_key_jwk, device_id, active)
      VALUES ($1, $2, $3, $4::jsonb, $5, true)
      ON CONFLICT (account_id, email) DO UPDATE SET
@@ -295,7 +383,7 @@ export async function registerPersonalContact(token, deviceId, body = {}) {
     ],
   );
 
-  // Link this device to every sender who added this email as a trusted contact.
+  // Link this device key to every sender who added this email as a trusted contact.
   await pool.query(
     `UPDATE personal_contacts SET
        public_key_jwk = $1::jsonb,

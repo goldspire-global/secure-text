@@ -118,7 +118,17 @@
       personalIncludedContacts: body.includedContacts || 6,
       personalExtraContactSlots: body.extraContactSlots || 0,
     });
-    return body;
+
+    let profilePull = {};
+    if (global.GoldspireProfileSync?.pullPersonalProfile) {
+      try {
+        profilePull = await global.GoldspireProfileSync.pullPersonalProfile();
+      } catch {
+        profilePull = {};
+      }
+    }
+
+    return { ...body, ...profilePull };
   }
 
   async function sendVerificationEmail() {
@@ -139,6 +149,9 @@
         personalContactCount: status.contactCount || 0,
         personalPendingShareCount: status.pendingShareCount || 0,
       });
+      if (global.GoldspireProfileSync?.pullPersonalProfile) {
+        await global.GoldspireProfileSync.pullPersonalProfile().catch(() => {});
+      }
       return status;
     } catch {
       return null;

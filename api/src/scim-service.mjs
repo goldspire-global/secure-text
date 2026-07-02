@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
+import { deactivateOrgMemberDevices } from './member-devices.mjs';
 import { addOrgMember } from './admin-service.mjs';
 
 const SCIM_PREFIX = '/scim/v2';
@@ -135,6 +136,7 @@ export async function scimPatchUser(scimAuth, userId, body = {}) {
        WHERE org_id = $1 AND email = $2`,
       [scimAuth.org.id, email],
     );
+    await deactivateOrgMemberDevices(pool, scimAuth.org.id, email);
   }
 
   const row = await pool.query(

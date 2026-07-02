@@ -32,7 +32,7 @@
     sessionUntil = Date.now() + ms;
   }
 
-  async   function snoozeHost(host = '') {
+  async function snoozeHost(host = '') {
     const key = String(host || '').trim();
     if (!key) return;
     hosts.add(key);
@@ -42,6 +42,11 @@
       const stored = await gst.storageGet('local', { [STORAGE_KEY]: [] });
       const updated = Array.from(new Set([...(stored[STORAGE_KEY] || []), key]));
       gst.storage?.local?.set?.({ [STORAGE_KEY]: updated });
+      if (global.GoldspireProfileSync?.scheduleCopilotMemoryPush) {
+        global.GoldspireProfileSync.scheduleCopilotMemoryPush();
+      } else {
+        gst?.sendMessage?.({ type: 'PROFILE_SYNC_PUSH_COPILOT_MEMORY' })?.catch?.(() => {});
+      }
     } catch {
       // Non-critical.
     }

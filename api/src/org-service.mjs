@@ -4,6 +4,7 @@ import { assertMemberEmailAllowed } from './membership.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { getMemberTeamPolicy } from './teams-service.mjs';
 import { assertProvisionedOrgCanOperate } from './billing-guard.mjs';
+import { linkOrgMemberDevice } from './member-devices.mjs';
 
 async function touchDeviceClientInfo(pool, orgId, deviceId, clientInfo = {}) {
   const device = String(deviceId || '').trim();
@@ -134,13 +135,7 @@ export async function joinWithCode(joinCode, deviceId, email, clientInfo = {}) {
 
   const provisionToken = provisionResult.rows[0].provision_token;
 
-  await pool.query(
-    `UPDATE org_members
-     SET device_id = $1, updated_at = now()
-     WHERE org_id = $2 AND email = $3 AND active = true
-       AND (device_id IS NULL OR device_id = $1)`,
-    [device, org.id, memberEmail],
-  );
+  await linkOrgMemberDevice(pool, org.id, memberEmail, device);
 
   const teamContext = await getMemberTeamPolicy(org.id, memberEmail);
   return orgPayload(org, provisionToken, teamContext);
@@ -188,8 +183,10 @@ export async function syncPolicy(token, deviceId, clientPolicyVersion, clientInf
   );
 
   const memberResult = await pool.query(
-    `SELECT email FROM org_members
-     WHERE org_id = $1 AND device_id = $2 AND active = true
+    `SELECT om.email
+     FROM org_member_devices omd
+     JOIN org_members om ON om.id = omd.member_id AND om.active = true
+     WHERE omd.org_id = $1 AND omd.device_id = $2 AND omd.active = true
      LIMIT 1`,
     [row.id, device],
   );

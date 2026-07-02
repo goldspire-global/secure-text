@@ -1,0 +1,2 @@
+-- Copilot memory (site allow rules, host snoozes) stored inside settings_sync JSON.
+-- No schema change required — documented for operators; logic uses settings_sync.copilotMemory.
