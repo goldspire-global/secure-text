@@ -77,8 +77,10 @@ const earlyAccess = String(env.VEIL_EARLY_ACCESS ?? 'true').toLowerCase() !== 'f
 const earlyAccessEnd = String(env.VEIL_EARLY_ACCESS_END ?? '').trim();
 const stripePaymentLinkTeam = env.STRIPE_PAYMENT_LINK_TEAM ?? '';
 const stripeBillingPortalUrl = env.STRIPE_BILLING_PORTAL_URL ?? '';
-const storeUrlChrome = env.STORE_URL_CHROME ?? '';
-const storeUrlEdge = env.STORE_URL_EDGE ?? '';
+const DEFAULT_STORE_CHROME = 'https://chromewebstore.google.com/detail/veil/jecnnfblijhbkadedjpmkfmbfekeohml';
+const DEFAULT_STORE_EDGE = 'https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd';
+const storeUrlChrome = String(env.STORE_URL_CHROME ?? '').trim() || DEFAULT_STORE_CHROME;
+const storeUrlEdge = String(env.STORE_URL_EDGE ?? '').trim() || DEFAULT_STORE_EDGE;
 
 let extensionVersion = '';
 try {
@@ -199,6 +201,7 @@ for (const page of [
   'feedback.html',
   'practice.html',
   'practice.css',
+  '_redirects',
 ]) {
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }
@@ -209,6 +212,23 @@ cpSync(join(repoRoot, 'api', 'ops', 'ops.js'), join(apiPublicDir, 'portal', 'ops
 const outlookAddinDir = join(repoRoot, 'outlook-addin');
 if (existsSync(outlookAddinDir)) {
   cpSync(outlookAddinDir, join(apiPublicDir, 'outlook-addin'), { force: true, recursive: true });
+}
+
+const gmailAddinDir = join(repoRoot, 'gmail-addon');
+if (existsSync(gmailAddinDir)) {
+  cpSync(gmailAddinDir, join(apiPublicDir, 'gmail-addon'), { force: true, recursive: true });
+}
+
+const mailAddinDir = join(repoRoot, 'mail-addin');
+if (existsSync(mailAddinDir)) {
+  cpSync(mailAddinDir, join(apiPublicDir, 'mail-addin'), { force: true, recursive: true });
+}
+
+for (const shared of ['constants.js', 'crypto.js', 'marker.js']) {
+  const src = join(repoRoot, shared);
+  if (existsSync(src)) {
+    cpSync(src, join(apiPublicDir, shared), { force: true });
+  }
 }
 
 console.log(`Applied .env → ${constantsPath}`);

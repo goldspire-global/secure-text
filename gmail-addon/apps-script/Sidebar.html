@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://veil.goldspireventures.com/gmail-addon/taskpane.css" />
+</head>
+<body>
+  <main class="veil-pane">
+    <header class="veil-pane__brand">
+      <img src="https://veil.goldspireventures.com/icons/icon-48.png" alt="" width="36" height="36" />
+      <div>
+        <h1>Veil</h1>
+        <p>Keyboard-edge protection for Gmail</p>
+      </div>
+    </header>
+
+    <aside class="veil-trust">
+      Decryption runs in this panel. Your passphrase and secrets never upload to Goldspire.
+    </aside>
+
+    <p id="scan-status" class="status">Scanning message for <code>[redacted]</code>…</p>
+
+    <form id="unlock-form" hidden>
+      <label class="field">
+        <span>Passphrase</span>
+        <input id="passphrase" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="btn" id="unlock-btn">Show unlocked secret</button>
+    </form>
+
+    <section id="result" class="result" hidden>
+      <p class="status status--ok">Unlocked locally</p>
+      <code id="result-text"></code>
+    </section>
+
+    <p id="error" class="status status--error" hidden></p>
+  </main>
+
+  <script>
+    window.__VEIL_MAIL_BODY__ = <?!= bodyJson ?>;
+  </script>
+  <script src="https://veil.goldspireventures.com/constants.js"></script>
+  <script src="https://veil.goldspireventures.com/crypto.js"></script>
+  <script src="https://veil.goldspireventures.com/marker.js"></script>
+  <script src="https://veil.goldspireventures.com/mail-addin/unlock-pane.js"></script>
+  <script>
+    VeilMailUnlock.boot({ getBody: function () { return window.__VEIL_MAIL_BODY__; } });
+  </script>
+</body>
+</html>

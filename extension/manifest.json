@@ -43,6 +43,17 @@
   },
   "content_scripts": [
     {
+      "matches": [
+        "https://veil.goldspireventures.com/practice*",
+        "https://*.goldspireventures.com/practice*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["src/practice-host.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
       "matches": ["<all_urls>"],
       "js": [
         "src/constants.js",
@@ -144,6 +155,7 @@
       "resources": [
         "unlock/*",
         "bookmarklet/*",
+        "practice/*",
         "src/*.js",
         "styles/content.css"
       ],

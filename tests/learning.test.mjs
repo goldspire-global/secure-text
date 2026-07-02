@@ -14,8 +14,11 @@ import { buildBundleArtifact } from '../api/src/learning-train.mjs';
 import { createOrganization } from '../api/src/admin-service.mjs';
 import { joinWithCode } from '../api/src/org-service.mjs';
 import { ingestExtensionEvents } from '../api/src/events-service.mjs';
+import { prepareScenarioEnv } from './scenarios/helpers.mjs';
 
 const TEAM_PASS = 'learning-test-passphrase-16chars';
+
+prepareScenarioEnv();
 
 function mockAdminReq(token) {
   return { headers: { authorization: `Bearer ${token}` } };
@@ -40,8 +43,8 @@ test('learning bundle signs and verifies', () => {
 });
 
 test('platform decisions ingest stores metadata only', async () => {
-  const env = { OPS_CLIENT_INGEST_KEY: '' };
-  const result = await ingestPlatformDecisions(env, mockIngestReq(''), {
+  const key = String(process.env.OPS_CLIENT_INGEST_KEY || '').trim();
+  const result = await ingestPlatformDecisions({ OPS_CLIENT_INGEST_KEY: key }, mockIngestReq(key), {
     events: [{
       at: Date.now(),
       type: 'decision',

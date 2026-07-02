@@ -118,6 +118,9 @@
         allowBtn.type = 'button';
         allowBtn.className = 'gst-veil-selection-bar__btn gst-veil-selection-bar__btn--allow';
         allowBtn.textContent = 'Allow';
+        allowBtn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+        });
         allowBtn.addEventListener('click', () => {
           onSelectionAction('ignore', { text, context, detections, settings, selectionContext });
         });
@@ -128,6 +131,9 @@
           siteBtn.className = 'gst-veil-selection-bar__btn gst-veil-selection-bar__btn--allow';
           siteBtn.textContent = 'Always here';
           siteBtn.title = 'Stop prompting for this type on this site';
+          siteBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+          });
           siteBtn.addEventListener('click', () => {
             onSelectionAction('ignore-site', { text, context, detections, settings, selectionContext });
           });
@@ -140,6 +146,9 @@
       btn.className = 'gst-veil-selection-bar__btn';
       btn.textContent = action.stub ? `${action.label} (soon)` : action.label;
       btn.disabled = action.stub || action.available === false;
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
       btn.addEventListener('click', () => {
         onSelectionAction(action.id, { text, context, detections, settings, selectionContext });
       });
@@ -152,6 +161,10 @@
 
   function refresh(getDeps) {
     if (!getDeps) return;
+    if (/\/practice(?:\.html)?$/i.test(typeof location !== 'undefined' ? location.pathname : '')) {
+      hide();
+      return;
+    }
     const { getPreview, getSelectionContext, getSettings, isComposeContext } = getDeps;
     const preview = getPreview?.() || '';
     const trimmed = preview.trim();

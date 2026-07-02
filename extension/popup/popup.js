@@ -556,14 +556,14 @@ async function openPracticePage({ startTour = true } = {}) {
     showStatus('Practice page URL not configured.');
     return;
   }
-  const url = `${base}practice.html`;
+  const url = `${base}practice?tour=1`;
   const tab = await new Promise((resolve) => {
     api.tabs.create({ url, active: true }, (created) => {
       void api.runtime?.lastError;
       resolve(created);
     });
   });
-  await writeSyncSettings({ firstSecurePractice: true });
+  await writeSyncSettings({ firstSecurePractice: true, practiceTourPending: false });
   refreshFirstSecureCard().catch(() => {});
 
   if (startTour && tab?.id) {
@@ -620,8 +620,13 @@ async function refreshSecurityProof() {
   if (attestationEl && global.GoldspireAttestation) {
     const att = await global.GoldspireAttestation.load();
     const line = global.GoldspireAttestation.summaryLine(att);
-    attestationEl.textContent = line || 'Secure an item to generate a client-side encryption proof.';
-    attestationEl.hidden = false;
+    if (line) {
+      attestationEl.textContent = line;
+      attestationEl.hidden = false;
+    } else {
+      attestationEl.textContent = '';
+      attestationEl.hidden = true;
+    }
   }
 }
 
@@ -909,7 +914,9 @@ async function finishSetup(profile, extraSettings = {}, passphrase = '') {
     ...profileDefaults,
     ...extraSettings,
     setupComplete: true,
+    tourComplete: false,
     securityProfile: profile,
+    ...(profile === 'personal' || profile === 'organization' ? { practiceTourPending: true } : {}),
   });
 
   await writeSyncSettings(patch);
@@ -931,10 +938,7 @@ async function finishSetup(profile, extraSettings = {}, passphrase = '') {
   await loadSettings();
   const secureShortcut = GoldspireCopy?.shortcut?.('secure') || 'Ctrl+Shift+S';
   showStatus(`Setup complete — highlight text and press ${secureShortcut}.`);
-  GoldspirePopupTour?.maybeStartAfterSetup?.(profile, {
-    switchTab,
-    api,
-  });
+  GoldspirePopupTour?.start?.(profile, { switchTab, api, force: true });
 }
 
 function generatePersonalPassphrase() {
@@ -1334,6 +1338,10 @@ async function loadSettings() {
   await refreshFirstSecureCard();
   await refreshSecurityProof();
   if (profile === 'personal') await refreshPlusPanel();
+
+  if (settings.setupComplete && settings.tourComplete !== true) {
+    GoldspirePopupTour?.maybeStartAfterSetup?.(profile, { switchTab, api });
+  }
 }
 
 async function refreshPlusPanel() {

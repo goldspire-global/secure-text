@@ -42,7 +42,7 @@
         <div class="field">
           <label for="allowed-domain">Company email domain</label>
           <input id="allowed-domain" name="allowedEmailDomain" placeholder="company.com" autocomplete="off" />
-          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. If blank, <strong>only people you add in Admin → People</strong> can join — add their work emails before they try.</div>
+          <div class="hint">Optional — leave blank to infer from your work email above. Veil MX-checks the domain so only real company inboxes can join (e.g. <code>name@company.com</code>).</div>
         </div>
 
         <div class="field">
@@ -107,6 +107,8 @@
           </div>
         </div>
       </div>
+
+      <p id="success-domain-status" class="hint" hidden style="margin-bottom:1rem;"></p>
 
       <div class="btn-row">
         <button type="button" class="btn" id="open-admin">Open admin</button>
@@ -203,6 +205,18 @@
       document.getElementById('team-passphrase').value = app.generatePassphrase(24);
     });
 
+    const adminEmailEl = document.getElementById('admin-email');
+    const allowedDomainEl = document.getElementById('allowed-domain');
+    adminEmailEl?.addEventListener('input', () => {
+      if (!allowedDomainEl || allowedDomainEl.dataset.userEdited === '1') return;
+      const email = adminEmailEl.value.trim().toLowerCase();
+      const at = email.lastIndexOf('@');
+      allowedDomainEl.value = at > 0 ? email.slice(at + 1) : '';
+    });
+    allowedDomainEl?.addEventListener('input', () => {
+      allowedDomainEl.dataset.userEdited = allowedDomainEl.value.trim() ? '1' : '';
+    });
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       submitBtn.disabled = true;
@@ -226,6 +240,22 @@
         document.getElementById('out-display-name').textContent = result.displayName;
         document.getElementById('out-join-code').textContent = result.joinCode;
         document.getElementById('out-admin-token').textContent = result.adminToken;
+
+        const domainStatus = document.getElementById('success-domain-status');
+        const domains = result.settings?.allowedEmailDomains || [];
+        const verifiedAt = result.settings?.domainVerifiedAt;
+        if (domainStatus) {
+          if (domains.length && verifiedAt) {
+            domainStatus.innerHTML = `<strong>Email domain verified:</strong> <code>${domains.join(', ')}</code> (MX check passed). Only matching work inboxes can join automatically.`;
+            domainStatus.hidden = false;
+          } else if (domains.length) {
+            domainStatus.innerHTML = `<strong>Join domain:</strong> <code>${domains.join(', ')}</code> — members with matching emails can join.`;
+            domainStatus.hidden = false;
+          } else {
+            domainStatus.hidden = true;
+            domainStatus.textContent = '';
+          }
+        }
 
         const appliedPack = GoldspirePolicyPacks.recommendedPackForIndustry(industrySelect?.value);
         const policyStep = document.getElementById('success-policy-step');

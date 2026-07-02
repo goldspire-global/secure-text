@@ -194,6 +194,18 @@
       variant,
       alreadyInserted,
     });
+    if (/\/practice(?:\.html)?$/i.test(typeof location !== 'undefined' ? location.pathname : '')) {
+      try {
+        document.dispatchEvent(new CustomEvent('veil-practice-copilot', {
+          detail: {
+            source: context?.source || 'paste',
+            title: title || '',
+          },
+        }));
+      } catch {
+        // Non-critical.
+      }
+    }
     void global.GoldspireWeeklyDigest?.record?.('copilot');
   }
 

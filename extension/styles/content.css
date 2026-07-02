@@ -121,6 +121,15 @@
   word-break: break-all;
 }
 
+.gst-result--compact .gst-result__value--compact {
+  display: block;
+  max-width: 100%;
+  word-break: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .gst-dialog {
   width: min(340px, calc(100vw - 28px));
   border-radius: 14px;
@@ -491,6 +500,23 @@
   background: rgba(212, 160, 23, 0.18);
   border-color: rgba(212, 160, 23, 0.5);
   color: #e8c55a;
+}
+
+/* Practice fake-mail compose — light background needs obvious link styling */
+.gst-practice-compose a.gst-redacted,
+.gst-practice-compose .gst-redacted[href] {
+  color: #0078d4 !important;
+  background: rgba(0, 120, 212, 0.1);
+  border: none;
+  text-decoration: underline;
+  text-decoration-style: solid;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+
+.gst-practice-compose a.gst-redacted:hover {
+  color: #106ebe !important;
+  background: rgba(0, 120, 212, 0.16);
 }
 
 .gst-veil-token-btn {
@@ -900,11 +926,42 @@
   color: #e2e8f0;
 }
 
+.gst-veil-pop--secure {
+  width: min(292px, calc(100vw - 28px));
+  padding: 10px 11px 9px;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__why {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__why li {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 4px;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__why li:last-child {
+  margin-bottom: 0;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__trust {
+  margin: 2px 0 8px;
+}
+
 .gst-veil-pop--secure .gst-veil-pop__hint {
   margin: 0 0 6px;
   font-size: 11px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: #94a3b8;
+}
+
+.gst-veil-pop--secure .gst-veil-pop__hint code {
+  font-size: 10px;
+  color: #cbd5e1;
 }
 
 .gst-veil-pop__field {

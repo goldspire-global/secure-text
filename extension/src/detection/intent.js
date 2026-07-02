@@ -33,6 +33,10 @@
     return Boolean(portalHost && host === portalHost);
   }
 
+  function isPracticePage(path) {
+    return /\/practice(?:\.html)?$/.test(String(path || ''));
+  }
+
   function isOwnApiHost(host) {
     const apiHost = deployment().API_HOST || '';
     return Boolean(apiHost && host === apiHost);
@@ -196,6 +200,17 @@
       };
     }
 
+    if (isOwnPortalHost(host) && isPracticePage(path)) {
+      signals.push('practice_page');
+      return {
+        intent: 'compose_outbound',
+        outboundRisk: 'high',
+        expectsPii: false,
+        inForm: Boolean(form) || meta.editorKind === 'textarea',
+        signals,
+      };
+    }
+
     if (isAdminSurface(host, path)) {
       signals.push('admin_surface');
       return {
@@ -276,6 +291,7 @@
     isGovernmentIdField,
     isAdminSurface,
     isOwnPortalHost,
+    isPracticePage,
     mailHostPattern: () => pattern('mailHost'),
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

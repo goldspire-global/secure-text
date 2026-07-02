@@ -35,69 +35,75 @@
       <p class="hint" data-price-currency-note hidden></p>
     </section>
 
-    <section class="grid-5">
-      <div class="card card--flat price-card">
-        <p class="eyebrow">Personal</p>
-        <p class="price-card__amount">Free</p>
-        <p class="hint">One browser profile · no account</p>
-        <ul class="trust-list">
+    <section class="pricing-sandwich">
+      <div class="card card--flat price-card price-card--horizontal">
+        <div class="price-card__head">
+          <p class="eyebrow">Personal</p>
+          <p class="price-card__amount">Free</p>
+          <p class="hint">One browser profile · no account</p>
+        </div>
+        <ul class="trust-list price-card__features">
           <li>Inline <code>[redacted]</code> encrypt &amp; unlock</li>
           <li>Veil copilot on paste &amp; typing</li>
           <li>One-time codes + hosted unlock links</li>
           <li>Email / SMS share helpers for codes</li>
         </ul>
-        <a class="btn btn--ghost" href="install.html">Install free</a>
+        <a class="btn btn--ghost price-card__cta" href="install.html">Install free</a>
       </div>
 
-      <div class="card price-card price-card--featured" id="plus">
-        <p class="eyebrow">Veil Plus</p>
-        <p class="price-card__amount" data-price-plus>$4.99 <span class="price-card__unit">/ mo</span></p>
-        <p class="hint">6 trusted contacts included · <span data-local-price="plus-contact-addon"></span> per extra</p>
-        <ul class="trust-list">
-          <li>Everything in Personal</li>
-          <li>Direct unlock to trusted contacts</li>
-          <li>Magic links (one-time, no Veil required)</li>
-          <li>Add contact slots as you grow</li>
-        </ul>
-        <a class="btn" href="plus.html">Get Veil Plus</a>
+      <div class="pricing-mid">
+        <div class="card price-card price-card--featured" id="plus">
+          <p class="eyebrow">Veil Plus</p>
+          <p class="price-card__amount" data-price-plus>$4.99 <span class="price-card__unit">/ mo</span></p>
+          <p class="hint">6 trusted contacts included · <span data-local-price="plus-contact-addon"></span> per extra</p>
+          <ul class="trust-list">
+            <li>Everything in Personal</li>
+            <li>Direct unlock to trusted contacts</li>
+            <li>Magic links (one-time, no Veil required)</li>
+            <li>Add contact slots as you grow</li>
+          </ul>
+          <a class="btn" href="plus.html">Get Veil Plus</a>
+        </div>
+
+        <div class="card card--flat price-card" id="team">
+          <p class="eyebrow">Team</p>
+          <p class="price-card__amount" data-price-team>$7 <span class="price-card__unit">/ user / mo</span></p>
+          <p class="hint"><span data-local-price="team-annual-equiv"></span> · min. 7 seats · card required</p>
+          <ul class="trust-list">
+            <li>Everything in Personal</li>
+            <li>Org admin, join codes, member directory</li>
+            <li>Policy packs: Finance, Healthcare, GDPR, Engineering</li>
+            <li>Team tokens, SIEM webhook, security events</li>
+          </ul>
+          <a class="btn" href="create.html?billing=1">Set up your team</a>
+        </div>
+
+        <div class="card card--flat price-card">
+          <p class="eyebrow">Enterprise</p>
+          <p class="price-card__amount">Self-serve</p>
+          <p class="hint" data-price-enterprise>From $12 / user / mo at 100+ seats</p>
+          <ul class="trust-list">
+            <li>Everything in Team</li>
+            <li>Sub-teams &amp; custom policy overlays</li>
+            <li>Chrome / Edge managed policy deployment</li>
+            <li>Priority support queue</li>
+          </ul>
+          <a class="btn" href="create.html?billing=1">Create organization</a>
+        </div>
       </div>
 
-      <div class="card card--flat price-card" id="team">
-        <p class="eyebrow">Team</p>
-        <p class="price-card__amount" data-price-team>$7 <span class="price-card__unit">/ user / mo</span></p>
-        <p class="hint"><span data-local-price="team-annual-equiv"></span> · min. 5 seats · card required</p>
-        <ul class="trust-list">
-          <li>Everything in Personal</li>
-          <li>Org admin, join codes, member directory</li>
-          <li>Policy packs: Finance, Healthcare, GDPR, Engineering</li>
-          <li>Team tokens, SIEM webhook, security events</li>
-        </ul>
-        <a class="btn" href="create.html?billing=1">Set up your team</a>
-      </div>
-
-      <div class="card card--flat price-card">
-        <p class="eyebrow">Enterprise</p>
-        <p class="price-card__amount">Self-serve</p>
-        <p class="hint" data-price-enterprise>From $12 / user / mo at 100+ seats</p>
-        <ul class="trust-list">
-          <li>Everything in Team</li>
-          <li>Sub-teams &amp; custom policy overlays</li>
-          <li>Chrome / Edge managed policy deployment</li>
-          <li>Priority support queue</li>
-        </ul>
-        <a class="btn" href="create.html?billing=1">Create organization</a>
-      </div>
-
-      <div class="card card--flat price-card">
-        <p class="eyebrow">Custom</p>
-        <p class="price-card__amount">Let’s talk</p>
-        <p class="hint">Volume pricing &amp; hands-on rollout</p>
-        <ul class="trust-list">
+      <div class="card card--flat price-card price-card--horizontal">
+        <div class="price-card__head">
+          <p class="eyebrow">Custom</p>
+          <p class="price-card__amount">Let’s talk</p>
+          <p class="hint">Volume pricing &amp; hands-on rollout</p>
+        </div>
+        <ul class="trust-list price-card__features">
           <li>Dedicated onboarding workshop</li>
           <li>MDM / Intune rollout support</li>
           <li>Security review &amp; procurement pack</li>
         </ul>
-        <a class="btn btn--ghost" href="#" data-contact-href="sales" data-mail-subject="Veil Custom plan">Contact sales</a>
+        <a class="btn btn--ghost price-card__cta" href="#" data-contact-href="sales" data-mail-subject="Veil Custom plan">Contact sales</a>
       </div>
     </section>
 

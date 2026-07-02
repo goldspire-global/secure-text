@@ -2,6 +2,10 @@
 extension/dist/
 extension/store/*.zip
 
+# E2E / tour walk artifacts (regenerated locally)
+extension/store/e2e-walk/
+extension/store/practice-tour-walk/
+
 # Dependencies (if you add any later)
 node_modules/
 

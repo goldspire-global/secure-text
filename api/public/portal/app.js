@@ -35,6 +35,14 @@
     el.className = 'status' + (kind ? ` ${kind}` : '');
   }
 
+  function friendlyNetworkError(error) {
+    const message = String(error?.message || error || '');
+    if (error instanceof TypeError && /fetch|network|failed/i.test(message)) {
+      return new Error('Could not reach the Veil service. Check your connection and try again.');
+    }
+    return error instanceof Error ? error : new Error(message || 'Request failed.');
+  }
+
   async function readJson(response) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -52,12 +60,15 @@
       ...(options.headers || {}),
     };
 
-    const response = await fetch(`${base}${path}`, {
-      ...options,
-      headers,
-    });
-
-    return readJson(response);
+    try {
+      const response = await fetch(`${base}${path}`, {
+        ...options,
+        headers,
+      });
+      return readJson(response);
+    } catch (error) {
+      throw friendlyNetworkError(error);
+    }
   }
 
   async function apiPublic(path, options = {}) {

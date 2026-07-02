@@ -1,0 +1,35 @@
+{
+  "timeZone": "Europe/London",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.addons.execute",
+    "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "addOns": {
+    "common": {
+      "name": "Veil",
+      "logoUrl": "https://veil.goldspireventures.com/icons/icon-48.png",
+      "layoutProperties": {
+        "primaryColor": "#d4a017",
+        "secondaryColor": "#0d111b"
+      },
+      "openLinkUrlPrefixes": [
+        "https://veil.goldspireventures.com/"
+      ]
+    },
+    "gmail": {
+      "contextualTriggers": [
+        {
+          "unconditional": {},
+          "onTriggerFunction": "onGmailMessageOpen"
+        }
+      ],
+      "primaryColor": "#d4a017",
+      "secondaryColor": "#0d111b",
+      "version": "1"
+    }
+  }
+}

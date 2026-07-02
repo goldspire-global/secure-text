@@ -382,25 +382,26 @@
     }
 
     const match = global.GoldspirePasteInsert?.findRawMatch?.(text, analyzed.detections);
-    if (!match?.raw) {
+    const resolvedMatch = match;
+    if (!resolvedMatch?.raw) {
       global.GoldspireVeilCopilotUI?.removePrompt?.();
       return;
     }
 
-    if (global.GoldspireVeilSnooze?.isCompositionAllowed?.(context.host, text, match, fieldState)) return;
+    if (global.GoldspireVeilSnooze?.isCompositionAllowed?.(context.host, text, resolvedMatch, fieldState)) return;
 
-    const dedupeKey = global.GoldspireObserveContext?.pasteDedupeKey?.(match.raw, context.host) || match.raw;
+    const dedupeKey = global.GoldspireObserveContext?.pasteDedupeKey?.(resolvedMatch.raw, context.host) || resolvedMatch.raw;
     if (shouldDedupe(dedupeKey)) return;
 
     await processSensitiveInsert({
-      text: match.raw,
+      text: resolvedMatch.raw,
       target,
       context,
       detections: analyzed.detections,
       settings,
       alreadyInserted: true,
       fieldState,
-      match,
+      match: resolvedMatch,
     });
   }
 

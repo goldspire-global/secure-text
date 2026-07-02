@@ -4,6 +4,9 @@
     "/index.html",
     "/install.html",
     "/practice.html",
+    "/plus.html",
+    "/claim.html",
+    "/verify-email.html",
     "/pricing.html",
     "/create.html",
     "/join.html",
@@ -16,6 +19,14 @@
   ],
   "failed": [],
   "warnings": [
+    {
+      "route": "/unlock.html",
+      "reason": "Expected content not found: /Zero-knowledge/i"
+    },
+    {
+      "route": "/unlock.html",
+      "reason": "Console errors: Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
     {
       "route": "popup",
       "reason": "popup: chrome is not defined"

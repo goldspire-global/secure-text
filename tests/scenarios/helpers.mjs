@@ -20,6 +20,13 @@ export function loadDotEnv() {
   }
 }
 
+/** Scenario/E2E tests need org join without live billing or MX DNS. */
+export function prepareScenarioEnv() {
+  loadDotEnv();
+  process.env.VEIL_EARLY_ACCESS = 'true';
+  process.env.VEIL_ORG_CHECK_MX = 'false';
+}
+
 export function hasDatabase() {
   loadDotEnv();
   return Boolean(process.env.DATABASE_URL || process.env.DIRECT_URL);

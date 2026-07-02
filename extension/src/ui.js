@@ -12,6 +12,18 @@
       .replace(/"/g, '&quot;');
   }
 
+  function formatCompactUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.replace(/^www\./, '');
+      const path = parsed.pathname.replace(/\/unlock\.html$/i, '/unlock');
+      return `${host}${path}…`;
+    } catch {
+      return url.length > 42 ? `${url.slice(0, 38)}…` : url;
+    }
+  }
+
   function showToast(message, type = 'info') {
     document.getElementById(TOAST_ID)?.remove();
 
@@ -106,6 +118,7 @@
         return;
       }
       if (rootEl.contains(event.target)) return;
+      if (event.target.closest?.('.practice-tour')) return;
       document.removeEventListener('mousedown', activeOutsideDismiss, true);
       activeOutsideDismiss = null;
       removePrompt();
@@ -327,12 +340,17 @@
         <div class="gst-result gst-result--compact">
           ${lines
             .map(
-              (line, index) => `
+              (line) => {
+                const shown = line.displayValue ?? line.value;
+                const compact = Boolean(line.displayValue || (line.value && String(line.value).includes('#')));
+                const title = line.title || (compact ? line.value : '');
+                return `
                 <div class="gst-result__row">
                   <span class="gst-result__label">${escapeHtml(line.label)}</span>
-                  <code class="gst-result__value">${escapeHtml(line.value)}</code>
+                  <code class="gst-result__value${compact ? ' gst-result__value--compact' : ''}"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(shown)}</code>
                 </div>
-              `,
+              `;
+              },
             )
             .join('')}
         </div>
@@ -409,11 +427,12 @@
         </div>
       `,
       magic: '<p class="gst-veil-pop__hint">Creates a one-time link you share separately. Recipient opens it to get the unlock code — no Veil account needed.</p>',
-      'one-time': '<p class="gst-veil-pop__hint">Recipient gets a one-time unlock code you share out of band.</p>',
+      'one-time': '<p class="gst-veil-pop__hint"><strong>One-time code</strong> — Veil creates a unique unlock code for this message. Copy it and send it separately (text, call, or chat). The recipient pastes it when they click <code>[redacted]</code>.</p>',
     };
 
-    const detectionSummary = Array.isArray(detections) && detections.length
-      ? global.GoldspireVeilExplain?.buildExplainSummary?.(detections, { context: {}, settings }) || []
+    const sheetDetections = global.GoldspireVeilExplain?.dedupeDetectionsForDisplay?.(detections) || detections;
+    const detectionSummary = Array.isArray(sheetDetections) && sheetDetections.length
+      ? global.GoldspireVeilExplain?.buildExplainSummary?.(sheetDetections, { context: {}, settings }) || []
       : [];
 
     const pop = document.createElement('div');
@@ -458,10 +477,19 @@
       }
     }
 
+    chipsEl.addEventListener('mousedown', (event) => {
+      if (event.target.closest('[data-mode]')) event.preventDefault();
+    });
     chipsEl.addEventListener('click', (event) => {
       const chip = event.target.closest('[data-mode]');
       if (!chip) return;
       setMode(chip.dataset.mode);
+    });
+
+    pop.addEventListener('mousedown', (event) => {
+      if (event.target.closest('[data-action], [data-mode], .gst-veil-pop__chip')) {
+        event.preventDefault();
+      }
     });
 
     pop.addEventListener('click', async (event) => {
@@ -545,5 +573,6 @@
     teamPassphraseFields,
     showResultDialog,
     removePrompt,
+    formatCompactUrl,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : window);

@@ -6,7 +6,7 @@ Quick start for **Personal** profile users (no team, no join code).
 
 ## Install
 
-1. Install from [Veil on Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkbblkoncafpmcpkd) or [Chrome Web Store](https://chromewebstore.google.com/search/Veil%20Goldspire) (search **Veil by Goldspire**).
+1. Install from [Veil on Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd) or [Chrome Web Store](https://chromewebstore.google.com/detail/veil/jecnnfblijhbkadedjpmkfmbfekeohml).
 2. Open the Veil popup → **Personal** → **Quick setup** (or choose your own passphrase).
 
 ![Veil popup — personal setup complete](screenshots/popup-home-checklist.png)

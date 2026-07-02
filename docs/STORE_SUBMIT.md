@@ -11,6 +11,7 @@ Output:
 
 - `extension/store/veil-1.1.0.zip` — upload this
 - `extension/store/listing.json` — version + URLs reference
+- `extension/store/STORE_UPDATE.md` — **What's new** copy for dashboard
 - Copy from `docs/STORE_LISTING.md` for description text
 
 ## 2. Chrome Web Store

@@ -1,5 +1,5 @@
 .practice {
-  max-width: 720px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 24px 20px 32px;
 }
@@ -8,7 +8,7 @@
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .practice__logo {
@@ -19,7 +19,7 @@
 }
 
 .practice__banner {
-  margin: 0 0 20px;
+  margin: 0 0 16px;
   padding: 14px 16px;
   border-radius: 14px;
   background: rgba(34, 197, 94, 0.08);
@@ -44,65 +44,212 @@
   margin-bottom: 6px;
 }
 
-.practice__compose {
+/* Fake Outlook compose — mirrors extension store demo */
+.practice-frame {
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #111827;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
 }
 
-.practice__toolbar {
+.practice-browser__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #202124;
+  color: #e8eaed;
+  font-size: 12px;
+}
+
+.practice-browser__dots {
+  display: flex;
+  gap: 6px;
+}
+
+.practice-browser__dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #5f6368;
+}
+
+.practice-browser__dots span:nth-child(1) { background: #ff5f57; }
+.practice-browser__dots span:nth-child(2) { background: #febc2e; }
+.practice-browser__dots span:nth-child(3) { background: #28c840; }
+
+.practice-browser__url {
+  flex: 1;
+  margin-left: 4px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #303134;
+  color: #bdc1c6;
+  font-size: 12px;
+}
+
+.practice-browser__badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.practice-compose {
+  background: #fff;
+  color: #111827;
+}
+
+.practice-compose__toolbar {
   display: flex;
   gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.2);
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
 }
 
-.practice__toolbar .btn {
-  padding: 8px 14px;
-  min-height: auto;
+.practice-compose__toolbar .btn-send {
+  background: #0078d4;
+  border: 1px solid #0078d4;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
   font-size: 13px;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
-.practice__toolbar .btn--ghost {
-  opacity: 0.5;
-  pointer-events: none;
+.practice-compose__toolbar .btn-discard {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
-.practice__field {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 10px;
+.practice-compose__row {
+  display: flex;
+  gap: 12px;
   align-items: center;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 13px;
-  color: #94a3b8;
+  padding: 10px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
 }
 
-.practice__field input {
-  border: 0;
+.practice-compose__row > span:first-child {
+  width: 52px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.practice-compose__row input {
+  flex: 1;
+  border: none;
   background: transparent;
-  color: #e2e8f0;
   font: inherit;
-  font-size: 14px;
+  color: #111827;
   outline: none;
+}
+
+.practice-compose__editor {
+  padding: 20px 24px 28px;
+  min-height: 220px;
 }
 
 .practice__body {
-  min-height: 200px;
   width: 100%;
-  border: 0;
-  resize: vertical;
-  padding: 16px 14px;
-  background: transparent;
-  color: #f1f5f9;
-  font: inherit;
-  font-size: 15px;
-  line-height: 1.6;
+  min-height: 180px;
+  border: none;
   outline: none;
+  font: 15px/1.65 "Segoe UI", system-ui, sans-serif;
+  color: #111827;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.practice-frame--highlight-key .practice__body {
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.35) 0%, transparent 40%);
+}
+
+.practice-hints-lab {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(212, 160, 23, 0.08);
+  border: 1px solid rgba(212, 160, 23, 0.28);
+}
+
+.practice-hints-lab__label {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.practice-hints-lab__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.practice-hints-lab__btn {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: #cbd5e1;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: 600 13px/1 system-ui, sans-serif;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+
+.practice-hints-lab__btn:hover {
+  border-color: rgba(212, 160, 23, 0.5);
+  color: #f8fafc;
+}
+
+.practice-hints-lab__btn--active {
+  border-color: rgba(212, 160, 23, 0.65);
+  color: #fde68a;
+  box-shadow: 0 0 16px rgba(212, 160, 23, 0.25);
+}
+
+.practice-typing-zone {
+  margin-top: 20px;
+  padding: 16px 18px 20px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0, 120, 212, 0.35);
+  background: rgba(0, 120, 212, 0.06);
+}
+
+.practice-typing-zone__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #f1f5f9;
+}
+
+.practice-type-body {
+  margin-top: 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+.practice-type-body:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
 }
 
 .practice__footer {

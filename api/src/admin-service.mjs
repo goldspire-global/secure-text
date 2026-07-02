@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
+import { assertPersonalEmailFormat } from './personal-email-validation.mjs';
+import { resolveOrgAllowedDomains, verifyOrgDomains } from './org-domain-validation.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { MEMBERSHIP_POLICIES } from './membership.mjs';
 import { getPolicyPack, resolveIndustrySettings, normalizeEnabledPackIds } from './policy-packs.mjs';
@@ -142,20 +144,37 @@ export async function createOrganization(body = {}) {
   if (displayName.length < 2) throw httpError(400, 'Team name must be at least 2 characters.');
   if (displayName.length > 120) throw httpError(400, 'Team name is too long.');
   if (teamPassphrase.length < 12) {
-    throw httpError(400, 'Team passphrase must be at least 16 characters.');
+    throw httpError(400, 'Team passphrase must be at least 12 characters.');
   }
 
-  const allowedEmailDomains = parseAllowedDomains(body);
-  const industry = String(body.industry || body.settings?.industry || '').trim();
+  if (adminEmail) {
+    assertPersonalEmailFormat(adminEmail);
+  }
+
+  const explicitDomains = parseAllowedDomains(body);
   const settings = defaultSettings(body.settings);
+  const requestedPolicy = String(
+    body.membershipPolicy || body.settings?.membershipPolicy || settings.membershipPolicy || '',
+  ).toLowerCase();
+  const domainSetup = await resolveOrgAllowedDomains({
+    adminEmail,
+    explicitDomains,
+    membershipPolicy: requestedPolicy,
+  });
+
+  const industry = String(body.industry || body.settings?.industry || '').trim();
   if (industry) {
     Object.assign(settings, resolveIndustrySettings(industry));
   }
-  if (allowedEmailDomains.length > 0) {
+  if (domainSetup.domains.length > 0) {
     settings.membershipPolicy = 'domain';
-    settings.allowedEmailDomains = allowedEmailDomains;
+    settings.allowedEmailDomains = domainSetup.domains;
+    settings.domainVerifiedAt = domainSetup.verifiedAt;
+    settings.domainVerificationMethod = domainSetup.method;
   } else if (body.membershipPolicy && MEMBERSHIP_POLICIES.has(String(body.membershipPolicy))) {
     settings.membershipPolicy = String(body.membershipPolicy);
+  } else if (body.settings?.membershipPolicy && MEMBERSHIP_POLICIES.has(String(body.settings.membershipPolicy))) {
+    settings.membershipPolicy = String(body.settings.membershipPolicy);
   }
   settings.billing = initialBillingSettings();
 
@@ -279,8 +298,13 @@ export async function updateOrganization(admin, body = {}) {
     if (merged.membershipPolicy && !MEMBERSHIP_POLICIES.has(merged.membershipPolicy)) {
       throw httpError(400, 'membershipPolicy must be open, invite, or domain.');
     }
-    if (merged.allowedEmailDomains) {
+    if (merged.allowedEmailDomains?.length) {
       merged.allowedEmailDomains = parseAllowedDomains({ allowedEmailDomains: merged.allowedEmailDomains });
+      const verified = await verifyOrgDomains(merged.allowedEmailDomains);
+      merged.allowedEmailDomains = verified.domains;
+      merged.domainVerifiedAt = verified.verifiedAt;
+      merged.domainVerificationMethod = verified.method;
+      merged.membershipPolicy = 'domain';
     }
     if (Array.isArray(body.settings.enabledPackIds)) {
       const industryId = merged.industry || current.industry;

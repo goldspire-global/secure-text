@@ -23,7 +23,7 @@ export async function createTeamCheckoutSession(admin) {
   if (!priceId) throw httpError(503, 'Team price is not configured.');
 
   const adminUrl = portalAdminUrl(env);
-  const minSeats = Math.max(5, Number(env.VEIL_TEAM_MIN_SEATS) || 5);
+  const minSeats = Math.max(7, Number(env.VEIL_TEAM_MIN_SEATS) || 7);
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',

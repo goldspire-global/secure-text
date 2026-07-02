@@ -54,6 +54,12 @@ https://veil.goldspireventures.com/feedback.html
 4. Token `[veil:vt_…]` revealed in Gmail
 5. Admin portal members list (optional)
 
+## Chrome Web Store
+
+- **Live listing:** https://chromewebstore.google.com/detail/veil/jecnnfblijhbkadedjpmkfmbfekeohml
+- **Extension ID:** `jecnnfblijhbkadedjpmkfmbfekeohml`
+- Use the direct URL on [install.html](../install.html) — search may not rank yet.
+
 ## Edge Add-ons
 
 - **Live listing:** https://microsoftedge.microsoft.com/addons/detail/veil/kfnpkdgfdpalmfibbkblkoncafpmcpkd

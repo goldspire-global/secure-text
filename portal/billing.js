@@ -108,7 +108,7 @@
       container.innerHTML = `
         <p class="lede"><strong>Early access</strong> — your team cloud is free. No card on file.${endLabel ? ` Free through <strong>${endLabel}</strong>.` : ''}</p>
         <ul class="trust-list">
-          <li>Team list price: <strong>$7 / user / month</strong>, billed annually ($84 / user / year), minimum 5 seats.</li>
+          <li>Team list price: <strong>$7 / user / month</strong>, billed annually ($84 / user / year), minimum 7 seats.</li>
           ${salesLine}
           <li>We’ll notify you before billing starts at general availability.</li>
         </ul>
@@ -123,7 +123,7 @@
         <div class="btn-row">
           ${portal ? `<a class="btn btn--ghost btn--sm" href="${portal}" rel="noopener noreferrer" target="_blank">Manage billing</a>` : ''}
         </div>
-        <p class="hint">$7 / user / month, billed annually ($84 / user / year). Minimum 5 seats.</p>
+        <p class="hint">$7 / user / month, billed annually ($84 / user / year). Minimum 7 seats.</p>
       `;
       bindCheckoutButton(container, apiAdmin);
       return;
@@ -153,7 +153,7 @@
       <p class="lede">Subscribe to Veil Team cloud for admin, policy packs, and token storage.</p>
       ${checkoutRow}
       ${portal ? `<div class="btn-row"><a class="btn btn--ghost btn--sm" href="${portal}" rel="noopener noreferrer" target="_blank">Billing portal</a></div>` : ''}
-      <p class="hint">$7 / user / month, billed annually ($84 / user / year). Minimum 5 seats.</p>
+      <p class="hint">$7 / user / month, billed annually ($84 / user / year). Minimum 7 seats.</p>
       ${orgBilling?.status === 'past_due' ? '<p class="hint">Payment failed — update your card in the billing portal to restore access.</p>' : ''}
     `;
     bindCheckoutButton(container, apiAdmin);

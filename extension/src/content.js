@@ -2,6 +2,8 @@
   if (window.__goldspireVeilLoaded) return;
   window.__goldspireVeilLoaded = true;
 
+  const global = globalThis;
+
   const DEFAULT_SETTINGS = GoldspireSettings.DEFAULT_SETTINGS;
   const runtimeApi = () => globalThis.chrome?.runtime || globalThis.browser?.runtime;
   const browserApi = () => globalThis.GoldspireBrowser;
@@ -346,6 +348,52 @@
 
   function getProfile(settings) {
     return settings.securityProfile === 'organization' ? 'organization' : 'personal';
+  }
+
+  function isPracticePage() {
+    return /\/practice(?:\.html)?$/i.test(location.pathname || '');
+  }
+
+  function emitPracticeEvent(name, detail = {}) {
+    if (!isPracticePage()) return;
+    try {
+      document.dispatchEvent(new CustomEvent(name, { detail }));
+    } catch {
+      // Non-critical.
+    }
+  }
+
+  function pinSelectionContext(context) {
+    if (!context?.selectedText?.trim()) return null;
+    if (context.kind === 'input' && context.element) {
+      return {
+        kind: 'input',
+        element: context.element,
+        start: context.start,
+        end: context.end,
+        selectedText: context.selectedText,
+      };
+    }
+    if (context.kind === 'multi-range' && context.ranges) {
+      return {
+        kind: 'multi-range',
+        selectedText: context.selectedText,
+        rangeCount: context.rangeCount,
+        ranges: context.ranges.map((entry) => ({
+          selectedText: entry.selectedText,
+          range: entry.range?.cloneRange?.() || entry.range,
+        })),
+      };
+    }
+    if (context.range) {
+      return {
+        kind: 'range',
+        selectedText: context.selectedText,
+        range: context.range.cloneRange(),
+        selection: context.selection,
+      };
+    }
+    return { ...context };
   }
 
   async function resolveTeamPassphrase(settings) {
@@ -964,6 +1012,16 @@
     refreshDebounceTimer = window.setTimeout(doRefreshSelectionUi, 400);
   }
 
+  function applySelectionUiModeSync(mode) {
+    if (!mode) return;
+    cachedUiSettings = { ...(cachedUiSettings || {}), selectionUiMode: mode };
+    if (mode === 'quiet') {
+      document.getElementById('goldspire-selection-status')?.classList.remove('gst-selection-status--visible');
+    }
+    window.clearTimeout(refreshDebounceTimer);
+    doRefreshSelectionUi();
+  }
+
   function ensureSelectionStatus() {
     if (document.getElementById('goldspire-selection-status')) return;
 
@@ -997,23 +1055,35 @@
       }));
     });
 
+    pill.querySelector('.gst-pill-half--quick')?.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+    pill.querySelector('.gst-pill-half--options')?.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+    pill.querySelector('.gst-pill-unlock')?.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+
     pill.querySelector('.gst-pill-half--quick')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!getActivePreview()) return;
-      runSafe(handleCommand({ type: 'SECURE_SELECTION' }));
+      const ctx = GoldspireSelection.getActiveSelection();
+      if (!ctx?.selectedText?.trim() && !getActivePreview()?.trim()) return;
+      runSafe(handleCommand({ type: 'SECURE_SELECTION', selectionContext: ctx }));
     });
 
     pill.querySelector('.gst-pill-half--options')?.addEventListener('click', (e) => {
       e.stopPropagation();
+      const ctx = GoldspireSelection.getActiveSelection();
       const preview = getActivePreview();
-      if (!preview?.trim()) {
+      if (!preview?.trim() && !ctx?.selectedText?.trim()) {
         if (isTopFrame && remoteSelectionPreview?.trim() && remoteSelectionToken) {
           forwardToRelayedFrame('SECURE_WITH_OPTIONS', { showOptions: true });
           return;
         }
         return;
       }
-      runSafe(handleCommand({ type: 'SECURE_WITH_OPTIONS', showOptions: true }));
+      runSafe(handleCommand({ type: 'SECURE_WITH_OPTIONS', showOptions: true, selectionContext: ctx }));
     });
 
     pill.querySelector('.gst-pill-unlock')?.addEventListener('click', (e) => {
@@ -1127,11 +1197,19 @@
 
     await GoldspireRedacted.insertRedacted(context, fullMarker, settings);
 
+    if (isPracticePage()) {
+      emitPracticeEvent('veil-practice-secured', { mode: isOneTime ? 'one-time' : mode });
+    }
+
     await recordHistory({ mode: isOneTime ? 'one-time' : mode });
     await auditEvent('secure', settings, isOneTime ? 'one-time' : mode);
 
     if (isOneTime && !silentOneTime && !skipClipboard) {
-      const unlockLink = GoldspireSecureMarker.buildUnlockLink(fullMarker);
+      const unlockLink = GoldspireRedacted.buildUnlockHref(
+        fullMarker,
+        GoldspireRedacted.resolvePublicUnlockUrl(settings),
+      );
+      const unlockLinkDisplay = GoldspireSecureUI.formatCompactUrl?.(unlockLink) || unlockLink;
       if (settings.copyOneTimeCodeAutomatically) await copyWithAutoClear(unlockSecret, settings);
 
       const shareBody = GoldspireShareHelper?.oneTimeMessage?.(unlockSecret, unlockLink || '') || unlockSecret;
@@ -1145,15 +1223,6 @@
               GoldspireShareHelper.mailtoUrl({ subject: 'Veil unlock code', body: shareBody }),
               '_blank',
             );
-          },
-        });
-      }
-      if (GoldspireShareHelper?.smsUrl) {
-        extraActions.push({
-          id: 'share-sms',
-          label: 'Text code',
-          onClick: () => {
-            window.open(GoldspireShareHelper.smsUrl(shareBody), '_blank');
           },
         });
       }
@@ -1171,7 +1240,7 @@
         title: 'Secured with one-time code',
         lines: [
           { label: 'Share this code separately (not in the message)', value: unlockSecret },
-          ...(unlockLink ? [{ label: 'Backup unlock link', value: unlockLink }] : []),
+          ...(unlockLink ? [{ label: 'Unlock page link', value: unlockLink, displayValue: unlockLinkDisplay, title: unlockLink }] : []),
         ],
         copyItems: [
           { label: 'Copy code', value: unlockSecret },
@@ -1180,6 +1249,9 @@
         ],
         extraActions,
       });
+      if (isPracticePage()) {
+        emitPracticeEvent('veil-practice-onetime-dialog', { mode: 'one-time' });
+      }
 
       if (copyLink && unlockLink) await copyWithAutoClear(unlockLink, settings);
     } else if (!isOneTime && !silentBatch) {
@@ -1294,6 +1366,9 @@
       }
 
       refreshSelectionUi();
+      if (isPracticePage()) {
+        emitPracticeEvent('veil-practice-unlocked', { mode: isOneTime ? 'one-time' : marker.mode || 'team' });
+      }
       return plaintext;
     }
 
@@ -1594,9 +1669,18 @@
   async function secureSelection(message = {}) {
     if (!ensureExtensionReady()) return;
 
-    const context = message.selectionContext
+    if (isPracticePage()) {
+      global.GoldspirePracticeHost?.upgradeComposeBody?.(true);
+    }
+
+    const rawContext = message.selectionContext
       ? resolveContext(message.selectionContext)
       : getSelectionContext(message);
+    let context = pinSelectionContext(rawContext);
+    if (isPracticePage() && context?.kind === 'input') {
+      const normalized = global.GoldspirePracticeHost?.normalizeInputContext?.(context);
+      if (normalized?.kind === 'range') context = pinSelectionContext(normalized);
+    }
     if (!context?.selectedText?.trim()) {
       if (!message.silent) {
         showToastTop('Highlight text first, then Ctrl+Shift+S or right-click.', 'error');
@@ -1615,18 +1699,45 @@
     const settings = await getSettings();
     const profile = getProfile(settings);
 
+    if (isPracticePage() && !message.showOptions) {
+      const saved = (await resolveTeamPassphrase(settings))?.trim();
+      const oneTime = !saved;
+      const unlockSecret = saved || GoldspireSecureCrypto.generateOneTimeCode(16);
+      await executeSecureBatch(context, settings, {
+        mode: oneTime ? 'one-time' : 'team',
+        unlockSecret,
+        copyLink: false,
+        silentOneTime: false,
+      });
+      return { handled: true };
+    }
+
     const teamPassphrase = await resolveTeamPassphrase(settings);
 
     const canQuickSecure =
       !message.showOptions &&
-      settings.defaultSecureMode === 'team' &&
+      settings.useSavedPassphrase !== false &&
       teamPassphrase &&
-      settings.useSavedPassphrase !== false;
+      settings.defaultSecureMode === 'team';
+
+    const canQuickOneTime =
+      !message.showOptions &&
+      settings.defaultSecureMode === 'one-time' &&
+      profile === 'personal';
 
     if (canQuickSecure) {
       await executeSecureBatch(context, settings, {
         mode: 'team',
         unlockSecret: teamPassphrase,
+        copyLink: false,
+      });
+      return { handled: true };
+    }
+
+    if (canQuickOneTime) {
+      await executeSecureBatch(context, settings, {
+        mode: 'one-time',
+        unlockSecret: GoldspireSecureCrypto.generateOneTimeCode(16),
         copyLink: false,
       });
       return { handled: true };
@@ -1658,14 +1769,17 @@
 
     const selectionSummary = getSelectionSummary();
     const isOrg = globalThis.GoldspireCopy?.isOrgProfile?.(settings) || false;
-    const defaultMode = settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team';
+    const practice = isPracticePage();
+    const defaultMode = practice
+      ? 'one-time'
+      : (settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team');
     const protectionOptions = [
       {
         value: 'team',
         label: globalThis.GoldspireCopy?.secureModeLabel?.(settings, 'team') || (isOrg ? 'Team passphrase' : 'My passphrase'),
         checked: defaultMode === 'team',
       },
-      ...(sharingAvailable
+      ...(sharingAvailable && !practice
         ? [{
           value: 'direct',
           label: plusDirect
@@ -1674,16 +1788,18 @@
           checked: false,
         }]
         : []),
-      ...(magicAvailable
+      ...(magicAvailable && !practice
         ? [{ value: 'magic', label: 'Magic link', checked: false }]
         : []),
       { value: 'one-time', label: 'One-time', checked: defaultMode === 'one-time' },
     ];
 
-    const selectedText = getSelectionContext()?.selectedText?.trim() || '';
-    const sheetDetections = selectedText && globalThis.GoldspireDetectionLib?.analyzeAll
+    const selectedText = context.selectedText?.trim() || '';
+    const rawDetections = selectedText && globalThis.GoldspireDetectionLib?.analyzeAll
       ? globalThis.GoldspireDetectionLib.analyzeAll(selectedText, { source: 'selection' })
       : [];
+    const sheetDetections = globalThis.GoldspireVeilExplain?.dedupeDetectionsForDisplay?.(rawDetections)
+      || rawDetections;
 
     await showSecureSheetTop({
       title: selectionSummary?.multi ? `Secure ${selectionSummary.count} items` : 'Secure selection',
@@ -1692,21 +1808,22 @@
       settings,
       detections: sheetDetections,
       onSubmit: async ({ mode, recipients }) => {
+        const pinned = pinSelectionContext(context) || context;
         const isDirect = mode === 'direct';
         const isOneTime = mode === 'one-time';
 
         if (isDirect) {
-          await runDirectShare(context, settings, recipients);
+          await runDirectShare(pinned, settings, recipients);
           return;
         }
 
         if (mode === 'magic') {
-          await runMagicLinkSecure(context, settings);
+          await runMagicLinkSecure(pinned, settings);
           return;
         }
 
         if (isOneTime) {
-          await executeSecureBatch(context, settings, {
+          await executeSecureBatch(pinned, settings, {
             mode: 'one-time',
             unlockSecret: GoldspireSecureCrypto.generateOneTimeCode(16),
             copyLink: false,
@@ -1716,6 +1833,15 @@
 
         const unlockSecret = teamPassphrase;
         if (!unlockSecret) {
+          if (practice) {
+            await executeSecureBatch(pinned, settings, {
+              mode: 'one-time',
+              unlockSecret: GoldspireSecureCrypto.generateOneTimeCode(16),
+              copyLink: false,
+              silentOneTime: true,
+            });
+            return;
+          }
           if (settings.passphraseFromVault) {
             throw new Error(globalThis.GoldspireCopy?.passphraseMissingError?.(settings) || 'Passphrase required.');
           }
@@ -1726,7 +1852,7 @@
           GoldspirePassphrasePolicy?.assertPassphrase?.(unlockSecret, profile, { mode: 'team' });
         }
 
-        await executeSecureBatch(context, settings, {
+        await executeSecureBatch(pinned, settings, {
           mode: 'team',
           unlockSecret,
           copyLink: false,
@@ -1895,6 +2021,12 @@
           inEditable: isComposeContext(),
         }),
         START_PAGE_TOUR: async () => {
+          if (isPracticePage()) {
+            await global.GoldspirePracticeHost?.startPracticeTour?.({
+              force: message.force === true,
+            });
+            return { ok: true };
+          }
           global.GoldspireContentTour?.start?.({ force: message.force === true });
           return { ok: true };
         },
@@ -2094,12 +2226,56 @@
       }
       runSafe(getSettings().then((s) => {
         cachedUiSettings = s;
+        refreshSelectionUi();
       }));
-    } else if (changes.dlpMode) {
+    } else if (changes.dlpMode || changes.selectionUiMode || changes.showSelectionPill) {
+      if (changes.selectionUiMode?.newValue) {
+        applySelectionUiModeSync(changes.selectionUiMode.newValue);
+      }
       runSafe(getSettings().then((s) => {
         cachedUiSettings = s;
+        refreshSelectionUi();
       }));
     }
+  }
+
+  if (isPracticePage()) {
+    document.addEventListener('veil-practice-hints-changed', (e) => {
+      applySelectionUiModeSync(e.detail?.mode);
+      runSafe(getSettings().then((s) => {
+        cachedUiSettings = s;
+        doRefreshSelectionUi();
+      }));
+    });
+    document.addEventListener('veil-practice-clear-selection', () => {
+      window.getSelection?.()?.removeAllRanges?.();
+      document.getElementById('goldspire-selection-status')?.classList.remove('gst-selection-status--visible');
+      window.clearTimeout(refreshDebounceTimer);
+      doRefreshSelectionUi();
+    });
+    document.addEventListener('veil-practice-reset-copilot', () => {
+      global.GoldspirePasteObserve?.resetPromptState?.();
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+    });
+    document.addEventListener('veil-practice-open-options', () => {
+      runSafe((async () => {
+        let ctx = getSelectionContext();
+        if (!ctx?.selectedText?.trim()) {
+          const body = document.getElementById('practice-body');
+          const key = 'sk-practice-demo-7f3a9b2c4e8d1a6f0b5c9e2d4a7f1b3';
+          const text = body?.textContent || '';
+          const idx = text.indexOf(key);
+          if (body && idx >= 0 && global.GoldspirePracticeHost?.rangeForOffsets) {
+            const range = global.GoldspirePracticeHost.rangeForOffsets(body, idx, idx + key.length);
+            global.GoldspirePracticeHost.applyRangeToSelection?.(range);
+            ctx = getSelectionContext();
+          }
+        }
+        if (ctx?.selectedText?.trim()) {
+          await secureSelection({ showOptions: true, silent: true, selectionContext: ctx });
+        }
+      })());
+    });
   }
 
   try {

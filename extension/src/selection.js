@@ -4,6 +4,8 @@
  */
 (function (global) {
   const CACHE_TTL_MS = 60_000;
+  /** Keep selection after focus moves to Veil UI (pill / copilot buttons). */
+  const CACHE_GRACE_MS = 8_000;
   let cached = null;
 
   function editableRootForRange(range) {
@@ -186,7 +188,13 @@
     const stored = cached.context;
     if (stored.kind === 'input') {
       const { element, start, end, selectedText } = stored;
-      if (!element?.isConnected) return null;
+      if (!element?.isConnected) {
+        if (global.GoldspirePracticeHost?.isPracticePath?.()) {
+          const normalized = global.GoldspirePracticeHost.normalizeInputContext?.(stored);
+          if (normalized?.kind === 'range') return normalized;
+        }
+        return null;
+      }
       const current = element.value.slice(start, end);
       if (current !== selectedText) {
         const index = element.value.indexOf(selectedText);
@@ -239,6 +247,7 @@
   function captureSelection() {
     const live = buildSelectionContext();
     if (live?.selectedText?.trim()) return remember(live);
+    if (cached && Date.now() - cached.at < CACHE_GRACE_MS) return null;
     clearCache();
     return null;
   }

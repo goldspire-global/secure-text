@@ -120,7 +120,7 @@ async function main() {
       line_items: [{
         price: priceAnnual.id,
         quantity: 5,
-        adjustable_quantity: { enabled: true, minimum: 5, maximum: 999 },
+        adjustable_quantity: { enabled: true, minimum: 7, maximum: 999 },
       }],
       metadata: { veil_product: 'team' },
       after_completion: {

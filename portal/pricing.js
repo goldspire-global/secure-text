@@ -2,6 +2,8 @@
  * Localized list prices for the pricing page (marketing amounts, not live FX).
  */
 (function (global) {
+  const STORAGE_KEY = 'veilPricingCurrency';
+
   const LIST_PRICES = {
     USD: { plus: 4.99, plusContact: 1.49, team: 7, enterpriseFrom: 12, locale: 'en-US' },
     EUR: { plus: 4.49, plusContact: 1.29, team: 6, enterpriseFrom: 11, locale: 'de-DE' },
@@ -42,15 +44,56 @@
     JP: 'JPY',
   };
 
-  function detectCurrency() {
-    const locale = navigator.language || 'en-US';
+  const TEAM_MIN_SEATS = 7;
+
+  function readCachedCurrency() {
+    try {
+      const cached = sessionStorage.getItem(STORAGE_KEY);
+      if (cached && LIST_PRICES[cached]) return cached;
+    } catch (_) { /* ignore */ }
+    return null;
+  }
+
+  function cacheCurrency(currency) {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, currency);
+    } catch (_) { /* ignore */ }
+  }
+
+  function detectCurrencyFromLocale() {
+    const locale = navigator.language || 'en-GB';
     const region = (locale.split('-')[1] || '').toUpperCase();
     if (region && REGION_CURRENCY[region]) return REGION_CURRENCY[region];
     if (locale.toLowerCase().startsWith('en-gb')) return 'GBP';
     if (locale.toLowerCase().startsWith('en-au')) return 'AUD';
     if (locale.toLowerCase().startsWith('en-ca')) return 'CAD';
     if (locale.toLowerCase().startsWith('en-in')) return 'INR';
-    return 'USD';
+    return 'GBP';
+  }
+
+  function detectCurrency() {
+    return readCachedCurrency() || detectCurrencyFromLocale();
+  }
+
+  async function resolveVisitorCurrency() {
+    const cached = readCachedCurrency();
+    if (cached) return cached;
+
+    try {
+      const res = await fetch('https://www.cloudflare.com/cdn-cgi/trace', {
+        signal: AbortSignal.timeout(3500),
+      });
+      const text = await res.text();
+      const loc = text.match(/^loc=(\w{2})$/m)?.[1]?.toUpperCase();
+      if (loc && REGION_CURRENCY[loc]) {
+        cacheCurrency(REGION_CURRENCY[loc]);
+        return REGION_CURRENCY[loc];
+      }
+    } catch (_) { /* offline or blocked */ }
+
+    const fallback = detectCurrencyFromLocale();
+    cacheCurrency(fallback);
+    return fallback;
   }
 
   function formatMoney(amount, currency, locale) {
@@ -64,13 +107,12 @@
   }
 
   function priceRow(currency) {
-    return LIST_PRICES[currency] || LIST_PRICES.USD;
+    return LIST_PRICES[currency] || LIST_PRICES.GBP;
   }
 
-  function apply() {
-    const currency = detectCurrency();
+  function applyPrices(currency) {
     const row = priceRow(currency);
-    const locale = navigator.language || row.locale;
+    const locale = row.locale || navigator.language || 'en-GB';
     const teamMonthly = row.team;
     const teamAnnual = teamMonthly * 12;
     const usd = LIST_PRICES.USD;
@@ -107,12 +149,12 @@
       el.textContent = `${formatMoney(teamAnnual, currency, locale)} / user / year (${formatMoney(teamMonthly, currency, locale)} / mo)`;
     });
     document.querySelectorAll('[data-local-price="billing-line"]').forEach((el) => {
-      el.innerHTML = `<strong>${formatMoney(teamAnnual, currency, locale)} / user / year</strong> (min. 5 seats), billed annually through Stripe.`;
+      el.innerHTML = `<strong>${formatMoney(teamAnnual, currency, locale)} / user / year</strong> (min. ${TEAM_MIN_SEATS} seats), billed annually through Stripe.`;
     });
 
-    if (noteEl && currency !== 'USD') {
-      const usdAnnual = usd.team * 12;
-      noteEl.textContent = `Prices in ${currency} for your region. USD list: ${formatMoney(usd.team, 'USD', 'en-US')} / user / mo (${formatMoney(usdAnnual, 'USD', 'en-US')} / year, min. 5 seats).`;
+    if (noteEl && currency !== 'GBP') {
+      const gbpAnnual = LIST_PRICES.GBP.team * 12;
+      noteEl.textContent = `Prices in ${currency} for your region. GBP list: ${formatMoney(LIST_PRICES.GBP.team, 'GBP', 'en-GB')} / user / mo (${formatMoney(gbpAnnual, 'GBP', 'en-GB')} / year, min. ${TEAM_MIN_SEATS} seats).`;
       noteEl.hidden = false;
     } else if (noteEl) {
       noteEl.hidden = true;
@@ -120,7 +162,22 @@
     }
   }
 
-  global.GoldspirePricing = { apply, detectCurrency, formatMoney, priceRow };
+  async function apply() {
+    const initial = detectCurrency();
+    applyPrices(initial);
+    const resolved = await resolveVisitorCurrency();
+    if (resolved !== initial) applyPrices(resolved);
+  }
+
+  global.GoldspirePricing = {
+    apply,
+    applyPrices,
+    detectCurrency,
+    resolveVisitorCurrency,
+    formatMoney,
+    priceRow,
+    TEAM_MIN_SEATS,
+  };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', apply);
   } else {

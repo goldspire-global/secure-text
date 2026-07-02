@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Practice securing secrets with Veil — safe sandbox, nothing is sent." />
+  <meta name="description" content="Practice securing secrets with Veil — fake Outlook compose, nothing is sent." />
   <title>Practice — Veil by Goldspire</title>
+  <link rel="canonical" href="https://veil.goldspireventures.com/practice" />
   <link rel="stylesheet" href="portal/common.css" />
   <link rel="stylesheet" href="practice.css" />
+  <link rel="stylesheet" href="practice-tour.css" />
   <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
@@ -22,70 +24,106 @@
       <nav class="nav nav--header" data-portal-nav></nav>
     </header>
 
-  <main class="practice card hero--premium">
-    <header class="practice__header">
-      <img class="practice__logo" src="icons/icon-48.png" alt="" width="44" height="44" />
-      <div>
-        <h1>Practice your first secure</h1>
-        <p class="hint">Nothing on this page is sent anywhere. Veil runs entirely in your browser.</p>
-      </div>
-    </header>
+    <main class="practice card hero--premium">
+      <header class="practice__header">
+        <img class="practice__logo" src="icons/icon-48.png" alt="" width="44" height="44" />
+        <div>
+          <h1>Practice secure — fake mail compose</h1>
+          <p class="hint">Interactive walkthrough — same flow as Outlook or Gmail. Nothing leaves your browser.</p>
+        </div>
+      </header>
 
-    <aside class="practice__banner">
-      <strong>Safe sandbox</strong> — the API key below is fake. Highlight it, click <strong>Secure</strong> on the Veil pill, or press your secure shortcut. You should see <code>[redacted]</code> replace the secret.
-    </aside>
+      <div class="practice__intro-actions">
+        <button type="button" class="btn" id="practice-tour-start">Start guided tour</button>
+        <button type="button" class="btn btn--ghost" id="practice-tour-replay" hidden>Replay tour</button>
+      </div>
 
-    <ol class="practice__steps">
-      <li>Highlight the line starting with <code>sk-</code> below</li>
-      <li>Click <strong>Secure</strong> on the Veil pill — or use <kbd>Ctrl+Shift+S</kbd> (<kbd>⌘⇧S</kbd> on Mac)</li>
-      <li>Click <strong>Unlock</strong> on <code>[redacted]</code> to verify it works</li>
-    </ol>
+      <aside class="practice__banner">
+        <strong>Why practice?</strong> Unlock pages are for <em>recipients</em>. This sandbox teaches <em>you</em> to secure before send —
+        highlight → Quick → <code>[redacted]</code> link → unlock — with zero risk.
+      </aside>
 
-    <div class="practice__compose" role="region" aria-label="Practice email compose">
-      <div class="practice__toolbar">
-        <button type="button" class="btn" disabled aria-hidden="true">Send</button>
-        <button type="button" class="btn btn--ghost" disabled aria-hidden="true">Discard</button>
+      <ol class="practice__steps practice__steps--tour" id="practice-tour-outline" aria-label="Tour progress">
+        <li><span class="step-num">1</span><span>Highlight &amp; Quick secure</span></li>
+        <li><span class="step-num">2</span><span>Unlock <code>[redacted]</code></span></li>
+        <li><span class="step-num">3</span><span>Options &amp; modes</span></li>
+        <li><span class="step-num">4</span><span>Smart / Always / Off hints</span></li>
+        <li><span class="step-num">5</span><span>Copilot — paste</span></li>
+        <li><span class="step-num">6</span><span>Copilot — typing</span></li>
+        <li><span class="step-num">7</span><span>Ready for real mail</span></li>
+      </ol>
+
+      <div id="practice-hints-lab" class="practice-hints-lab" hidden>
+        <p class="practice-hints-lab__label">On-page hints <span class="hint">(syncs to extension Settings)</span></p>
+        <div class="practice-hints-lab__btns" role="group" aria-label="On-page hints mode">
+          <button type="button" class="practice-hints-lab__btn practice-hints-lab__btn--active" data-hints-mode="smart" aria-pressed="true">Smart</button>
+          <button type="button" class="practice-hints-lab__btn" data-hints-mode="always" aria-pressed="false">Always</button>
+          <button type="button" class="practice-hints-lab__btn" data-hints-mode="quiet" aria-pressed="false">Off</button>
+        </div>
       </div>
-      <div class="practice__field">
-        <span>To</span>
-        <input type="text" value="client@example.com" readonly tabindex="-1" aria-hidden="true" />
-      </div>
-      <div class="practice__field">
-        <span>Subject</span>
-        <input type="text" value="Staging API credentials" readonly tabindex="-1" aria-hidden="true" />
-      </div>
-      <textarea id="practice-body" class="practice__body" aria-label="Message body">Hi — here is the staging key for the integration:
+
+      <div class="practice-frame" role="region" aria-label="Fake Outlook compose">
+        <div class="practice-browser__bar">
+          <div class="practice-browser__dots" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="practice-browser__url">outlook.office.com — New message</div>
+          <span class="practice-browser__badge">Sandbox</span>
+        </div>
+        <div class="practice-compose">
+          <div class="practice-compose__toolbar">
+            <button type="button" class="btn-send" disabled aria-hidden="true">Send</button>
+            <button type="button" class="btn-discard" disabled aria-hidden="true">Discard</button>
+          </div>
+          <div class="practice-compose__row">
+            <span>To</span>
+            <input type="text" value="client@example.com" readonly tabindex="-1" aria-hidden="true" />
+          </div>
+          <div class="practice-compose__row">
+            <span>Subject</span>
+            <input type="text" value="Staging API credentials" readonly tabindex="-1" aria-hidden="true" />
+          </div>
+          <div class="practice-compose__editor">
+            <div
+              id="practice-body"
+              class="practice__body"
+              contenteditable="true"
+              role="textbox"
+              aria-multiline="true"
+              aria-label="Message body"
+              spellcheck="false"
+            >Hi — here is the staging key for the integration:
 
 sk-practice-demo-7f3a9b2c4e8d1a6f0b5c9e2d4a7f1b3
 
-Let me know once you've rotated it.</textarea>
-    </div>
+Let me know once you've rotated it.
 
-    <footer class="practice__footer">
-      <p>Ready for real mail? Open <a href="https://outlook.office.com" target="_blank" rel="noopener">Outlook</a> or <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a> — Veil works the same way.</p>
-      <p><a href="install.html">Install guide</a> · <a href="index.html">Back to Veil</a></p>
-    </footer>
-  </main>
+Thanks for your help on the project.</div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="practice__footer">
+        <p>Done here? Open <a href="https://outlook.office.com" target="_blank" rel="noopener">Outlook</a> or <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a> — Veil behaves the same way in real compose.</p>
+        <p><a href="install.html">Install guide</a> · <a href="index.html">Back to Veil</a></p>
+      </footer>
+    </main>
 
     <footer class="site-footer" data-portal-footer></footer>
   </div>
   <script src="portal/config.js"></script>
   <script src="portal/nav.js"></script>
+  <script src="portal/practice-tour.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('practice');
     GoldspirePortalNav.renderPortalFooter?.();
-  </script>
-  <script>
-    (function () {
-      const body = document.getElementById('practice-body');
-      if (body) {
-        body.focus();
-        const start = body.value.indexOf('sk-practice');
-        if (start >= 0) {
-          body.setSelectionRange(start, start + 59);
-        }
-      }
-    })();
+    document.getElementById('practice-tour-start')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('veil-practice-start-tour', { detail: { force: true } }));
+    });
+    document.getElementById('practice-tour-replay')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('veil-practice-start-tour', { detail: { force: true } }));
+    });
+    if (new URLSearchParams(location.search).get('tour') !== '1') {
+      document.getElementById('practice-tour-replay')?.removeAttribute('hidden');
+    }
   </script>
 </body>
 </html>

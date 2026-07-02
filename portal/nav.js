@@ -73,6 +73,7 @@
       <a href="index.html"${activePage === 'index' ? ' aria-current="page"' : ''}>Home</a>
       <a href="pricing.html#team"${activePage === 'pricing' ? ' aria-current="page"' : ''}>Set up team</a>
       <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Join</a>
+      <a href="practice"${activePage === 'practice' ? ' aria-current="page"' : ''}>Practice</a>
       <a href="install.html"${activePage === 'install' ? ' aria-current="page"' : ''}>Install</a>
       <a href="pricing.html"${activePage === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a>
       <a href="feedback.html"${activePage === 'feedback' ? ' aria-current="page"' : ''}>Feedback</a>

@@ -317,6 +317,10 @@
     return GoldspireSecureMarker.isLegacyToken(text);
   }
 
+  function isPracticePage() {
+    return /\/practice(?:\.html)?$/i.test(typeof location !== 'undefined' ? location.pathname : '');
+  }
+
   function isEmailCompose() {
     return global.GoldspireEditorHost?.isEmailHost?.() || false;
   }
@@ -383,10 +387,28 @@
   }
 
   async function insertRedacted(context, fullMarker, settings = {}) {
-    const resolved = context;
+    let resolved = context;
     if (!resolved) return null;
 
+    if (isPracticePage()) {
+      global.GoldspirePracticeHost?.upgradeComposeBody?.(true);
+      if (resolved.kind === 'input') {
+        const normalized = global.GoldspirePracticeHost?.normalizeInputContext?.(resolved);
+        if (normalized?.kind === 'range') resolved = normalized;
+      }
+    }
+
     if (resolved.kind === 'input') {
+      if (isPracticePage()) {
+        const ce = document.getElementById('practice-body');
+        const needle = resolved.selectedText?.trim() || '';
+        if (ce?.isContentEditable && needle) {
+          const normalized = global.GoldspirePracticeHost?.normalizeInputContext?.(resolved);
+          if (normalized?.kind === 'range') {
+            return insertRichRedacted(normalized, fullMarker, settings, { forEmail: true });
+          }
+        }
+      }
       const plain = formatPlain(fullMarker);
       const { element, start, end } = resolved;
       const before = element.value.slice(0, start);
@@ -404,8 +426,14 @@
       return insertRichRedacted(resolved, fullMarker, settings, { forEmail: true });
     }
 
+    if (isPracticePage() && resolved.kind !== 'input') {
+      return insertRichRedacted(resolved, fullMarker, settings, { forEmail: true });
+    }
+
     if (isRichComposeContext(resolved)) {
-      return insertRichRedacted(resolved, fullMarker, settings, { forEmail: false });
+      return insertRichRedacted(resolved, fullMarker, settings, {
+        forEmail: isPracticePage(),
+      });
     }
 
     if (prefersPlainRedacted(resolved)) {

@@ -11,11 +11,12 @@ import {
   demoPublicJwk,
   hasDatabase,
   loadDotEnv,
+  prepareScenarioEnv,
   loadExtensionCrypto,
   mockAdminReq,
 } from './helpers.mjs';
 
-loadDotEnv();
+prepareScenarioEnv();
 
 const TEAM_PASS = 'Scenario-Team-Passphrase-2026!';
 let lastOrgId = '';

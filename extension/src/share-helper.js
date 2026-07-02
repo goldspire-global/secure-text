@@ -13,7 +13,12 @@
       code,
     ];
     if (unlockLink) {
-      lines.push('', `Or open: ${unlockLink}`);
+      let shortPage = 'veil.goldspireventures.com/unlock';
+      try {
+        const parsed = new URL(unlockLink);
+        shortPage = `${parsed.hostname.replace(/^www\./, '')}${parsed.pathname.replace(/\/unlock\.html$/i, '/unlock')}`;
+      } catch { /**/ }
+      lines.push('', `Unlock page: ${shortPage}`, unlockLink);
     }
     return lines.join('\n');
   }
@@ -24,10 +29,6 @@
     if (body) params.set('body', body);
     const qs = params.toString();
     return `mailto:${encodeURIComponent(to)}${qs ? `?${qs}` : ''}`;
-  }
-
-  function smsUrl(body = '') {
-    return `sms:?&body=${encodeURIComponent(body)}`;
   }
 
   async function copyText(text) {
@@ -53,7 +54,6 @@
     passphraseMessage,
     oneTimeMessage,
     mailtoUrl,
-    smsUrl,
     copyText,
     shareNative,
   };

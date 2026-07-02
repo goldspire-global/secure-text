@@ -39,8 +39,12 @@
       next.personalEmailVerified = next.personalEmailVerified === true;
     }
 
-    // Existing installs before 1.3.3: skip auto tour; new users get tour after setup.
-    if (next.setupComplete === true && next.tourComplete === undefined) {
+    // Legacy installs that completed setup before tours existed (not fresh finishSetup).
+    if (
+      next.setupComplete === true
+      && next.tourComplete === undefined
+      && settings.setupComplete === true
+    ) {
       next.tourComplete = true;
     }
 

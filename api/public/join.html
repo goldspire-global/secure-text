@@ -126,7 +126,11 @@
         }
         document.getElementById('join-next-steps').hidden = false;
       } catch (err) {
-        app.setStatus(statusEl, err.message || 'Could not join this team.', 'error');
+        const message = String(err?.message || '');
+        const friendly = /failed to fetch|networkerror|load failed/i.test(message)
+          ? 'Could not reach the Veil service. Check your connection and try again.'
+          : (message || 'Could not join this team.');
+        app.setStatus(statusEl, friendly, 'error');
       } finally {
         submitBtn.disabled = false;
       }

@@ -36,10 +36,28 @@
     return alreadyInserted ? 'Sensitive content in field' : 'Sensitive data pasted';
   }
 
+  function normalizeMatchKey(text) {
+    const t = String(text || '').replace(/\s+/g, '').toLowerCase();
+    if (t.length <= 8) return t;
+    return `${t.slice(0, 6)}|${t.slice(-6)}`;
+  }
+
+  function dedupeDetectionsForDisplay(detections = []) {
+    const map = new Map();
+    for (const d of detections) {
+      const key = `${d.category}|${normalizeMatchKey(d.matchedText)}`;
+      const existing = map.get(key);
+      if (!existing || (d.confidence || 0) > (existing.confidence || 0)) {
+        map.set(key, d);
+      }
+    }
+    return Array.from(map.values());
+  }
+
   function buildExplainSummary(detections = [], { policyMessage = '', recommendedId = '', context = {}, settings = {} } = {}) {
     const lines = [];
     const unique = [];
-    for (const d of detections) {
+    for (const d of dedupeDetectionsForDisplay(detections)) {
       const line = formatDetectionLine(d);
       if (!unique.includes(line)) unique.push(line);
       if (unique.length >= 3) break;
@@ -60,5 +78,6 @@
     formatDetectionLine,
     buildTriggerLabel,
     buildExplainSummary,
+    dedupeDetectionsForDisplay,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
